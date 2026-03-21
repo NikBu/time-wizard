@@ -166,11 +166,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--color-primary);box-sh
 .stat-pill strong{color:var(--color-text);font-weight:600;}
 .task-tree{list-style:none;display:flex;flex-direction:column;gap:var(--space-2);}
 .task-item{display:flex;align-items:flex-start;gap:var(--space-3);padding:var(--space-3);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);}
-.task-item.done .task-text{text-decoration:line-through;color:var(--color-text-muted);}
+.task-item.done .task-text{text-decoration:line-through;color:var(--color-text-faint);opacity:.7;}
 .task-item.sub{margin-left:var(--space-8);background:var(--color-surface-offset);}
 .task-check{flex-shrink:0;width:20px;height:20px;border:2px solid var(--color-border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--trans);}
 .task-check:hover{border-color:var(--color-primary);}
-.task-item.done .task-check{background:var(--color-accent);border-color:var(--color-accent);color:#fff;}
+.task-item.done .task-check{background:var(--color-primary);border-color:var(--color-primary);color:#fff;}
 .task-body{flex:1;min-width:0;}
 /* task-text handled below */
 .task-points{display:inline-flex;align-items:center;gap:3px;font-size:var(--text-xs);color:var(--color-gold);font-weight:600;margin-left:var(--space-2);}
@@ -332,6 +332,22 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; padding-
 #musicWidget .mw-vol{display:flex;align-items:center;gap:var(--space-1);}
 #musicWidget input[type=range]{width:64px;height:4px;accent-color:var(--color-primary);}
 
+
+/* MUSIC DROP ZONE */
+#musicDropZone.drag-over{border-color:var(--color-primary);background:var(--color-primary-highlight);}
+
+
+.companion-speech{ transition: opacity 0.2s ease; }
+
+
+/* ARCHIBALD FLOATING POPUP */
+#archPopup{position:fixed;bottom:var(--space-5);left:var(--space-5);z-index:190;display:flex;align-items:flex-end;gap:var(--space-3);pointer-events:none;opacity:0;transform:translateY(10px);transition:opacity .4s ease,transform .4s ease;max-width:280px;}
+#archPopup.visible{opacity:1;transform:translateY(0);}
+#archPopupImg{width:48px;height:48px;border-radius:var(--radius-lg);border:2px solid var(--color-border);object-fit:cover;flex-shrink:0;box-shadow:var(--shadow-md);}
+#archPopupBubble{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);border-bottom-left-radius:var(--radius-sm);padding:var(--space-2) var(--space-3);box-shadow:var(--shadow-md);font-size:var(--text-xs);color:var(--color-text);font-style:italic;line-height:1.5;position:relative;}
+#archPopupBubble::after{content:'';position:absolute;bottom:6px;left:-7px;border:6px solid transparent;border-right-color:var(--color-border);}
+#archPopupBubble::before{content:'';position:absolute;bottom:7px;left:-5px;border:5px solid transparent;border-right-color:var(--color-surface);z-index:1;}
+
 </style>
 </head>
 <body>
@@ -350,9 +366,16 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; padding-
   </div>
   <div class="header-right">
     <div id="headerPoints" class="badge gold">✦ 0 pts</div>
-    <button class="icon-btn" data-theme-toggle aria-label="Toggle theme">
+    <button class="icon-btn" onclick="exportData()" aria-label="Export data" title="Export data">
+      <i data-lucide="download-cloud" style="width:16px;height:16px;"></i>
+    </button>
+    <button class="icon-btn" onclick="document.getElementById('importFile').click()" aria-label="Import data" title="Import data">
+      <i data-lucide="upload-cloud" style="width:16px;height:16px;"></i>
+    </button>
+    <button class="icon-btn" data-theme-toggle aria-label="Toggle theme" title="Toggle theme">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
+    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="handleImport(this)">
   </div>
 </header>
 
@@ -483,42 +506,63 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; padding-
 
 <!-- COMPANION PANEL -->
 <section class="tab-panel" id="panel-companion">
-  <div class="companion-card">
-    <div class="companion-header">Archibald</div>
-    <div class="companion-name-tag">Librarian-Wizard Owl ✦ Lv. <span id="owlLevel">1</span></div>
-    <p class="companion-subtitle">Your mystical productivity companion</p>
-    <div class="companion-frame">
-      <img src="https://user-gen-media-assets.s3.amazonaws.com/seedream_images/d728ba27-b057-453a-8ab6-e5ea7a6e0025.png"
-           alt="Archibald the librarian-wizard owl" id="companionImg" class="companion-img" width="180" height="180">
-      <div class="companion-state-label" id="companionStateLabel">Idle</div>
-    </div>
-    <div class="companion-speech" id="companionSpeech">
-      "Ah, a new visitor! I am Archibald. Let us begin our work together, shall we?"
-    </div>
-    <div class="companion-stats">
-      <div class="stat-bar-group">
-        <div class="stat-bar-label"><span>Mood</span><span id="moodVal">70%</span></div>
-        <div class="stat-bar-track"><div class="stat-bar-fill mood" id="moodBar" style="width:70%"></div></div>
+  <div style="max-width:700px;margin:0 auto;">
+
+    <!-- Header row with disable toggle -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
+      <div>
+        <h2 class="card-title" style="margin-bottom:0;">Archibald</h2>
+        <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Librarian-Wizard Owl ✦ Wisdom <span id="owlWisdom">0</span> pts</div>
       </div>
-      <div class="stat-bar-group">
-        <div class="stat-bar-label"><span>Focus</span><span id="focusVal">50%</span></div>
-        <div class="stat-bar-track"><div class="stat-bar-fill focus" id="focusBar" style="width:50%"></div></div>
+      <label style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-sm);color:var(--color-text-muted);cursor:pointer;">
+        <input type="checkbox" id="archEnabled" checked onchange="setArchEnabled(this.checked)" style="width:16px;height:16px;accent-color:var(--color-primary);">
+        Enable companion
+      </label>
+    </div>
+
+    <div id="archBody">
+      <!-- Main card: portrait + speech -->
+      <div class="card" style="display:flex;gap:var(--space-5);align-items:flex-start;margin-bottom:var(--space-4);flex-wrap:wrap;">
+        <div style="position:relative;flex-shrink:0;width:160px;height:160px;border-radius:var(--radius-xl);border:2px solid var(--color-border);overflow:hidden;cursor:pointer;box-shadow:var(--shadow-md);" onclick="archFAQOpen()" title="Ask Archibald">
+          <img src="" alt="Archibald" id="companionImg" class="companion-img" width="160" height="160"
+               style="width:100%;height:100%;object-fit:cover;display:block;transition:opacity .3s ease;">
+          <div class="companion-state-label" id="companionStateLabel">Idle</div>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div class="companion-speech" id="companionSpeech" style="margin-bottom:var(--space-4);">
+            "Ah, a new visitor. I am Archibald. Let us begin our work together, shall we?"
+          </div>
+          <!-- Stats -->
+          <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+            <div class="stat-bar-group">
+              <div class="stat-bar-label"><span title="Rises with task completions">😊 Mood</span><span id="moodVal">70%</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill mood" id="moodBar" style="width:70%"></div></div>
+            </div>
+            <div class="stat-bar-group">
+              <div class="stat-bar-label"><span title="Rises while timers are running">🎯 Focus</span><span id="focusVal">50%</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill focus" id="focusBar" style="width:50%"></div></div>
+            </div>
+            <div class="stat-bar-group">
+              <div class="stat-bar-label"><span title="Drains during long sessions, restores on rest">⚡ Energy</span><span id="energyVal">80%</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill energy" id="energyBar" style="width:80%"></div></div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="stat-bar-group">
-        <div class="stat-bar-label"><span>Energy</span><span id="energyVal">80%</span></div>
-        <div class="stat-bar-track"><div class="stat-bar-fill energy" id="energyBar" style="width:80%"></div></div>
-      </div>
-      <div class="stat-bar-group">
-        <div class="stat-bar-label"><span>Task Progress</span><span id="tasksVal">0%</span></div>
-        <div class="stat-bar-track"><div class="stat-bar-fill tasks" id="tasksBar" style="width:0%"></div></div>
+
+      <!-- FAQ section -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
+          <div class="card-title" style="font-size:var(--text-base);margin-bottom:0;">📖 Ask Archibald</div>
+          <span style="font-size:var(--text-xs);color:var(--color-text-faint);">Click any question</span>
+        </div>
+        <div id="faqList" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
+        <div id="faqAnswer" style="display:none;margin-top:var(--space-3);padding:var(--space-3);background:var(--color-surface-offset);border-radius:var(--radius-lg);border-left:3px solid var(--color-primary);">
+          <div id="faqAnswerText" style="font-size:var(--text-sm);color:var(--color-text);font-style:italic;"></div>
+        </div>
       </div>
     </div>
-    <div class="companion-actions">
-      <button class="btn btn-secondary btn-sm" onclick="petOwl()">🤝 Pet</button>
-      <button class="btn btn-secondary btn-sm" onclick="giveOwlTea()">☕ Give Tea</button>
-      <button class="btn btn-secondary btn-sm" onclick="readBook()">📚 Read Together</button>
-    </div>
-    <div class="companion-xp">XP: <span id="owlXP">0</span> / 100 — Total: <span id="owlTotalPts">0</span> pts</div>
+
   </div>
 </section>
 
@@ -587,13 +631,13 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; padding-
     <div class="card" style="margin-bottom:var(--space-4);">
       <div class="card-title" style="font-size:var(--text-base);margin-bottom:var(--space-1);">Custom Track</div>
       <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);">Upload an MP3, WAV, or OGG. It will loop automatically.</p>
-      <div style="display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap;">
-        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('musicUpload').click()">
-          <i data-lucide="upload" style="width:12px;height:12px;"></i> Choose file
-        </button>
-        <span id="musicUploadName" style="font-size:var(--text-xs);color:var(--color-text-muted);">No file chosen</span>
-        <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,audio/*" style="display:none;" onchange="handleMusicUpload(this)">
+      <div id="musicDropZone" style="border:2px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);text-align:center;transition:border-color var(--trans),background var(--trans);cursor:pointer;" onclick="document.getElementById('musicUpload').click()" ondragover="musicDragOver(event)" ondragleave="musicDragLeave(event)" ondrop="musicDrop(event)">
+        <i data-lucide="music" style="width:24px;height:24px;margin:0 auto var(--space-2);color:var(--color-text-faint);display:block;"></i>
+        <div style="font-size:var(--text-sm);color:var(--color-text-muted);">Drop audio file here or <span style="color:var(--color-primary);font-weight:600;">click to browse</span></div>
+        <div style="font-size:var(--text-xs);color:var(--color-text-faint);margin-top:var(--space-1);">MP3 · WAV · OGG</div>
+        <div id="musicUploadName" style="font-size:var(--text-xs);color:var(--color-primary);margin-top:var(--space-2);display:none;"></div>
       </div>
+      <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,audio/*" style="display:none;" onchange="handleMusicUpload(this)">
       <div id="customMusicList" style="margin-top:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2);"></div>
       <!-- Progress bar for playing custom track -->
       <div id="customTrackProgress" style="display:none;margin-top:var(--space-3);">
@@ -878,8 +922,8 @@ function tickFn(){
   });
 }
 function timerDone(t){
-  playSound(t.sound); duckMusicForAlarm(3000); t.reps++;
-  updateOwlFocus(10);
+  playSound(t.sound); duckMusicForAlarm(3000); archOnTimerDone(); t.reps++;
+  // arch focus handled by archTick
   showToast(`⏰ "${t.name}" done! (×${t.reps})`,'success');
   const r=t.rep;
   if(r.mode==='once'){ t.running=false; t.done=true; }
@@ -891,7 +935,7 @@ function timerDone(t){
   else if(r.mode==='random'){ t.tot=Math.floor(r.rMin+Math.random()*(r.rMax-r.rMin)); t.rem=t.tot; }
   else t.rem=t.tot;
 }
-function toggleTimer(id){ const t=timers.find(x=>x.id===id); if(!t||t.done) return; t.running=!t.running; renderTimers(); }
+function toggleTimer(id){ const t=timers.find(x=>x.id===id); if(!t||t.done) return; t.running=!t.running; if(t.running) archOnTimerStart(); renderTimers(); }
 function resetTimer(id){ const t=timers.find(x=>x.id===id); if(!t) return; t.running=false;t.done=false;t.rem=t.orig;t.tot=t.orig;t.reps=0; renderTimers(); }
 function deleteTimer(id){ timers=timers.filter(x=>x.id!==id); renderTimers(); }
 function toggleEditPanel(id){
@@ -1138,6 +1182,97 @@ function renderTimers(){
 
 // ── CHECKLISTS ────────────────────────────────────
 let lists=[], lidx=1, tidxc=1, activeList=null, totalPts=0;
+
+
+// ── IMPORT / EXPORT ─────────────────────────────────
+function buildExportPayload(){
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    timers: timers.map(t => ({
+      name: t.name,
+      tot: t.orig || t.tot,
+      sound: t.sound,
+      rep: t.rep || {mode:'once'}
+    })),
+    lists: lists,
+    activeList: activeList,
+    totalPts: totalPts,
+    settings: {
+      theme: activeThemeId,
+      mode: window._getMode ? window._getMode() : document.documentElement.getAttribute('data-theme') || 'dark',
+      archEnabled: archEnabled
+    }
+  };
+}
+function exportData(){
+  try{
+    const data = buildExportPayload();
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'timewizard-state-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    showToast('State exported.','success');
+  }catch(e){ console.error(e); showToast('Export failed.','error'); }
+}
+function handleImport(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const data = JSON.parse(e.target.result);
+      applyImportedState(data);
+      showToast('State imported.','success');
+    }catch(err){
+      console.error(err);
+      showToast('Import failed: invalid file','error');
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+function applyImportedState(data){
+  if(!data || typeof data !== 'object') throw new Error('Bad payload');
+  // Timers
+  clearInterval(tick); tick=null; timers=[]; tidx=1;
+  if(Array.isArray(data.timers)){
+    data.timers.forEach(t => {
+      if(!t || typeof t !== 'object') return;
+      const tot = Number(t.tot)||0; if(tot<=0) return;
+      const id = tidx++;
+      const rep = t.rep && typeof t.rep==='object' ? t.rep : {mode:'once'};
+      timers.push({id,name:t.name||'Timer',tot:tot,orig:tot,rem:tot,sound:t.sound||'bell',rep:JSON.parse(JSON.stringify(rep)),running:false,done:false,reps:0,capToMax:true});
+    });
+  }
+  if(timers.length) renderTimers(); else document.getElementById('timersList').innerHTML='';
+  // Lists
+  lists = Array.isArray(data.lists) ? JSON.parse(JSON.stringify(data.lists)) : [];
+  // Recompute indices
+  lidx = lists.reduce((m,l)=>Math.max(m,l.id||0),0)+1;
+  tidxc = lists.reduce((m,l)=>Math.max(m, ...(Array.isArray(l.tasks)?l.tasks.map(t=>t.id||0):[0])),0)+1;
+  totalPts = Number(data.totalPts)||0;
+  updateHeaderPts();
+  // Active list
+  activeList = data.activeList;
+  if(!lists.some(l=>l.id===activeList)) activeList = lists[0]?lists[0].id:null;
+  renderLists();
+  if(activeList) renderChecklist();
+  else document.getElementById('checklistMain').innerHTML='<div style="text-align:center;padding:var(--space-12);color:var(--color-text-faint);font-size:var(--text-sm);"><p>Select or create a list.</p></div>';
+  // Settings
+  if(data.settings){
+    if(data.settings.theme && THEMES.some(t=>t.id===data.settings.theme)){
+      activeThemeId = data.settings.theme; applyThemeVars(); renderThemes();
+    }
+    if(typeof data.settings.archEnabled==='boolean'){
+      setArchEnabled(data.settings.archEnabled);
+      const cb = document.getElementById('archEnabled'); if(cb) cb.checked = data.settings.archEnabled;
+    }
+  }
+}
 function openNewListModal(){ document.getElementById('newListModal').classList.remove('hidden'); document.getElementById('newListName').focus(); }
 function closeModal(id){ document.getElementById(id).classList.add('hidden'); }
 function createList(){
@@ -1192,7 +1327,7 @@ function renderChecklist(){
       <div class="num-wrap"><input type="number" class="points-input" id="newTaskPts" value="10" min="1" max="100" title="Points"><div class="num-spin"><button class="spin-up" onclick="stepNum('newTaskPts',1)">▲</button><button onclick="stepNum('newTaskPts',-1)">▼</button></div></div>
       <button class="btn btn-primary" onclick="addTask()"><i data-lucide="plus" style="width:13px;height:13px;"></i></button>
     </div>`;
-  lucide.createIcons(); updateOwlTasks(); _initExpandBtns();
+  lucide.createIcons(); // updateOwlTasks replaced by arch system _initExpandBtns();
 }
 function renderNodes(tasks,pid,depth){
   depth=depth||0;
@@ -1344,7 +1479,7 @@ function toggleTask(id){
   task.done=!task.done;
   if(task.done){
     totalPts+=task.pts; updateHeaderPts();
-    updateOwlFromPts(task.pts);
+    archOnTaskDone(task.pts);
     showToast(`✦ +${task.pts} pts! "${task.text}"`,'success');
     list.tasks.filter(t=>t.pid===id&&!t.done).forEach(s=>{ s.done=true; totalPts+=s.pts; });
   } else { totalPts=Math.max(0,totalPts-task.pts); updateHeaderPts(); list.tasks.filter(t=>t.pid===id).forEach(s=>s.done=false); }
@@ -1361,45 +1496,321 @@ function deleteList(id){
     renderLists();
     if(activeList) renderChecklist();
     else document.getElementById('checklistMain').innerHTML='<div style="text-align:center;padding:var(--space-12);color:var(--color-text-faint);font-size:var(--text-sm);"><p>Select or create a list.</p></div>';
-    updateOwlTasks();
+    // updateOwlTasks replaced by archTick
   });
 }
-function updateHeaderPts(){ document.getElementById('headerPoints').textContent=`✦ ${totalPts} pts`; document.getElementById('owlTotalPts').textContent=totalPts; document.getElementById('owlXP').textContent=totalPts%100; document.getElementById('owlLevel').textContent=Math.floor(totalPts/100)+1; }
+function updateHeaderPts(){
+  const hp=document.getElementById('headerPoints');
+  if(hp) hp.textContent=`✦ ${totalPts} pts`;
+  const lvl=document.getElementById('owlLevel');
+  if(lvl) lvl.textContent=Math.floor(totalPts/100)+1;
+  const wiz=document.getElementById('owlWisdom');
+  if(wiz) wiz.textContent=totalPts;
+}
 
-// ── OWL COMPANION ─────────────────────────────────
+// ── ARCHIBALD COMPANION ───────────────────────────
 const OWL = {
   idle:'https://user-gen-media-assets.s3.amazonaws.com/seedream_images/d728ba27-b057-453a-8ab6-e5ea7a6e0025.png',
   excited:'https://user-gen-media-assets.s3.amazonaws.com/gemini_images/69b2eac8-ab2c-47c3-80bd-ecc1b32af910.png',
   sleepy:'https://user-gen-media-assets.s3.amazonaws.com/gemini_images/1e18a9dd-9dd9-4afd-bdbb-4559c51bf7e2.png',
+  concerned:'https://user-gen-media-assets.s3.amazonaws.com/seedream_images/06f3503b-88eb-42ef-800e-09104d524204.png',
 };
-const QUOTES = {
-  idle:['"Ah, a new visitor! I am Archibald. Shall we begin?"','"The library of time is vast. Which scroll today?"','"I await your command, quill in wing."','"Even great owls rest between endeavours."'],
-  excited:['"Splendid! Your dedication fills me with scholarly joy!"','"Hoot hoot! Another task — the scrolls sing your praises!"','"By Merlin\'s spectacles, you are on fire!"','"At this rate, you shall be a Grand Wizard of Productivity!"'],
-  sleepy:['"*yawns* Even the wisest owls must rest... Zzz..."','"The candle burns low... a repose is in order..."','"*adjusts spectacles sleepily* I was watching... zzz..."','"Rest, dear apprentice. Even magic needs sleep."'],
-};
-let owlSt={mood:70,focus:50,energy:80,tasks:0}, owlMode='idle';
-function setOwlMode(m){
-  owlMode=m; const img=document.getElementById('companionImg'), lbl=document.getElementById('companionStateLabel'); if(!img) return;
-  img.style.opacity='0';
-  setTimeout(()=>{ img.src=OWL[m]||OWL.idle; img.style.opacity='1'; lbl.textContent=m[0].toUpperCase()+m.slice(1);
-    const q=QUOTES[m]||QUOTES.idle; document.getElementById('companionSpeech').textContent=q[Math.floor(Math.random()*q.length)]; },300);
-}
-function clp(v,mn,mx){ return Math.max(mn,Math.min(mx,v)); }
-function owlDelta(stat,d){ owlSt[stat]=clp(owlSt[stat]+d,0,100); refreshOwl(); }
-function refreshOwl(){
-  const s=owlSt;
-  ['mood','focus','energy','tasks'].forEach(k=>{ const el=document.getElementById(k+'Bar'); if(el) el.style.width=s[k]+'%'; const vl=document.getElementById(k+'Val'); if(vl) vl.textContent=s[k]+'%'; });
-  const wantMode=s.energy<25?'sleepy':(s.mood>75||s.focus>70)?'excited':'idle';
-  if(wantMode!==owlMode) setOwlMode(wantMode);
-}
-function updateOwlFromPts(p){ owlDelta('mood',p*.3); owlDelta('focus',p*.2); owlDelta('energy',-p*.1); updateOwlTasks(); }
-function updateOwlFocus(v){ owlDelta('focus',v); }
-function updateOwlTasks(){ const top=lists.flatMap(l=>l.tasks.filter(t=>!t.pid)); owlSt.tasks=top.length?Math.round(top.filter(t=>t.done).length/top.length*100):0; refreshOwl(); }
-function petOwl(){ owlDelta('mood',15); owlDelta('energy',5); showToast('Archibald ruffles his feathers! 🦉'); setOwlMode('excited'); setTimeout(refreshOwl,3000); }
-function giveOwlTea(){ owlDelta('energy',25); owlDelta('mood',10); showToast('Archibald sips tea. ☕'); if(owlMode==='sleepy') setOwlMode('idle'); refreshOwl(); }
-function readBook(){ owlDelta('focus',20); owlDelta('mood',8); showToast('Archibald joins you for a chapter. 📚'); setOwlMode('excited'); setTimeout(refreshOwl,4000); }
-setInterval(()=>{ if(timers.some(t=>t.running)) owlDelta('energy',-2); else owlDelta('energy',1); owlDelta('mood',-1); },60000);
+const ARCH_FAQ = [
+  { q:"How do timers work?", a:"Set a duration, pick a sound, choose a repeat mode, then press Start. Timers tick down independently — you can run several at once. When time is up, the alarm fires and (if repeating) the timer resets automatically." },
+  { q:"What are the repeat modes?", a:"Once fires a single alarm. Fixed repeats a set number of times. Increase/Decrease changes the period each cycle. Custom sequences let you define a pattern like '5, 30, 10' minutes which loops. Fibonacci and Random offer more exotic rhythms." },
+  { q:"What is the excess cap on a timer?", a:"The slider in a timer's edit panel lets you add time beyond the original duration. If 'Cap adjustments to original' is unchecked, that extra time is allowed and a teal marker shows where the original endpoint was. On the next ring, the timer resets to its base duration." },
+  { q:"How does the point system work?", a:"Each checklist task has a point value from 1 to 100. Completing a task grants those points. Points accumulate as my Wisdom stat and drive list progress bars. High-value tasks earn more points but I shall not tell you to game the system." },
+  { q:"What are colored noises?", a:"White noise has equal energy at all frequencies. Pink noise rolls off at higher frequencies — like steady rain. Brown noise rolls off further — a deep waterfall rumble. Blue and Violet noises boost high frequencies — bright, thin hiss. Each has different focus properties." },
+  { q:"Where can I find music to upload?", a:"I recommend freesound.org for ambient loops under Creative Commons, pixabay.com/music for royalty-free lofi tracks, and musicforprogramming.net for curated focus music in downloadable MP3 form. Suno.com can generate custom tracks if you prefer AI-composed music." },
+  { q:"How do I export or import my data?", a:"Use the Import/Export button in the header. Your timers, checklists, and settings are bundled into a JSON file you can save and reload. Custom uploaded music tracks are not included as they are binary files." },
+  { q:"Can I turn you off?", a:"*adjusts spectacles* The checkbox at the top of this very page will silence me entirely. I shall not take offence. Much." },
+];
 
+const ARCH_QUOTES = {
+  greeting_morning: [
+    `"Good morning, Scholar. The day is fresh and the scrolls await."`,
+    `"Ah, an early riser! The wisest owls prefer the morning hours."`,
+    `"Morning light falls on your workspace. A fine time to begin."`,
+  ],
+  greeting_afternoon: [
+    `"Afternoon already? Let us make the remaining hours count."`,
+    `"The sun climbs toward its peak. How goes the work, Scholar?"`,
+    `"A productive afternoon requires only a clear mind and a good list."`,
+  ],
+  greeting_evening: [
+    `"Evening settles in. Candles lit, I presume?"`,
+    `"The day winds down. What remains on your list, I wonder?"`,
+    `"Evening is when the real thinking happens. Or so I tell myself."`,
+  ],
+  greeting_night: [
+    `"*blinks slowly* You keep late hours, Scholar."`,
+    `"The library is quiet at this hour. Perhaps suspiciously so."`,
+    `"Night work — a tradition among wizards and the perpetually behind."`,
+  ],
+  timer_start: [
+    `"The clock turns. Focus, Scholar."`,
+    `"Timer engaged. I shall watch the seconds with you."`,
+    `"Excellent. A defined task is half a completed one."`,
+    `"Begin. The hardest step is always the first."`,
+  ],
+  timer_done: [
+    `"The bell tolls! Mark the moment, Scholar."`,
+    `"Time is up. Well done for seeing it through."`,
+    `"Another interval complete. Shall we continue, or pause for tea?"`,
+    `"*rings small bell* The timer has spoken."`,
+  ],
+  timer_long: [
+    `"Forty-five minutes without pause. Even owls must stretch their wings occasionally."`,
+    `"I notice you have been at this for some time. A brief walk might sharpen the mind."`,
+    `"The Pomodoro masters recommend a break around now, Scholar. Just a thought."`,
+    `"Long sessions breed fatigue. Shall I suggest a five-minute respite?"`,
+  ],
+  hydration: [
+    `"Forgive the interruption — but have you had water recently? The brain is eighty percent fluid, you know."`,
+    `"A glass of water costs thirty seconds and repays tenfold. I speak from centuries of observation."`,
+    `"Dehydration masquerades as tiredness and poor focus. Drink something, Scholar."`,
+  ],
+  stretch: [
+    `"Your posture concerns me. Roll those shoulders. Go on, I can wait."`,
+    `"Stand, stretch, return. The scrolls will still be here in sixty seconds."`,
+    `"I have watched scholars ruin their backs sitting as you are sitting. Please adjust."`,
+  ],
+  food: [
+    `"Have you eaten? I ask because low blood sugar produces exactly the kind of work you are trying to avoid."`,
+    `"A small snack is not a luxury, Scholar. It is maintenance."`,
+    `"Even wizards eat between chapters. Step away, find something nourishing."`,
+  ],
+  all_idle: [
+    `"The timers are still. Is everything alright, Scholar?"`,
+    `"A long pause. Resting, or perhaps reconsidering the list?"`,
+    `"I notice nothing is running. Perhaps we need a fresh plan of attack."`,
+  ],
+  task_done: [
+    `"Marked complete. The list grows shorter."`,
+    `"*makes a small tick in the ledger* Well done."`,
+    `"One less thing between you and the end. Press on."`,
+    `"Task done. A small victory is still a victory."`,
+  ],
+  task_high_value: [
+    `"A high-value task, completed! I am genuinely impressed."`,
+    `"*hoots with approval* That was no small undertaking."`,
+    `"Significant work, Scholar. I shall note it in the records."`,
+  ],
+  list_complete: [
+    `"The entire list — done! *stamps seal of approval on scroll* Magnificent."`,
+    `"Every task checked. This is a rare and beautiful thing."`,
+    `"List cleared. You have earned a proper rest, or at minimum, a biscuit."`,
+  ],
+  tasks_piling: [
+    `"I count rather a lot of unchecked items on your list. Shall we perhaps prioritise?"`,
+    `"The pile grows, Scholar. One item at a time tends to be more effective than admiring the whole heap."`,
+    `"A long list is not a problem — an unstarted one is. Shall we pick one?"`,
+  ],
+  music_start: [
+    `"Ah, you have turned on the music. A fine accompaniment to focused work."`,
+    `"Music engages one part of the mind so the other may work undisturbed. Wise choice."`,
+    `"The ambient layer is set. Now — back to the task."`,
+  ],
+  music_off_timer: [
+    `"A timer runs in silence. The Music tab offers several focus ambients, should you want company."`,
+    `"Silence is valid, of course. Though I find brown noise quite agreeable for long sessions."`,
+  ],
+  late_night: [
+    `"*peers over spectacles* It is past midnight, Scholar. Even the most dedicated must sleep eventually."`,
+    `"The small hours are seductive but they extract a price. How much longer do you plan to work?"`,
+    `"I have seen many candles burn through the night. Rarely does the work suffer from sleeping on it."`,
+  ],
+  milestone: [
+    `"A points milestone! Your wisdom grows. As does mine, vicariously."`,
+    `"*updates the great ledger* The numbers do not lie. Impressive progress."`,
+    `"Milestone reached. The library acknowledges your contribution."`,
+  ],
+  low_energy: [
+    `"My energy wanes. Or perhaps that is a projection of your own state."`,
+    `"*yawns carefully behind one wing* The session has been long."`,
+    `"When energy runs low, the quality of work follows. A rest is not a defeat."`,
+  ],
+};
+
+let archEnabled = true;
+let archSt = { mood:70, focus:50, energy:80, wisdom:0 };
+let archMode = 'idle';
+let _archLastQuoteBucket = null, _archLastQuoteTime = 0;
+let _archSessionStart = Date.now();
+let _archActiveTimerMinutes = 0;
+let _archFoodFired = false, _archHydrationCooldown = 0, _archStretchCooldown = 0;
+
+function setArchEnabled(v){
+  archEnabled = v;
+  document.getElementById('archBody').style.display = v ? '' : 'none';
+  if(v) archGreet();
+}
+
+function archSetMode(m){
+  archMode = m;
+  const img = document.getElementById('companionImg');
+  const lbl = document.getElementById('companionStateLabel');
+  const popImg = document.getElementById('archPopupImg');
+  if(img){
+    img.style.opacity = '0';
+    setTimeout(()=>{
+      img.src = OWL[m] || OWL.idle;
+      img.style.opacity = '1';
+      if(lbl) lbl.textContent = m[0].toUpperCase() + m.slice(1);
+    }, 250);
+  }
+  if(popImg) popImg.src = OWL[m] || OWL.idle;
+}
+
+let _archPopupTimer = null;
+function archSay(bucket, override){
+  if(!archEnabled) return;
+  const now = Date.now();
+  if(bucket === _archLastQuoteBucket && now - _archLastQuoteTime < 120000) return;
+  const pool = ARCH_QUOTES[bucket] || ARCH_QUOTES.greeting_afternoon;
+  const q = override || pool[Math.floor(Math.random() * pool.length)];
+  // Update companion page speech bubble
+  const el = document.getElementById('companionSpeech');
+  if(el){ el.style.opacity='0'; setTimeout(()=>{ el.textContent=q; el.style.opacity='1'; },200); }
+  _archLastQuoteBucket = bucket; _archLastQuoteTime = now;
+  // Show floating popup on any tab (suppress on companion tab itself)
+  const onCompanion = document.getElementById('panel-companion')?.classList.contains('active');
+  if(!onCompanion) _archShowPopup(q);
+}
+function _archShowPopup(q){
+  const popup = document.getElementById('archPopup');
+  const img = document.getElementById('archPopupImg');
+  const bubble = document.getElementById('archPopupBubble');
+  if(!popup || !img || !bubble) return;
+  img.src = OWL[archMode] || OWL.idle;
+  bubble.textContent = q;
+  popup.classList.add('visible');
+  if(_archPopupTimer) clearTimeout(_archPopupTimer);
+  // Display duration scales with quote length (min 4s, max 9s)
+  const dur = Math.min(9000, Math.max(4000, q.length * 55));
+  _archPopupTimer = setTimeout(()=>{ popup.classList.remove('visible'); }, dur);
+}
+
+function archRefreshStats(){
+  if(!archEnabled) return;
+  const s = archSt;
+  ['mood','focus','energy'].forEach(k=>{
+    const bar=document.getElementById(k+'Bar'), val=document.getElementById(k+'Val');
+    if(bar) bar.style.width = s[k]+'%';
+    if(val) val.textContent = Math.round(s[k])+'%';
+  });
+  const wEl = document.getElementById('owlWisdom');
+  if(wEl) wEl.textContent = Math.round(s.wisdom);
+  // Auto mode from stats
+  const want = s.energy < 20 ? 'sleepy' : (s.mood > 78 || s.focus > 75) ? 'excited' : s.mood < 30 ? 'concerned' : 'idle';
+  if(want !== archMode) archSetMode(want);
+}
+
+function archDelta(stat, d){ archSt[stat] = Math.max(0, Math.min(100, archSt[stat]+d)); archRefreshStats(); }
+
+function archGreet(){
+  if(!archEnabled) return;
+  const h = new Date().getHours();
+  const bucket = h<12?'greeting_morning':h<17?'greeting_afternoon':h<22?'greeting_evening':'greeting_night';
+  archSetMode('idle');
+  archRefreshStats();
+  // Greet after short delay so img src is set first
+  setTimeout(()=>archSay(bucket), 800);
+}
+
+// Called on timer start
+function archOnTimerStart(){ if(!archEnabled) return; archDelta('focus',8); archSay('timer_start'); }
+// Called on timer done
+function archOnTimerDone(){ if(!archEnabled) return; archDelta('mood',5); archDelta('focus',-3); archSay('timer_done'); }
+// Called on task complete
+function archOnTaskDone(pts){
+  if(!archEnabled) return;
+  archDelta('mood', pts*0.4); archDelta('focus', pts*0.15); archDelta('energy', -pts*0.05);
+  archSt.wisdom += pts; archRefreshStats();
+  if(pts >= 50) archSay('task_high_value');
+  else archSay('task_done');
+}
+// Called on list complete
+function archOnListComplete(){ if(!archEnabled) return; archDelta('mood',20); archSay('list_complete'); archSetMode('excited'); setTimeout(()=>archRefreshStats(), 4000); }
+// Called on music start
+function archOnMusicStart(){ if(!archEnabled) return; archSay('music_start'); }
+
+// FAQ system
+function archFAQOpen(){ document.querySelector('[data-tab="companion"]')?.click(); }
+function renderFAQ(){
+  const el = document.getElementById('faqList'); if(!el) return;
+  el.innerHTML = ARCH_FAQ.map((f,i)=>`
+    <button onclick="archAnswerFAQ(${i})" style="text-align:left;padding:var(--space-2) var(--space-3);background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--color-text-muted);cursor:pointer;transition:background var(--trans),color var(--trans);" onmouseover="this.style.background='var(--color-surface-dynamic)'" onmouseout="this.style.background='var(--color-surface-offset)'">
+      ❓ ${f.q}
+    </button>`).join('');
+}
+function archAnswerFAQ(i){
+  const f = ARCH_FAQ[i]; if(!f) return;
+  const wrap = document.getElementById('faqAnswer'), txt = document.getElementById('faqAnswerText');
+  if(!wrap||!txt) return;
+  txt.textContent = `Archibald says: ${f.a}`;
+  wrap.style.display = 'block';
+  // Also show in speech bubble
+  const el = document.getElementById('companionSpeech');
+  if(el){ el.style.opacity='0'; setTimeout(()=>{ el.textContent=f.a; el.style.opacity='1'; },200); }
+  archSetMode('excited');
+}
+
+// Periodic observation tick (every 60s)
+let _archTickCount = 0;
+function archTick(){
+  if(!archEnabled) return;
+  _archTickCount++;
+  const anyRunning = timers.some(t=>t.running);
+  const h = new Date().getHours();
+
+  // Passive stat drift
+  if(anyRunning){ archSt.focus = Math.min(100, archSt.focus+3); archSt.energy = Math.max(0, archSt.energy-2); _archActiveTimerMinutes++; }
+  else { archSt.focus = Math.max(0, archSt.focus-2); archSt.energy = Math.min(100, archSt.energy+1); }
+  archSt.mood = Math.max(0, archSt.mood - 0.5);
+  archRefreshStats();
+
+  // Event-driven quotes — only fire one per tick, most specific wins
+  if(h >= 23 || h < 4){
+    archSay('late_night'); return;
+  }
+  if(archSt.energy < 20){
+    archSay('low_energy'); return;
+  }
+  if(_archActiveTimerMinutes >= 90 && !_archFoodFired){
+    _archFoodFired = true; archSay('food'); return;
+  }
+  if(_archActiveTimerMinutes >= 50 && _archStretchCooldown < _archTickCount - 20){
+    _archStretchCooldown = _archTickCount; archSay('stretch'); return;
+  }
+  if(_archActiveTimerMinutes >= 30 && _archHydrationCooldown < _archTickCount - 25){
+    _archHydrationCooldown = _archTickCount; archSay('hydration'); return;
+  }
+  if(anyRunning && _archActiveTimerMinutes >= 45 && _archActiveTimerMinutes % 15 === 0){
+    archSay('timer_long'); return;
+  }
+  if(!anyRunning && _archTickCount > 3 && _archTickCount % 20 === 0){
+    archSay('all_idle'); return;
+  }
+  // Music nudge (once, early in session)
+  if(anyRunning && !musicState.playing && _archTickCount === 5){
+    archSay('music_off_timer'); return;
+  }
+  // Task pile check
+  const unchecked = lists.flatMap(l=>l.tasks).filter(t=>!t.done).length;
+  if(unchecked >= 10 && _archTickCount % 15 === 0){
+    archSay('tasks_piling'); return;
+  }
+  // Milestone check
+  const milestones = [50,100,250,500,1000];
+  const prevWisdom = archSt.wisdom;
+  if(milestones.some(m=> prevWisdom < m && archSt.wisdom >= m)){
+    archSay('milestone'); return;
+  }
+}
+setInterval(archTick, 60000);
+
+// ── THEMES ────────────────────────────────────────
 // ── THEMES ────────────────────────────────────────
 const THEMES = [
   { id:'parchment', name:'Old Parchment', emoji:'📜',
@@ -1640,13 +2051,26 @@ function selectAmbient(id){
 
 function handleMusicUpload(input){
   const file = input.files[0]; if(!file) return;
+  _addMusicFile(file);
+  input.value = '';
+}
+function _addMusicFile(file){
   const url = URL.createObjectURL(file);
   const id = 'custom_music_' + Date.now();
   const name = file.name.replace(/\.[^.]+$/,'');
   musicState.customTracks.push({id, name, url});
-  document.getElementById('musicUploadName').textContent = file.name;
-  input.value = '';
+  const nm = document.getElementById('musicUploadName');
+  if(nm){ nm.textContent = '🎵 ' + file.name; nm.style.display='block'; }
   selectAmbient(id);
+}
+function musicDragOver(e){ e.preventDefault(); e.stopPropagation(); document.getElementById('musicDropZone').classList.add('drag-over'); }
+function musicDragLeave(e){ document.getElementById('musicDropZone').classList.remove('drag-over'); }
+function musicDrop(e){
+  e.preventDefault(); e.stopPropagation();
+  document.getElementById('musicDropZone').classList.remove('drag-over');
+  const file = Array.from(e.dataTransfer.files).find(f=>f.type.startsWith('audio/'));
+  if(file) _addMusicFile(file);
+  else showToast('Please drop an audio file (MP3, WAV, OGG)','error');
 }
 
 function removeCustomMusic(id){
@@ -1680,7 +2104,7 @@ function startMusic(){
   } else {
     _playAmbient(id);
   }
-  updateMusicUI();
+  archOnMusicStart(); updateMusicUI();
 }
 
 function _playCustomMusicTrack(id){
@@ -1867,6 +2291,9 @@ renderThemes();
 applyThemeVars();
 renderSoundGrid();
 initMusicUI();
+archGreet();
+renderFAQ();
+archSetMode('idle');
 lists.push({id:lidx++,name:'Getting Started',icon:'✨',tasks:[
   {id:tidxc++,text:'Start a timer from the Timers tab',pts:10,done:false,pid:null,note:''},
   {id:tidxc++,text:'Pet Archibald the owl',pts:5,done:false,pid:null,note:''},
@@ -1875,6 +2302,12 @@ lists.push({id:lidx++,name:'Getting Started',icon:'✨',tasks:[
 ]});
 renderLists(); selectList(1);
 </script>
+<!-- Archibald floating popup -->
+<div id="archPopup">
+  <img id="archPopupImg" src="" alt="Archibald">
+  <div id="archPopupBubble"></div>
+</div>
+
 <!-- Floating music mini-player -->
 <div id="musicWidget" class="hidden-widget">
   <div class="mw-bars">
