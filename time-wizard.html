@@ -213,6 +213,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--color-primary);box-sh
 .theme-footer{padding:var(--space-3) var(--space-4);font-size:var(--text-sm);font-weight:600;display:flex;justify-content:space-between;align-items:center;}
 
 
+
+/* TIMER EDIT PANEL */
+.timer-edit-panel{display:none;margin-top:var(--space-3);padding-top:var(--space-3);border-top:1px solid var(--color-divider);}
+.timer-edit-panel.open{display:block;}
+.time-slider-wrap{display:flex;flex-direction:column;gap:var(--space-1);margin-bottom:var(--space-3);}
+.time-slider{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:var(--radius-full);background:var(--color-surface-dynamic);outline:none;cursor:pointer;}
+.time-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--color-primary);cursor:pointer;border:2px solid var(--color-surface);box-shadow:var(--shadow-sm);}
+.time-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--color-primary);cursor:pointer;border:2px solid var(--color-surface);}
+.time-slider-labels{display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-faint);}
+.adj-btns{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-3);}
+.adj-btn{padding:2px var(--space-3);border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:600;background:var(--color-surface-offset);border:1px solid var(--color-border);cursor:pointer;transition:background var(--trans),border-color var(--trans);}
+.adj-btn:hover{background:var(--color-primary-highlight);border-color:var(--color-primary);color:var(--color-primary);}
+.edit-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);}
+
 /* SOUND PREVIEW */
 .snd-btn{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:var(--text-xs);font-weight:500;width:100%;text-align:left;transition:background var(--trans),border-color var(--trans);}
 .snd-btn:hover{background:var(--color-surface-dynamic);border-color:var(--color-primary);}
@@ -618,6 +632,40 @@ function timerDone(t){
 function toggleTimer(id){ const t=timers.find(x=>x.id===id); if(!t||t.done) return; t.running=!t.running; renderTimers(); }
 function resetTimer(id){ const t=timers.find(x=>x.id===id); if(!t) return; t.running=false;t.done=false;t.rem=t.orig;t.tot=t.orig;t.reps=0; renderTimers(); }
 function deleteTimer(id){ timers=timers.filter(x=>x.id!==id); renderTimers(); }
+function toggleEditPanel(id){
+  const t=timers.find(x=>x.id===id); if(!t) return;
+  t.editOpen=!t.editOpen; renderTimers();
+}
+function liveAdjustTimer(id, val){
+  const t=timers.find(x=>x.id===id); if(!t||t.done) return;
+  t.rem=parseInt(val);
+  const lbl=document.getElementById('sliderLabel_'+id);
+  if(lbl) lbl.textContent=fmt(t.rem);
+  const disp=document.querySelector('#titem_'+id+' .timer-display');
+  if(disp) disp.textContent=fmt(t.rem);
+  const pct=t.tot>0?Math.max(0,Math.min(100,100-(t.rem/t.tot)*100)):100;
+  const bar=document.querySelector('#titem_'+id+' .timer-progress-fill');
+  if(bar) bar.style.width=pct+'%';
+}
+function nudgeTimer(id, delta){
+  const t=timers.find(x=>x.id===id); if(!t||t.done) return;
+  t.rem=Math.max(0,Math.min(t.tot,t.rem+delta));
+  renderTimers();
+}
+function saveTimerEdit(id){
+  const t=timers.find(x=>x.id===id); if(!t) return;
+  const durInput=document.getElementById('eDur_'+id);
+  const sndInput=document.getElementById('eSnd_'+id);
+  if(durInput){
+    const newDur=Math.max(1,parseInt(durInput.value)||1)*60;
+    t.orig=newDur; t.tot=newDur;
+    if(!t.running) t.rem=newDur;
+  }
+  if(sndInput) t.sound=sndInput.value;
+  t.editOpen=false;
+  renderTimers(); showToast('Timer updated!');
+}
+
 function fmt(s){ const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`:`${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
 const repLabels={once:'Once',fixed:'Repeating','increase':'↑ Increasing','decrease':'↓ Decreasing',custom:'Custom Seq',fibonacci:'Fibonacci',random:'Random'};
 const sndEmoji={bell:'🔔',viola:'🎻',harp:'🎵',chime:'🎶',drum:'🥁',whistle:'🎷',none:'🔇'};
@@ -627,10 +675,15 @@ function renderTimers(){
   el.innerHTML=timers.map(t=>{
     const pct=t.tot>0?Math.max(0,Math.min(100,100-(t.rem/t.tot)*100)):100;
     const cls=t.done?'done':t.running?'running':'';
-    return `<div class="timer-item ${cls}">
+    const editOpen=t.editOpen?'open':'';
+    // Build sound options for edit panel
+    const builtinOpts=Object.entries(sndEmoji).map(([v,e])=>`<option value="${v}" ${t.sound===v?'selected':''}>${e} ${v}</option>`).join('');
+    const customOpts=customSounds.map(cs=>`<option value="${cs.id}" ${t.sound===cs.id?'selected':''}>🎧 ${cs.name}</option>`).join('');
+    return `<div class="timer-item ${cls}" id="titem_${t.id}">
       <div class="timer-header">
         <input class="timer-name-input" value="${t.name.replace(/"/g,'&quot;')}" onchange="timers.find(x=>x.id==${t.id}).name=this.value">
         <div class="timer-controls">
+          <button class="btn btn-icon btn-ghost" onclick="toggleEditPanel(${t.id})" title="Edit"><i data-lucide="${t.editOpen?'chevron-up':'settings-2'}" style="width:13px;height:13px;"></i></button>
           <button class="btn btn-icon btn-ghost" onclick="resetTimer(${t.id})" title="Reset"><i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i></button>
           <button class="btn btn-icon btn-danger" onclick="deleteTimer(${t.id})" title="Delete"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>
         </div>
@@ -638,7 +691,7 @@ function renderTimers(){
       <div class="timer-display ${cls}">${t.done?'✓ Complete':fmt(t.rem)}</div>
       <div class="timer-progress"><div class="timer-progress-fill" style="width:${pct}%"></div></div>
       <div class="timer-meta">
-        <span class="badge">${sndEmoji[t.sound]||'🔔'} ${t.sound}</span>
+        <span class="badge">${sndEmoji[t.sound]||'🎧'} ${customSounds.find(c=>c.id===t.sound)?.name||t.sound}</span>
         <span class="badge accent">${repLabels[t.rep.mode]||t.rep.mode}</span>
         ${t.reps>0?`<span class="badge gold">×${t.reps}</span>`:''}
       </div>
@@ -647,6 +700,34 @@ function renderTimers(){
           <i data-lucide="${t.running?'pause':'play'}" style="width:13px;height:13px;"></i>
           ${t.running?'Pause':t.done?'Done':'Start'}
         </button>
+      </div>
+      <!-- EDIT PANEL -->
+      <div class="timer-edit-panel ${editOpen}" id="tedit_${t.id}">
+        <span class="section-label">Adjust remaining time</span>
+        <div class="time-slider-wrap">
+          <input type="range" class="time-slider" min="0" max="${t.tot}" value="${t.rem}"
+            oninput="liveAdjustTimer(${t.id},this.value)" onchange="liveAdjustTimer(${t.id},this.value)"
+            ${t.done?'disabled':''}>
+          <div class="time-slider-labels"><span>0:00</span><span id="sliderLabel_${t.id}">${fmt(t.rem)}</span><span>${fmt(t.tot)}</span></div>
+        </div>
+        <div class="adj-btns">
+          <button class="adj-btn" onclick="nudgeTimer(${t.id},-300)">−5 min</button>
+          <button class="adj-btn" onclick="nudgeTimer(${t.id},-60)">−1 min</button>
+          <button class="adj-btn" onclick="nudgeTimer(${t.id},60)">+1 min</button>
+          <button class="adj-btn" onclick="nudgeTimer(${t.id},300)">+5 min</button>
+          <button class="adj-btn" onclick="nudgeTimer(${t.id},600)">+10 min</button>
+        </div>
+        <span class="section-label">Edit settings</span>
+        <div class="edit-form-grid">
+          <div class="form-group"><label>Duration (min)</label>
+            <input type="number" id="eDur_${t.id}" value="${Math.round(t.orig/60)}" min="1"></div>
+          <div class="form-group"><label>Sound</label>
+            <select id="eSnd_${t.id}">${builtinOpts}${customOpts}</select></div>
+        </div>
+        <div style="display:flex;gap:var(--space-2);margin-top:var(--space-3);">
+          <button class="btn btn-primary btn-sm" onclick="saveTimerEdit(${t.id})"><i data-lucide="save" style="width:12px;height:12px;"></i> Save</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleEditPanel(${t.id})">Cancel</button>
+        </div>
       </div>
     </div>`;
   }).join('');
