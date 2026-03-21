@@ -307,6 +307,31 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; padding-
 .timer-progress { position: relative; }
 .timer-orig-marker { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--color-primary); opacity: 0.5; border-radius: var(--radius-full); pointer-events: none; }
 
+
+/* MUSIC VISUALIZER */
+.viz-bar{width:4px;border-radius:var(--radius-full);background:var(--color-accent);transform-origin:bottom;animation:none;transition:height .1s ease;}
+.viz-bar.active{animation:vizBounce calc(0.4s + var(--i) * 0.07s) ease-in-out infinite alternate;}
+@keyframes vizBounce{from{height:4px;}to{height:28px;}}
+/* AMBIENT TRACK ROW */
+.ambient-row{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-surface-offset);cursor:pointer;transition:background var(--trans),border-color var(--trans);}
+.ambient-row:hover{background:var(--color-surface-dynamic);border-color:var(--color-primary);}
+.ambient-row.selected{background:var(--color-primary-highlight);border-color:var(--color-primary);}
+.ambient-row .amb-icon{font-size:20px;flex-shrink:0;}
+.ambient-row .amb-info{flex:1;min-width:0;}
+.ambient-row .amb-name{font-size:var(--text-sm);font-weight:600;}
+.ambient-row .amb-desc{font-size:var(--text-xs);color:var(--color-text-muted);}
+
+
+/* FLOATING MUSIC WIDGET */
+#musicWidget{position:fixed;bottom:var(--space-5);right:var(--space-5);z-index:200;display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);font-size:var(--text-xs);transition:opacity .2s,transform .2s;}
+#musicWidget.hidden-widget{opacity:0;pointer-events:none;transform:translateY(8px);}
+#musicWidget .mw-bars{display:flex;align-items:flex-end;gap:2px;height:16px;}
+#musicWidget .mw-bar{width:3px;border-radius:var(--radius-full);background:var(--color-primary);animation:none;}
+#musicWidget .mw-bar.active{animation:vizBounce calc(0.4s + var(--i)*0.07s) ease-in-out infinite alternate;}
+#musicWidget .mw-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-muted);}
+#musicWidget .mw-vol{display:flex;align-items:center;gap:var(--space-1);}
+#musicWidget input[type=range]{width:64px;height:4px;accent-color:var(--color-primary);}
+
 </style>
 </head>
 <body>
@@ -337,6 +362,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; padding-
   <button class="tab-btn" role="tab" data-tab="checklist"><i data-lucide="check-square" style="width:14px;height:14px;"></i> Checklists</button>
   <button class="tab-btn" role="tab" data-tab="companion"><i data-lucide="sparkles" style="width:14px;height:14px;"></i> Companion</button>
   <button class="tab-btn" role="tab" data-tab="themes"><i data-lucide="palette" style="width:14px;height:14px;"></i> Themes</button>
+  <button class="tab-btn" role="tab" data-tab="music"><i data-lucide="music" style="width:14px;height:14px;"></i> Music</button>
 </nav>
 
 <main>
@@ -503,6 +529,121 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; padding-
   <div class="themes-grid" id="themesGrid"></div>
 </section>
 
+<!-- MUSIC PANEL -->
+<section class="tab-panel" id="panel-music">
+  <div style="max-width:640px;">
+    <h2 class="card-title" style="margin-bottom:var(--space-2);">Focus Music</h2>
+    <p class="text-muted text-sm" style="margin-bottom:var(--space-5);">Plays looped ambient sound while any timer is running. Fades out when an alarm fires, then resumes.</p>
+
+    <!-- NOW PLAYING -->
+    <div class="card" style="margin-bottom:var(--space-4);">
+      <div style="display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap;">
+        <div id="musicVisualizer" style="display:flex;align-items:flex-end;gap:3px;height:32px;flex-shrink:0;">
+          <div class="viz-bar" style="--i:0"></div><div class="viz-bar" style="--i:1"></div>
+          <div class="viz-bar" style="--i:2"></div><div class="viz-bar" style="--i:3"></div>
+          <div class="viz-bar" style="--i:4"></div>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div id="musicNowPlaying" style="font-size:var(--text-sm);font-weight:600;color:var(--color-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Not playing</div>
+          <div id="musicStatus" style="font-size:var(--text-xs);color:var(--color-text-muted);">Select a track and press Play</div>
+        </div>
+        <div style="display:flex;gap:var(--space-2);align-items:center;">
+          <button class="btn btn-primary" id="musicPlayBtn" onclick="toggleMusic()">
+            <i data-lucide="play" style="width:13px;height:13px;"></i> Play
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="stopMusic()" title="Stop">
+            <i data-lucide="square" style="width:13px;height:13px;"></i>
+          </button>
+        </div>
+      </div>
+      <!-- Master volume -->
+      <div style="margin-top:var(--space-4);display:flex;flex-direction:column;gap:var(--space-1);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="section-label" style="margin-bottom:0;">Music volume</span>
+          <span id="musicVolLabel" style="font-size:var(--text-xs);color:var(--color-text-muted);">60%</span>
+        </div>
+        <input type="range" class="time-slider" id="musicVolSlider" min="0" max="100" value="60" oninput="setMusicVol(this.value)">
+      </div>
+    </div>
+
+    <!-- ALARM VOLUME -->
+    <div class="card" style="margin-bottom:var(--space-4);">
+      <div style="display:flex;flex-direction:column;gap:var(--space-1);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="section-label" style="margin-bottom:0;">Alarm volume</span>
+          <span id="alarmVolLabel" style="font-size:var(--text-xs);color:var(--color-text-muted);">80%</span>
+        </div>
+        <input type="range" class="time-slider" id="alarmVolSlider" min="0" max="100" value="80" oninput="setAlarmVol(this.value)">
+      </div>
+    </div>
+
+    <!-- BUILT-IN AMBIENTS -->
+    <div class="card" style="margin-bottom:var(--space-4);">
+      <div class="card-title" style="font-size:var(--text-base);margin-bottom:var(--space-3);">Built-in Ambients</div>
+      <div id="ambientGrid" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
+    </div>
+
+    <!-- CUSTOM MUSIC UPLOAD -->
+    <div class="card" style="margin-bottom:var(--space-4);">
+      <div class="card-title" style="font-size:var(--text-base);margin-bottom:var(--space-1);">Custom Track</div>
+      <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);">Upload an MP3, WAV, or OGG. It will loop automatically.</p>
+      <div style="display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('musicUpload').click()">
+          <i data-lucide="upload" style="width:12px;height:12px;"></i> Choose file
+        </button>
+        <span id="musicUploadName" style="font-size:var(--text-xs);color:var(--color-text-muted);">No file chosen</span>
+        <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,audio/*" style="display:none;" onchange="handleMusicUpload(this)">
+      </div>
+      <div id="customMusicList" style="margin-top:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2);"></div>
+      <!-- Progress bar for playing custom track -->
+      <div id="customTrackProgress" style="display:none;margin-top:var(--space-3);">
+        <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-1);">
+          <span id="ctpElapsed">0:00</span>
+          <span id="ctpTotal">—</span>
+        </div>
+        <div style="height:3px;background:var(--color-surface-dynamic);border-radius:var(--radius-full);overflow:hidden;">
+          <div id="ctpBar" style="height:100%;width:0%;background:var(--color-primary);border-radius:var(--radius-full);transition:width .5s linear;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FIND SOUNDS HINT -->
+    <div class="card" style="background:var(--color-surface-offset);border-style:dashed;">
+      <div style="font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint);margin-bottom:var(--space-3);">🔍 Find sounds online</div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
+          <span style="font-size:15px;">🌐</span>
+          <div>
+            <a href="https://freesound.org" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">freesound.org</a>
+            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Huge Creative Commons library — search "rain loop", "brown noise", "forest ambience"</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
+          <span style="font-size:15px;">🎵</span>
+          <div>
+            <a href="https://pixabay.com/music/" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">pixabay.com/music</a>
+            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Royalty-free, no attribution needed — good lofi & ambient section</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
+          <span style="font-size:15px;">🎹</span>
+          <div>
+            <a href="https://musicforprogramming.net" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">musicforprogramming.net</a>
+            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Curated focus music — downloadable MP3s, free to use personally</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
+          <span style="font-size:15px;">🤖</span>
+          <div>
+            <a href="https://suno.com" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">suno.com</a>
+            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">AI-generated music — free tier for personal use, Pro tier grants broader rights</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 </main>
 
 <!-- Confirm Modal -->
@@ -574,13 +715,36 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 // ── AUDIO ENGINE ──────────────────────────────────
+// ── AUDIO ENGINE ──────────────────────────────────
 let _actx = null;
-function actx(){ if(!_actx) _actx = new (window.AudioContext||window.webkitAudioContext)(); return _actx; }
+function actx(){ if(!_actx){ _actx = new (window.AudioContext||window.webkitAudioContext)(); _initGains(); } return _actx; }
+
+let _alarmGain = null, _musicGain = null;
+let _alarmVol = 0.8, _musicVol = 0.6;
+function _initGains(){
+  _alarmGain = _actx.createGain(); _alarmGain.gain.value = _alarmVol; _alarmGain.connect(_actx.destination);
+  _musicGain = _actx.createGain(); _musicGain.gain.value = _musicVol; _musicGain.connect(_actx.destination);
+}
+function alarmDest(){ actx(); return _alarmGain||_actx.destination; }
+function musicDest(){ actx(); return _musicGain||_actx.destination; }
+function setAlarmVol(v){
+  _alarmVol=v/100;
+  document.getElementById('alarmVolLabel').textContent=v+'%';
+  if(_alarmGain) _alarmGain.gain.setTargetAtTime(_alarmVol, actx().currentTime, 0.05);
+}
+function setMusicVol(v){
+  _musicVol=v/100;
+  const lbl=document.getElementById('musicVolLabel'); if(lbl) lbl.textContent=v+'%';
+  const mwSlider=document.getElementById('mwVolSlider'); if(mwSlider) mwSlider.value=v;
+  const mainSlider=document.getElementById('musicVolSlider'); if(mainSlider) mainSlider.value=v;
+  if(_musicGain) _musicGain.gain.setTargetAtTime(_musicVol, actx().currentTime, 0.05);
+}
+
 function oscEnv(f,t,sg,eg,st,dur){
   const o = actx().createOscillator(), g = actx().createGain();
   o.type=t; o.frequency.value=f;
   g.gain.setValueAtTime(sg,st); g.gain.exponentialRampToValueAtTime(eg,st+dur);
-  o.connect(g); g.connect(actx().destination); o.start(st); o.stop(st+dur+0.05);
+  o.connect(g); g.connect(alarmDest()); o.start(st); o.stop(st+dur+0.05);
 }
 function playSound(type){
   if(type==='none') return;
@@ -593,7 +757,7 @@ function playSound(type){
         o.type='sawtooth';o.frequency.value=f;flt.type='lowpass';flt.frequency.value=700;
         g.gain.setValueAtTime(0,n+d);g.gain.linearRampToValueAtTime(.1,n+d+.05);
         g.gain.exponentialRampToValueAtTime(.001,n+d+.38);
-        o.connect(flt);flt.connect(g);g.connect(actx().destination);o.start(n+d);o.stop(n+d+.4);
+        o.connect(flt);flt.connect(g);g.connect(alarmDest());o.start(n+d);o.stop(n+d+.4);
       });
     } else if(type==='harp'){ [523.25,659.25,783.99,1046.5,783.99,659.25].forEach((f,i)=>oscEnv(f,'triangle',.18,.001,n+i*.18,.6)); }
     else if(type==='chime'){ [1046.5,1318.5,1568,2093].forEach((f,i)=>oscEnv(f,'sine',.14,.001,n+i*.12,.5)); }
@@ -602,14 +766,14 @@ function playSound(type){
       const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,6);
       const s=actx().createBufferSource(),g=actx().createGain(),f=actx().createBiquadFilter();
       f.type='lowpass';f.frequency.value=180;s.buffer=buf;g.gain.value=.8;
-      s.connect(f);f.connect(g);g.connect(actx().destination);s.start(n);
+      s.connect(f);f.connect(g);g.connect(alarmDest());s.start(n);
       oscEnv(60,'sine',.5,.001,n,.5);
     } else if(type==='whistle'){
       const o=actx().createOscillator(),g=actx().createGain();
       o.type='sine';o.frequency.setValueAtTime(880,n);o.frequency.linearRampToValueAtTime(1100,n+.3);
       o.frequency.linearRampToValueAtTime(880,n+.6);
       g.gain.setValueAtTime(.13,n);g.gain.exponentialRampToValueAtTime(.001,n+.7);
-      o.connect(g);g.connect(actx().destination);o.start(n);o.stop(n+.75);
+      o.connect(g);g.connect(alarmDest());o.start(n);o.stop(n+.75);
     }
   } catch(e){}
 }
@@ -714,7 +878,7 @@ function tickFn(){
   });
 }
 function timerDone(t){
-  playSound(t.sound); t.reps++;
+  playSound(t.sound); duckMusicForAlarm(3000); t.reps++;
   updateOwlFocus(10);
   showToast(`⏰ "${t.name}" done! (×${t.reps})`,'success');
   const r=t.rep;
@@ -1418,11 +1582,291 @@ window.playSound = function(type){
 };
 
 
+// ── MUSIC ENGINE ─────────────────────────────────
+const AMBIENTS = [
+  { id:'brown_noise',  emoji:'🌊', name:'Deep Waterfall',   desc:'Brown noise — deep low-frequency rumble, like standing near a waterfall' },
+  { id:'rain',         emoji:'⚡', name:'Static Interference', desc:'High-frequency buzzing noise — irritating by design, good for fighting drowsiness' },
+  { id:'drone',        emoji:'🎵', name:'Slow Drone Pad',   desc:'Meditative evolving tone cluster — A minor chord with gentle vibrato' },
+  { id:'fireplace',    emoji:'🌊', name:'Ocean Waves',      desc:'Rolling wave noise with low warmth — pink-noise surf texture' },
+];
+let musicState = {
+  playing: false,
+  selectedId: null,    // ambient id or 'custom_XXX'
+  nodes: [],           // active oscillators/sources to stop
+  fadeGain: null,      // gain node for fade in/out
+  customTracks: [],    // {id, name, url}
+  alarmFading: false,
+};
+
+function renderAmbientGrid(){
+  const el = document.getElementById('ambientGrid'); if(!el) return;
+  el.innerHTML = AMBIENTS.map(a => `
+    <div class="ambient-row ${musicState.selectedId===a.id?'selected':''}" onclick="selectAmbient('${a.id}')">
+      <span class="amb-icon">${a.emoji}</span>
+      <div class="amb-info">
+        <div class="amb-name">${a.name}</div>
+        <div class="amb-desc">${a.desc}</div>
+      </div>
+      ${musicState.selectedId===a.id?'<span style="width:8px;height:8px;border-radius:50%;background:var(--color-primary);flex-shrink:0;"></span>':''}
+    </div>`).join('');
+  renderCustomMusicList();
+  lucide.createIcons();
+}
+
+function renderCustomMusicList(){
+  const el = document.getElementById('customMusicList'); if(!el) return;
+  if(!musicState.customTracks.length){ el.innerHTML=''; return; }
+  el.innerHTML = musicState.customTracks.map(t => `
+    <div class="ambient-row ${musicState.selectedId===t.id?'selected':''}" onclick="selectAmbient('${t.id}')">
+      <span class="amb-icon">🎧</span>
+      <div class="amb-info">
+        <div class="amb-name">${t.name}</div>
+        <div class="amb-desc">Custom track · loops</div>
+      </div>
+      <button class="btn btn-icon btn-danger btn-sm" onclick="event.stopPropagation();removeCustomMusic('${t.id}')" title="Remove" style="flex-shrink:0;"><i data-lucide="x" style="width:11px;height:11px;"></i></button>
+      ${musicState.selectedId===t.id?'<span style="width:8px;height:8px;border-radius:50%;background:var(--color-primary);flex-shrink:0;"></span>':''}
+    </div>`).join('');
+  lucide.createIcons();
+}
+
+function selectAmbient(id){
+  const wasPlaying = musicState.playing;
+  if(wasPlaying) stopMusic(true); // silent stop, will restart
+  musicState.selectedId = id;
+  renderAmbientGrid();
+  if(wasPlaying) startMusic();
+  else updateMusicUI();
+}
+
+function handleMusicUpload(input){
+  const file = input.files[0]; if(!file) return;
+  const url = URL.createObjectURL(file);
+  const id = 'custom_music_' + Date.now();
+  const name = file.name.replace(/\.[^.]+$/,'');
+  musicState.customTracks.push({id, name, url});
+  document.getElementById('musicUploadName').textContent = file.name;
+  input.value = '';
+  selectAmbient(id);
+}
+
+function removeCustomMusic(id){
+  const t = musicState.customTracks.find(x=>x.id===id);
+  if(t) URL.revokeObjectURL(t.url);
+  musicState.customTracks = musicState.customTracks.filter(x=>x.id!==id);
+  if(musicState.selectedId===id){ stopMusic(); musicState.selectedId=null; }
+  renderAmbientGrid();
+}
+
+function toggleMusic(){
+  if(musicState.playing) stopMusic();
+  else startMusic();
+}
+
+function startMusic(){
+  if(!musicState.selectedId){ showToast('Select a track first.','error'); return; }
+  actx(); // ensure context + gains exist
+  if(actx().state==='suspended') actx().resume();
+  stopMusic(true); // clear any existing nodes
+
+  musicState.playing = true;
+  musicState.fadeGain = actx().createGain();
+  musicState.fadeGain.gain.setValueAtTime(0, actx().currentTime);
+  musicState.fadeGain.gain.linearRampToValueAtTime(1, actx().currentTime + 2);
+  musicState.fadeGain.connect(musicDest());
+
+  const id = musicState.selectedId;
+  if(id.startsWith('custom_music_')){
+    _playCustomMusicTrack(id);
+  } else {
+    _playAmbient(id);
+  }
+  updateMusicUI();
+}
+
+function _playCustomMusicTrack(id){
+  const t = musicState.customTracks.find(x=>x.id===id); if(!t) return;
+  const audio = new Audio(t.url);
+  audio.loop = true;
+  const src = actx().createMediaElementSource(audio);
+  src.connect(musicState.fadeGain);
+  // Progress bar
+  const progWrap = document.getElementById('customTrackProgress');
+  const bar = document.getElementById('ctpBar');
+  const elapsed = document.getElementById('ctpElapsed');
+  const total = document.getElementById('ctpTotal');
+  audio.addEventListener('loadedmetadata', ()=>{
+    if(total && isFinite(audio.duration)) total.textContent = fmt(Math.round(audio.duration));
+    if(progWrap) progWrap.style.display = 'block';
+  });
+  audio.addEventListener('timeupdate', ()=>{
+    if(!isFinite(audio.duration)) return;
+    const pct = (audio.currentTime/audio.duration)*100;
+    if(bar) bar.style.width = pct+'%';
+    if(elapsed) elapsed.textContent = fmt(Math.round(audio.currentTime));
+  });
+  audio.play().catch(()=>{});
+  musicState.nodes = [{type:'audio', el:audio, src}];
+}
+
+function _stopNodes(){
+  musicState.nodes.forEach(n=>{
+    try{
+      if(n.type==='osc'){ n.osc.stop(); }
+      else if(n.type==='src'){ n.node.stop(); }
+      else if(n.type==='audio'){ n.el.pause(); n.el.src=''; try{ n.src.disconnect(); }catch(e){} }
+    } catch(e){}
+  });
+  musicState.nodes = [];
+  const progWrap = document.getElementById('customTrackProgress');
+  if(progWrap) progWrap.style.display='none';
+}
+
+function stopMusic(silent){
+  if(!musicState.playing && !silent) return;
+  if(musicState.fadeGain && !silent){
+    const now = actx().currentTime;
+    musicState.fadeGain.gain.setTargetAtTime(0, now, 0.5);
+    setTimeout(()=>{ _stopNodes(); try{ musicState.fadeGain.disconnect(); }catch(e){} musicState.fadeGain=null; }, 1500);
+  } else {
+    _stopNodes();
+    if(musicState.fadeGain){ try{ musicState.fadeGain.disconnect(); }catch(e){} musicState.fadeGain=null; }
+  }
+  musicState.playing = false;
+  updateMusicUI();
+}
+
+// Called when alarm fires — duck music, then restore
+function duckMusicForAlarm(duration){
+  if(!musicState.playing || !musicState.fadeGain) return;
+  const now = actx().currentTime;
+  musicState.fadeGain.gain.setTargetAtTime(0.05, now, 0.2);
+  setTimeout(()=>{
+    if(musicState.playing && musicState.fadeGain)
+      musicState.fadeGain.gain.setTargetAtTime(1, actx().currentTime, 0.8);
+  }, duration + 500);
+}
+
+function updateMusicUI(){
+  const btn = document.getElementById('musicPlayBtn');
+  const nowPlaying = document.getElementById('musicNowPlaying');
+  const status = document.getElementById('musicStatus');
+  const bars = document.querySelectorAll('.viz-bar');
+  const widget = document.getElementById('musicWidget');
+  const mwName = document.getElementById('mwName');
+  const mwBtn = document.getElementById('mwPlayBtn');
+  const mwBars = document.querySelectorAll('.mw-bar');
+  const sel = AMBIENTS.find(a=>a.id===musicState.selectedId) ||
+              musicState.customTracks.find(t=>t.id===musicState.selectedId);
+  const selName = sel ? ((sel.emoji||'🎧')+' '+sel.name) : '—';
+  if(!btn) return;
+  if(musicState.playing){
+    btn.innerHTML = '<i data-lucide="pause" style="width:13px;height:13px;"></i> Pause';
+    if(sel) nowPlaying.textContent = selName;
+    status.textContent = 'Playing · loops continuously';
+    bars.forEach(b=>b.classList.add('active'));
+    // widget
+    if(widget){ widget.classList.remove('hidden-widget'); }
+    if(mwName) mwName.textContent = sel ? sel.name : '—';
+    if(mwBtn) mwBtn.innerHTML = '<i data-lucide="pause" style="width:14px;height:14px;"></i>';
+    mwBars.forEach(b=>b.classList.add('active'));
+  } else {
+    btn.innerHTML = '<i data-lucide="play" style="width:13px;height:13px;"></i> Play';
+    nowPlaying.textContent = musicState.selectedId ? selName.replace(/^[^ ]+ /,'') + ' (paused)' : 'Not playing';
+    status.textContent = musicState.selectedId ? 'Paused — press Play to resume' : 'Select a track and press Play';
+    bars.forEach(b=>b.classList.remove('active'));
+    // widget
+    if(widget){ widget.classList.add('hidden-widget'); }
+    if(mwBtn) mwBtn.innerHTML = '<i data-lucide="play" style="width:14px;height:14px;"></i>';
+    mwBars.forEach(b=>b.classList.remove('active'));
+  }
+  lucide.createIcons();
+}
+
+// ── AMBIENT GENERATORS ────────────────────────────
+function _playAmbient(id){
+  const ctx = actx(), dest = musicState.fadeGain, nodes = [];
+  const sr = ctx.sampleRate;
+
+  if(id==='brown_noise'){
+    // Brown noise: Voss-McCartney algorithm, lowpass filtered — deep waterfall character
+    const bufSec = 6, buf = ctx.createBuffer(1, bufSec*sr, sr);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    for(let i=0;i<d.length;i++){ last = (last + 0.02*(Math.random()*2-1)) / 1.02; d[i]=last*10; }
+    const s = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+    f.type='lowpass'; f.frequency.value=300; f.Q.value=0.5;
+    s.buffer=buf; s.loop=true; g.gain.value=0.35;
+    s.connect(f); f.connect(g); g.connect(dest); s.start();
+    nodes.push({type:'src',node:s});
+    musicState.nodes = nodes;
+
+  } else if(id==='rain'){
+    // Static interference: raw high-frequency white noise — intentionally harsh
+    const bufSec=2, buf=ctx.createBuffer(1,bufSec*sr,sr);
+    const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    const s=ctx.createBufferSource(), hp=ctx.createBiquadFilter(), g=ctx.createGain();
+    hp.type='highpass'; hp.frequency.value=5000; g.gain.value=0.22;
+    s.buffer=buf; s.loop=true;
+    s.connect(hp); hp.connect(g); g.connect(dest); s.start();
+    // Add mid-range buzz for extra irritation
+    const osc=ctx.createOscillator(), og=ctx.createGain();
+    osc.type='square'; osc.frequency.value=180; og.gain.value=0.03;
+    osc.connect(og); og.connect(dest); osc.start();
+    nodes.push({type:'src',node:s},{type:'osc',osc});
+    musicState.nodes = nodes;
+
+  } else if(id==='drone'){
+    // Slow evolving A minor chord: A2+E3+A3+C4 with gentle per-voice LFO vibrato
+    [[110,0.09],[164.81,0.07],[220,0.06],[261.63,0.05]].forEach(([freq,vol],i)=>{
+      const o=ctx.createOscillator(), g=ctx.createGain(), f=ctx.createBiquadFilter();
+      o.type='sine'; o.frequency.value=freq;
+      const lfo=ctx.createOscillator(), lg=ctx.createGain();
+      lfo.type='sine'; lfo.frequency.value=0.08+i*0.03; lg.gain.value=freq*0.004;
+      lfo.connect(lg); lg.connect(o.frequency);
+      f.type='lowpass'; f.frequency.value=1200;
+      g.gain.value=vol; o.connect(f); f.connect(g); g.connect(dest);
+      o.start(); lfo.start();
+      nodes.push({type:'osc',osc:o},{type:'osc',osc:lfo});
+    });
+    musicState.nodes = nodes;
+
+  } else if(id==='fireplace'){
+    // Ocean waves: pink noise with slow wave-swell LFO modulation
+    const bufSec=4, buf=ctx.createBuffer(1,bufSec*sr,sr);
+    const d=buf.getChannelData(0);
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for(let i=0;i<d.length;i++){
+      const wh=Math.random()*2-1;
+      b0=0.99886*b0+wh*0.0555179; b1=0.99332*b1+wh*0.0750759;
+      b2=0.96900*b2+wh*0.1538520; b3=0.86650*b3+wh*0.3104856;
+      b4=0.55000*b4+wh*0.5329522; b5=-0.7616*b5-wh*0.0168980;
+      d[i]=(b0+b1+b2+b3+b4+b5+b6+wh*0.5362)*0.04; b6=wh*0.115926;
+    }
+    const s=ctx.createBufferSource(), g=ctx.createGain(), lp=ctx.createBiquadFilter();
+    lp.type='lowpass'; lp.frequency.value=900; g.gain.value=0.6;
+    s.buffer=buf; s.loop=true; s.connect(lp); lp.connect(g); g.connect(dest); s.start();
+    // Slow wave swell LFO on gain
+    const lfo=ctx.createOscillator(), lg=ctx.createGain();
+    lfo.type='sine'; lfo.frequency.value=0.12; lg.gain.value=0.25;
+    lfo.connect(lg); lg.connect(g.gain); lfo.start();
+    nodes.push({type:'src',node:s},{type:'osc',osc:lfo});
+    musicState.nodes = nodes;
+  }
+}
+
+// ── INIT MUSIC UI ─────────────────────────────────
+function initMusicUI(){
+  renderAmbientGrid();
+  musicState.selectedId = 'brown_noise'; // default selection
+  renderAmbientGrid();
+}
+
 // ── INIT ──────────────────────────────────────────
 lucide.createIcons();
 renderThemes();
 applyThemeVars();
 renderSoundGrid();
+initMusicUI();
 lists.push({id:lidx++,name:'Getting Started',icon:'✨',tasks:[
   {id:tidxc++,text:'Start a timer from the Timers tab',pts:10,done:false,pid:null,note:''},
   {id:tidxc++,text:'Pet Archibald the owl',pts:5,done:false,pid:null,note:''},
@@ -1431,5 +1875,26 @@ lists.push({id:lidx++,name:'Getting Started',icon:'✨',tasks:[
 ]});
 renderLists(); selectList(1);
 </script>
+<!-- Floating music mini-player -->
+<div id="musicWidget" class="hidden-widget">
+  <div class="mw-bars">
+    <div class="mw-bar" style="--i:0"></div>
+    <div class="mw-bar" style="--i:1"></div>
+    <div class="mw-bar" style="--i:2"></div>
+    <div class="mw-bar" style="--i:3"></div>
+  </div>
+  <span class="mw-name" id="mwName">—</span>
+  <button class="btn btn-icon btn-ghost" style="padding:2px;" onclick="toggleMusic()" id="mwPlayBtn" title="Play/Pause">
+    <i data-lucide="play" style="width:14px;height:14px;"></i>
+  </button>
+  <div class="mw-vol" title="Music volume">
+    <i data-lucide="volume-1" style="width:12px;height:12px;color:var(--color-text-faint);"></i>
+    <input type="range" min="0" max="100" value="60" id="mwVolSlider"
+      oninput="setMusicVol(this.value);document.getElementById('musicVolSlider').value=this.value;">
+  </div>
+  <button class="btn btn-icon btn-ghost" style="padding:2px;" onclick="stopMusic()" title="Stop">
+    <i data-lucide="square" style="width:12px;height:12px;"></i>
+  </button>
+</div>
 </body>
 </html>
