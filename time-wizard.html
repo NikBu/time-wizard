@@ -172,7 +172,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--color-primary);box-sh
 .task-check:hover{border-color:var(--color-primary);}
 .task-item.done .task-check{background:var(--color-accent);border-color:var(--color-accent);color:#fff;}
 .task-body{flex:1;min-width:0;}
-.task-text{font-size:var(--text-sm);line-height:1.5;}
+/* task-text handled below */
 .task-points{display:inline-flex;align-items:center;gap:3px;font-size:var(--text-xs);color:var(--color-gold);font-weight:600;margin-left:var(--space-2);}
 .task-actions{display:flex;gap:var(--space-1);opacity:0;transition:opacity var(--trans);}
 .task-item:hover .task-actions{opacity:1;}
@@ -255,6 +255,58 @@ input:focus,select:focus,textarea:focus{border-color:var(--color-primary);box-sh
 .flex-row{display:flex;align-items:center;gap:var(--space-2);}
 .mt-2{margin-top:var(--space-2);}.mt-3{margin-top:var(--space-3);}.mt-4{margin-top:var(--space-4);}
 .text-muted{color:var(--color-text-muted);}.text-sm{font-size:var(--text-sm);}
+
+/* SCROLLBARS */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--color-surface-offset); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: var(--radius-full); border: 2px solid var(--color-surface-offset); transition: background var(--trans); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+::-webkit-scrollbar-corner { background: var(--color-surface-offset); }
+* { scrollbar-width: thin; scrollbar-color: var(--color-border) var(--color-surface-offset); }
+
+/* TASK NOTES */
+/* task-note handled below */
+.task-note-input{width:100%;margin-top:var(--space-2);font-size:var(--text-xs);resize:vertical;min-height:48px;display:none;}
+.task-note-input.visible{display:block;}
+/* SUBTASK INPUT ROW */
+.sub-add-row{gap:var(--space-2);margin-top:var(--space-2);padding-left:var(--space-8);display:none;}
+.sub-add-row.visible{display:flex;}
+/* EDIT MODE */
+.task-edit-input{font-size:var(--text-sm);width:100%;background:var(--color-surface-2);border:1px solid var(--color-primary);border-radius:var(--radius-md);padding:2px var(--space-2);}
+/* INLINE DUPLICATE BADGE */
+.list-item-btn .list-actions{display:none;gap:var(--space-1);}
+.list-item-btn:hover .list-actions{display:flex;}
+.list-item-btn.active .list-actions{display:flex;}
+
+
+/* TASK TEXT COLLAPSE */
+.task-text{font-size:var(--text-sm);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.task-text.expanded{display:block;overflow:visible;}
+.task-note{font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-1);line-height:1.5;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.task-note.expanded{display:block;overflow:visible;}
+.task-expand-btn{font-size:var(--text-xs);color:var(--color-primary);background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px;display:none;}
+.task-expand-btn.visible{display:inline-block;}
+
+/* THEMED NUMBER INPUT SPINNERS */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] { -moz-appearance: textfield; appearance: textfield; padding-right: var(--space-1); }
+.num-wrap { position: relative; display: inline-flex; align-items: stretch; }
+.num-wrap input[type=number] { border-radius: var(--radius-md) 0 0 var(--radius-md); border-right: none; flex: 1; }
+.num-spin { display: flex; flex-direction: column; border: 1px solid var(--color-border); border-radius: 0 var(--radius-md) var(--radius-md) 0; overflow: hidden; }
+.num-spin button { flex: 1; width: 22px; background: var(--color-surface-offset); border: none; color: var(--color-text-muted); cursor: pointer; font-size: 10px; line-height: 1; padding: 0; transition: background var(--trans), color var(--trans); }
+.num-spin button:hover { background: var(--color-primary-highlight); color: var(--color-primary); }
+.num-spin button:active { background: var(--color-primary); color: var(--color-text-inverse); }
+.num-spin .spin-up { border-bottom: 1px solid var(--color-border); }
+
+
+/* TIMER BASE MARKER */
+.timer-progress { position: relative; }
+.timer-orig-marker { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--color-primary); opacity: 0.5; border-radius: var(--radius-full); pointer-events: none; }
+
 </style>
 </head>
 <body>
@@ -453,6 +505,18 @@ input:focus,select:focus,textarea:focus{border-color:var(--color-primary);box-sh
 
 </main>
 
+<!-- Confirm Modal -->
+<div class="modal-backdrop hidden" id="confirmModal">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-title" id="confirmTitle">Confirm</div>
+    <p id="confirmMsg" style="font-size:var(--text-sm);color:var(--color-text-muted);"></p>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="confirmResolve(false)">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmResolve(true)" id="confirmOkBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: New List -->
 <div class="modal-backdrop hidden" id="newListModal">
   <div class="modal">
@@ -564,6 +628,17 @@ function hideAddForm(){
   document.getElementById('timerPresets').style.display='block';
 }
 
+function autoWrapNumbers(container){
+  container.querySelectorAll('input[type=number]').forEach(inp=>{
+    if(inp.closest('.num-wrap')) return; // already wrapped
+    const wrap=document.createElement('div'); wrap.className='num-wrap';
+    inp.parentNode.insertBefore(wrap,inp); wrap.appendChild(inp);
+    const spin=document.createElement('div'); spin.className='num-spin';
+    spin.innerHTML=`<button class="spin-up" onclick="stepNum('${inp.id}',1)">▲</button><button onclick="stepNum('${inp.id}',-1)">▼</button>`;
+    wrap.appendChild(spin);
+    if(inp.style.width) inp.style.borderRadius='';
+  });
+}
 function handleRepeatChange(v){
   const area=document.getElementById('repeatCustomArea'), flds=document.getElementById('repeatCustomFields');
   flds.innerHTML='';
@@ -574,6 +649,7 @@ function handleRepeatChange(v){
   else if(v==='decrease') flds.innerHTML='<span class="section-label">Step decrease (min)</span><input type="number" id="cDown" value="5" min="1" style="width:80px;margin-top:4px;"> <span class="section-label" style="margin-top:8px;">Min duration (min)</span><input type="number" id="cMin" value="1" min="1" style="width:80px;margin-top:4px;">';
   else if(v==='fibonacci') flds.innerHTML='<p style="font-size:var(--text-xs);color:var(--color-text-muted);">Intervals: 1, 1, 2, 3, 5, 8, 13 min (Fibonacci), cycling.</p>';
   else if(v==='random') flds.innerHTML='<div class="form-row"><div class="form-group"><label>Min (min)</label><input type="number" id="cRMin" value="5" min="1"></div><div class="form-group"><label>Max (min)</label><input type="number" id="cRMax" value="30" min="1"></div></div>';
+  autoWrapNumbers(flds);
 }
 
 function getRepeatCfg(){
@@ -605,15 +681,37 @@ function addPreset(min,sec,name,sound,mode){
 }
 function pushTimer(o){
   const id=tidx++;
-  timers.push({id,name:o.name,tot:o.tot,orig:o.tot,rem:o.tot,sound:o.sound,rep:JSON.parse(JSON.stringify(o.rep)),running:false,done:false,reps:0});
+  timers.push({id,name:o.name,tot:o.tot,orig:o.tot,rem:o.tot,sound:o.sound,rep:JSON.parse(JSON.stringify(o.rep)),running:false,done:false,reps:0,capToMax:true});
   if(o.rep.mode==='increase') timers[timers.length-1].rep.base=o.tot;
   renderTimers(); showToast(`Timer "${o.name}" added!`);
   if(!tick) tick=setInterval(tickFn,1000);
 }
 function tickFn(){
-  let any=false;
-  timers.forEach(t=>{ if(!t.running||t.done) return; any=true; t.rem--; if(t.rem<=0) timerDone(t); });
-  if(any) renderTimers();
+  let needFullRender=false;
+  timers.forEach(t=>{
+    if(!t.running||t.done) return;
+    t.rem--;
+    if(t.rem<=0){ timerDone(t); needFullRender=true; }
+  });
+  if(needFullRender){ renderTimers(); return; }
+  // Lightweight DOM-only update — doesn't touch edit panel inputs
+  timers.forEach(t=>{
+    if(!t.running||t.done) return;
+    const disp=document.querySelector('#titem_'+t.id+' .timer-display');
+    if(disp && !t.editOpen) disp.textContent=fmt(t.rem);
+    else if(disp && t.editOpen){
+      // Even with edit open, just update the display text and progress bar, not the whole card
+      disp.textContent=fmt(t.rem);
+    }
+    const pct=t.tot>0?Math.max(0,Math.min(100,100-(t.rem/t.tot)*100)):100;
+    const bar=document.querySelector('#titem_'+t.id+' .timer-progress-fill');
+    if(bar) bar.style.width=pct+'%';
+    const slbl=document.getElementById('sliderLabel_'+t.id);
+    if(slbl) slbl.textContent=fmt(t.rem);
+    // Update slider max/value only if user isn't actively dragging it
+    const slider=document.querySelector('#titem_'+t.id+' .time-slider');
+    if(slider && document.activeElement!==slider) slider.value=t.rem;
+  });
 }
 function timerDone(t){
   playSound(t.sound); t.reps++;
@@ -649,23 +747,151 @@ function liveAdjustTimer(id, val){
 }
 function nudgeTimer(id, delta){
   const t=timers.find(x=>x.id===id); if(!t||t.done) return;
-  t.rem=Math.max(0,Math.min(t.tot,t.rem+delta));
+  const newRem = t.rem + delta;
+  if(t.capToMax){
+    t.rem = Math.max(0, Math.min(t.tot, newRem));
+  } else {
+    t.rem = Math.max(0, newRem);
+    if(t.rem > t.tot){ t.tot = t.rem; }
+  }
+  renderTimers();
+}
+function resetToBase(id){
+  const t=timers.find(x=>x.id===id); if(!t) return;
+  t.tot = t.orig; t.rem = Math.min(t.rem, t.orig);
   renderTimers();
 }
 function saveTimerEdit(id){
   const t=timers.find(x=>x.id===id); if(!t) return;
   const durInput=document.getElementById('eDur_'+id);
   const sndInput=document.getElementById('eSnd_'+id);
+  const capInput=document.getElementById('eCap_'+id);
   if(durInput){
     const newDur=Math.max(1,parseInt(durInput.value)||1)*60;
+    // Only reset remaining if the timer is paused; if running, apply on next natural cycle
     t.orig=newDur; t.tot=newDur;
     if(!t.running) t.rem=newDur;
   }
   if(sndInput) t.sound=sndInput.value;
+  if(capInput) t.capToMax=capInput.checked;
   t.editOpen=false;
   renderTimers(); showToast('Timer updated!');
 }
 
+function repeatSettingsPanel(t){
+  const r=t.rep, reps=t.reps;
+  const statusLine=reps>0
+    ? `<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-2);">${cycleInfo(t)}</div>`
+    : '';
+  if(r.mode==='once') return statusLine||'';
+
+  let fields='';
+  if(r.mode==='fixed'){
+    fields=`
+      <div class="form-row" style="gap:var(--space-2);">
+        <div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Repeat count (0=∞)</label>
+          <div class="num-wrap" style="width:100%;"><input type="number" id="rp_count_${t.id}" value="${r.count||0}" min="0" style="width:100%;" onchange="liveRepSave(${t.id})">
+          <div class="num-spin"><button class="spin-up" onclick="stepNum('rp_count_${t.id}',1)">▲</button><button onclick="stepNum('rp_count_${t.id}',-1)">▼</button></div></div>
+        </div>
+      </div>`;
+  } else if(r.mode==='increase'){
+    fields=`
+      <div class="form-row" style="gap:var(--space-2);">
+        <div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Step increase (min)</label>
+          <div class="num-wrap" style="width:100%;"><input type="number" id="rp_step_${t.id}" value="${r.step/60}" min="1" step="0.5" style="width:100%;" onchange="liveRepSave(${t.id})">
+          <div class="num-spin"><button class="spin-up" onclick="stepNum('rp_step_${t.id}',1)">▲</button><button onclick="stepNum('rp_step_${t.id}',-1)">▼</button></div></div>
+        </div>
+        <div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Max repeats (0=∞)</label>
+          <div class="num-wrap" style="width:100%;"><input type="number" id="rp_max_${t.id}" value="${r.max||0}" min="0" style="width:100%;" onchange="liveRepSave(${t.id})">
+          <div class="num-spin"><button class="spin-up" onclick="stepNum('rp_max_${t.id}',1)">▲</button><button onclick="stepNum('rp_max_${t.id}',-1)">▼</button></div></div>
+        </div>
+      </div>`;
+  } else if(r.mode==='decrease'){
+    fields=`
+      <div class="form-row" style="gap:var(--space-2);">
+        <div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Step decrease (min)</label>
+          <div class="num-wrap" style="width:100%;"><input type="number" id="rp_down_${t.id}" value="${r.step/60}" min="1" step="0.5" style="width:100%;" onchange="liveRepSave(${t.id})">
+          <div class="num-spin"><button class="spin-up" onclick="stepNum('rp_down_${t.id}',1)">▲</button><button onclick="stepNum('rp_down_${t.id}',-1)">▼</button></div></div>
+        </div>
+        <div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Min duration (min)</label>
+          <div class="num-wrap" style="width:100%;"><input type="number" id="rp_min_${t.id}" value="${r.minDur/60}" min="0.5" step="0.5" style="width:100%;" onchange="liveRepSave(${t.id})">
+          <div class="num-spin"><button class="spin-up" onclick="stepNum('rp_min_${t.id}',1)">▲</button><button onclick="stepNum('rp_min_${t.id}',-1)">▼</button></div></div>
+        </div>
+      </div>`;
+  } else if(r.mode==='custom'){
+    const seqStr=(r.seq||[]).map(s=>(s/60).toFixed(0)).join(', ');
+    const curIdx=(r.si||0);
+    fields=`
+      <div class="form-group"><label style="font-size:var(--text-xs);">Sequence (minutes, comma-separated)</label>
+        <input type="text" id="rp_seq_${t.id}" value="${seqStr}" style="width:100%;font-size:var(--text-xs);" onchange="liveRepSave(${t.id})">
+      </div>
+      <div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-1);">Current position: step ${curIdx+1} of ${(r.seq||[]).length} · next: ${fmt((r.seq||[])[curIdx]||0)}</div>`;
+  } else if(r.mode==='fibonacci'){
+    const fi=(r.fi||0);
+    const fseq=r.fib||[60,60,120,180,300,480,780];
+    fields=`<div style="font-size:var(--text-xs);color:var(--color-text-muted);">Sequence: ${fseq.map(s=>fmt(s)).join(' → ')}</div>
+      <div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:4px;">Current step: ${fi+1} · next: ${fmt(fseq[(fi+1)%fseq.length])}</div>`;
+  } else if(r.mode==='random'){
+    fields=`
+      <div class="form-row" style="gap:var(--space-2);">
+        <div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Min (min)</label>
+          <div class="num-wrap" style="width:100%;"><input type="number" id="rp_rmin_${t.id}" value="${r.rMin/60}" min="1" step="1" style="width:100%;" onchange="liveRepSave(${t.id})">
+          <div class="num-spin"><button class="spin-up" onclick="stepNum('rp_rmin_${t.id}',1)">▲</button><button onclick="stepNum('rp_rmin_${t.id}',-1)">▼</button></div></div>
+        </div>
+        <div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Max (min)</label>
+          <div class="num-wrap" style="width:100%;"><input type="number" id="rp_rmax_${t.id}" value="${r.rMax/60}" min="1" step="1" style="width:100%;" onchange="liveRepSave(${t.id})">
+          <div class="num-spin"><button class="spin-up" onclick="stepNum('rp_rmax_${t.id}',1)">▲</button><button onclick="stepNum('rp_rmax_${t.id}',-1)">▼</button></div></div>
+        </div>
+      </div>`;
+  }
+
+  return `<details style="font-size:var(--text-xs);">
+    <summary style="cursor:pointer;font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-faint);margin-bottom:var(--space-2);user-select:none;">
+      ${repLabels[r.mode]} settings ${reps>0?`· ring #${reps+1}`:''}
+    </summary>
+    ${statusLine}
+    <div style="display:flex;flex-direction:column;gap:var(--space-2);margin-top:var(--space-2);">${fields}</div>
+  </details>`;
+}
+function liveRepSave(id){
+  // Save repeat settings live from the edit panel fields without re-rendering
+  const t=timers.find(x=>x.id===id); if(!t) return;
+  const r=t.rep;
+  if(r.mode==='fixed'){ const v=document.getElementById('rp_count_'+id); if(v) r.count=parseInt(v.value)||0; }
+  else if(r.mode==='increase'){
+    const s=document.getElementById('rp_step_'+id), m=document.getElementById('rp_max_'+id);
+    if(s) r.step=Math.max(30,(parseFloat(s.value)||1)*60);
+    if(m) r.max=parseInt(m.value)||0;
+  } else if(r.mode==='decrease'){
+    const s=document.getElementById('rp_down_'+id), m=document.getElementById('rp_min_'+id);
+    if(s) r.step=Math.max(30,(parseFloat(s.value)||1)*60);
+    if(m) r.minDur=Math.max(30,(parseFloat(m.value)||0.5)*60);
+  } else if(r.mode==='custom'){
+    const v=document.getElementById('rp_seq_'+id);
+    if(v){ const seq=v.value.split(',').map(x=>parseFloat(x.trim())*60).filter(x=>x>0); if(seq.length) r.seq=seq; }
+  } else if(r.mode==='random'){
+    const mn=document.getElementById('rp_rmin_'+id), mx=document.getElementById('rp_rmax_'+id);
+    if(mn) r.rMin=Math.max(60,(parseFloat(mn.value)||1)*60);
+    if(mx) r.rMax=Math.max(r.rMin+60,(parseFloat(mx.value)||r.rMin/60+1)*60);
+  }
+}
+function cycleInfo(t){
+  const r=t.rep, reps=t.reps;
+  if(r.mode==='once') return `Ring once — completed ${reps} time${reps!==1?'s':''}`;
+  if(r.mode==='fixed') return `Cycle ${reps+1}${r.count>0?' of '+r.count:''} · next: ${fmt(t.tot)}`;
+  if(r.mode==='increase') return `Cycle ${reps+1}${r.max>0?' of '+r.max:''} · next interval: ${fmt(r.base+r.step*(reps+1))}`;
+  if(r.mode==='decrease'){ const nx=t.tot-r.step; return `Cycle ${reps+1} · next: ${nx>0?fmt(nx):'last cycle'}`; }
+  if(r.mode==='custom'){ const seq=r.seq||[]; const ni=(r.si+1)%seq.length; return `Custom step ${(r.si||0)+1} of ${seq.length} · next step (${ni+1}): ${fmt(seq[ni])}`; }
+  if(r.mode==='fibonacci'){ const fi=(r.fi+1)%r.fib.length; return `Fibonacci cycle ${reps+1} · next: ${fmt(r.fib[fi])} (step ${fi+1})`; }
+  if(r.mode==='random') return `Random · range ${fmt(r.rMin)}–${fmt(r.rMax)} · ring #${reps+1}`;
+  return `Ring #${reps+1}`;
+}
+function stepNum(id, delta){
+  const el=document.getElementById(id); if(!el) return;
+  const cur=parseFloat(el.value)||0, mn=parseFloat(el.min)||0, mx=parseFloat(el.max)||Infinity;
+  el.value=Math.max(mn,Math.min(mx,cur+delta));
+  el.dispatchEvent(new Event('input'));
+}
 function fmt(s){ const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`:`${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
 const repLabels={once:'Once',fixed:'Repeating','increase':'↑ Increasing','decrease':'↓ Decreasing',custom:'Custom Seq',fibonacci:'Fibonacci',random:'Random'};
 const sndEmoji={bell:'🔔',viola:'🎻',harp:'🎵',chime:'🎶',drum:'🥁',whistle:'🎷',none:'🔇'};
@@ -689,7 +915,10 @@ function renderTimers(){
         </div>
       </div>
       <div class="timer-display ${cls}">${t.done?'✓ Complete':fmt(t.rem)}</div>
-      <div class="timer-progress"><div class="timer-progress-fill" style="width:${pct}%"></div></div>
+      <div class="timer-progress">
+        <div class="timer-progress-fill" style="width:${pct}%"></div>
+        ${t.tot>t.orig?`<div class="timer-orig-marker" style="right:${Math.round((1-t.orig/t.tot)*100)}%"></div>`:''}
+      </div>
       <div class="timer-meta">
         <span class="badge">${sndEmoji[t.sound]||'🎧'} ${customSounds.find(c=>c.id===t.sound)?.name||t.sound}</span>
         <span class="badge accent">${repLabels[t.rep.mode]||t.rep.mode}</span>
@@ -703,9 +932,12 @@ function renderTimers(){
       </div>
       <!-- EDIT PANEL -->
       <div class="timer-edit-panel ${editOpen}" id="tedit_${t.id}">
+        <div style="margin-bottom:var(--space-3);">
+          ${repeatSettingsPanel(t)}
+        </div>
         <span class="section-label">Adjust remaining time</span>
         <div class="time-slider-wrap">
-          <input type="range" class="time-slider" min="0" max="${t.tot}" value="${t.rem}"
+          <input type="range" class="time-slider" min="0" max="${Math.max(t.tot,t.rem)}" value="${t.rem}"
             oninput="liveAdjustTimer(${t.id},this.value)" onchange="liveAdjustTimer(${t.id},this.value)"
             ${t.done?'disabled':''}>
           <div class="time-slider-labels"><span>0:00</span><span id="sliderLabel_${t.id}">${fmt(t.rem)}</span><span>${fmt(t.tot)}</span></div>
@@ -716,11 +948,17 @@ function renderTimers(){
           <button class="adj-btn" onclick="nudgeTimer(${t.id},60)">+1 min</button>
           <button class="adj-btn" onclick="nudgeTimer(${t.id},300)">+5 min</button>
           <button class="adj-btn" onclick="nudgeTimer(${t.id},600)">+10 min</button>
+          ${t.tot>t.orig?`<button class="adj-btn" onclick="resetToBase(${t.id})" style="border-color:var(--color-primary);color:var(--color-primary);">↺ Reset to ${fmt(t.orig)}</button>`:''}
         </div>
+        <label style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);cursor:pointer;">
+          <input type="checkbox" id="eCap_${t.id}" ${t.capToMax?'checked':''} style="width:14px;height:14px;accent-color:var(--color-primary);">
+          Cap adjustments to original duration
+        </label>
         <span class="section-label">Edit settings</span>
         <div class="edit-form-grid">
           <div class="form-group"><label>Duration (min)</label>
-            <input type="number" id="eDur_${t.id}" value="${Math.round(t.orig/60)}" min="1"></div>
+            <div class="num-wrap" style="width:100%;"><input type="number" id="eDur_${t.id}" value="${Math.round(t.orig/60)}" min="1" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDur_${t.id}',1)">▲</button><button onclick="stepNum('eDur_${t.id}',-1)">▼</button></div></div>
+          </div>
           <div class="form-group"><label>Sound</label>
             <select id="eSnd_${t.id}">${builtinOpts}${customOpts}</select></div>
         </div>
@@ -752,10 +990,16 @@ function renderLists(){
   if(!lists.length){ sb.innerHTML='<p style="font-size:var(--text-xs);color:var(--color-text-faint);padding:var(--space-2);">No lists yet.</p>'; return; }
   sb.innerHTML=lists.map(l=>{
     const done=l.tasks.filter(t=>!t.pid&&t.done).length, tot=l.tasks.filter(t=>!t.pid).length;
-    return `<button class="list-item-btn ${activeList===l.id?'active':''}" onclick="selectList(${l.id})">
-      <span>${l.icon} ${l.name}</span><span class="list-count">${done}/${tot}</span>
-    </button>`;
+    return `<div class="list-item-btn ${activeList===l.id?'active':''}" onclick="selectList(${l.id})" style="cursor:pointer;">
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.icon} ${l.name}</span>
+      <span class="list-count">${done}/${tot}</span>
+      <span class="list-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-icon btn-ghost btn-sm" title="Duplicate list" onclick="duplicateList(${l.id})" style="width:22px;height:22px;"><i data-lucide="copy" style="width:10px;height:10px;"></i></button>
+        <button class="btn btn-icon btn-danger btn-sm" title="Delete list" onclick="deleteList(${l.id})" style="width:22px;height:22px;"><i data-lucide="trash-2" style="width:10px;height:10px;"></i></button>
+      </span>
+    </div>`;
   }).join('');
+  lucide.createIcons();
 }
 function selectList(id){ activeList=id; renderLists(); renderChecklist(); }
 function renderChecklist(){
@@ -780,43 +1024,156 @@ function renderChecklist(){
     </div>
     <ul class="task-tree" id="taskTree">${renderNodes(list.tasks,null)}</ul>
     <div class="add-task-row mt-3">
-      <input type="text" id="newTaskInput" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask()">
-      <input type="number" class="points-input" id="newTaskPts" value="10" min="1" max="100" title="Points">
+      <input type="text" id="newTaskInput" placeholder="Add a task... (Enter to add)" onkeydown="if(event.key==='Enter')addTask()">
+      <div class="num-wrap"><input type="number" class="points-input" id="newTaskPts" value="10" min="1" max="100" title="Points"><div class="num-spin"><button class="spin-up" onclick="stepNum('newTaskPts',1)">▲</button><button onclick="stepNum('newTaskPts',-1)">▼</button></div></div>
       <button class="btn btn-primary" onclick="addTask()"><i data-lucide="plus" style="width:13px;height:13px;"></i></button>
     </div>`;
-  lucide.createIcons(); updateOwlTasks();
+  lucide.createIcons(); updateOwlTasks(); _initExpandBtns();
 }
-function renderNodes(tasks,pid){
+function renderNodes(tasks,pid,depth){
+  depth=depth||0;
   return tasks.filter(t=>t.pid===pid).map(t=>{
-    const kids=renderNodes(tasks,t.id);
-    return `<li class="task-item ${t.done?'done':''} ${t.pid?'sub':''}">
+    const kids=renderNodes(tasks,t.id,depth+1);
+    const hasNote=t.note&&t.note.trim();
+    return `<li class="task-item ${t.done?'done':''} ${t.pid?'sub':''}" id="task-li-${t.id}">
       <div class="task-check" onclick="toggleTask(${t.id})" role="checkbox" aria-checked="${t.done}">
         ${t.done?'<i data-lucide="check" style="width:11px;height:11px;"></i>':''}
       </div>
-      <div class="task-body">
-        <span class="task-text">${t.text}</span>
-        <span class="task-points">✦${t.pts}</span>
+      <div class="task-body" style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:baseline;gap:var(--space-2);flex-wrap:wrap;">
+          <span class="task-text" id="task-text-${t.id}">${t.text}</span>
+          <span class="task-points">✦${t.pts}</span>
+        </div>
+        <button class="task-expand-btn" id="task-expbtn-${t.id}" onclick="toggleTaskExpand(${t.id})">Show more</button>
+        ${hasNote?`<div class="task-note" id="task-note-${t.id}">${t.note}</div><button class="task-expand-btn" id="task-notebtn-${t.id}" onclick="toggleNoteExpand(${t.id})">Show more</button>`:`<div class="task-note" id="task-note-${t.id}" style="display:none;"></div>`}
+        <textarea class="task-note-input" id="task-note-input-${t.id}" placeholder="Add a note..." onblur="saveNote(${t.id})">${t.note||''}</textarea>
         ${kids?`<ul class="task-tree" style="margin-top:var(--space-2);">${kids}</ul>`:''}
+        <div class="sub-add-row" id="sub-add-row-${t.id}">
+          <input type="text" id="sub-input-${t.id}" placeholder="Subtask name..." style="flex:1;font-size:var(--text-xs);" onkeydown="if(event.key==='Enter')commitSub(${t.id});if(event.key==='Escape')cancelSub(${t.id})">
+          <div class="num-wrap"><input type="number" id="sub-pts-${t.id}" value="5" min="1" max="100" style="width:48px;font-size:var(--text-xs);" title="Points"><div class="num-spin"><button class="spin-up" onclick="stepNum('sub-pts-${t.id}',1)">▲</button><button onclick="stepNum('sub-pts-${t.id}',-1)">▼</button></div></div>
+          <button class="btn btn-primary btn-sm" onclick="commitSub(${t.id})">Add</button>
+          <button class="btn btn-ghost btn-sm" onclick="cancelSub(${t.id})">✕</button>
+        </div>
       </div>
       <div class="task-actions">
-        ${!t.pid?`<button class="btn btn-icon btn-ghost btn-sm" title="Subtask" onclick="addSub(${t.id})"><i data-lucide="corner-down-right" style="width:11px;height:11px;"></i></button>`:''}
+        <button class="btn btn-icon btn-ghost btn-sm" title="Edit" onclick="editTask(${t.id})"><i data-lucide="pencil" style="width:11px;height:11px;"></i></button>
+        <button class="btn btn-icon btn-ghost btn-sm" title="Note" onclick="toggleNote(${t.id})"><i data-lucide="sticky-note" style="width:11px;height:11px;"></i></button>
+        <button class="btn btn-icon btn-ghost btn-sm" title="Copy task" onclick="copyTask(${t.id})"><i data-lucide="copy" style="width:11px;height:11px;"></i></button>
+        ${!t.pid?`<button class="btn btn-icon btn-ghost btn-sm" title="Add subtask" onclick="showSubAdd(${t.id})"><i data-lucide="corner-down-right" style="width:11px;height:11px;"></i></button>`:''}
         <button class="btn btn-icon btn-danger btn-sm" onclick="delTask(${t.id})"><i data-lucide="x" style="width:11px;height:11px;"></i></button>
       </div>
     </li>`;
   }).join('');
 }
+function _checkOverflow(el){ return el && el.scrollHeight > el.clientHeight + 2; }
+function _initExpandBtns(){
+  // After render, show expand buttons only for actually-overflowing elements
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.task-text').forEach(el=>{
+      const id=el.id.replace('task-text-','');
+      const btn=document.getElementById('task-expbtn-'+id);
+      if(btn){ btn.classList.toggle('visible', _checkOverflow(el)); }
+    });
+    document.querySelectorAll('.task-note').forEach(el=>{
+      if(el.style.display==='none') return;
+      const id=el.id.replace('task-note-','');
+      const btn=document.getElementById('task-notebtn-'+id);
+      if(btn){ btn.classList.toggle('visible', _checkOverflow(el)); }
+    });
+  });
+}
+function toggleTaskExpand(id){
+  const el=document.getElementById('task-text-'+id), btn=document.getElementById('task-expbtn-'+id);
+  if(!el) return;
+  el.classList.toggle('expanded');
+  if(btn) btn.textContent=el.classList.contains('expanded')?'Show less':'Show more';
+}
+function toggleNoteExpand(id){
+  const el=document.getElementById('task-note-'+id), btn=document.getElementById('task-notebtn-'+id);
+  if(!el) return;
+  el.classList.toggle('expanded');
+  if(btn) btn.textContent=el.classList.contains('expanded')?'Show less':'Show more';
+}
 function addTask(){
   const list=lists.find(l=>l.id===activeList); if(!list) return;
   const inp=document.getElementById('newTaskInput'), text=inp.value.trim(); if(!text) return;
   const pts=Math.max(1,parseInt(document.getElementById('newTaskPts').value)||10);
-  list.tasks.push({id:tidxc++,text,pts,done:false,pid:null});
-  inp.value=''; renderChecklist(); renderLists();
+  list.tasks.push({id:tidxc++,text,pts,done:false,pid:null,note:''});
+  inp.value='';
+  renderChecklist(); renderLists();
+  // Re-focus after render so Enter-to-add workflow is seamless
+  const newInp=document.getElementById('newTaskInput');
+  if(newInp) newInp.focus();
 }
-function addSub(pid){
-  const text=prompt('Subtask:'); if(!text?.trim()) return;
+function showSubAdd(pid){
+  // toggle the inline sub-add row
+  const row=document.getElementById('sub-add-row-'+pid);
+  if(!row) return;
+  const wasVisible=row.classList.contains('visible');
+  // hide all other sub-add rows first
+  document.querySelectorAll('.sub-add-row.visible').forEach(r=>r.classList.remove('visible'));
+  if(!wasVisible){ row.classList.add('visible'); const inp=document.getElementById('sub-input-'+pid); if(inp) inp.focus(); }
+}
+function commitSub(pid){
+  const inp=document.getElementById('sub-input-'+pid); if(!inp) return;
+  const text=inp.value.trim(); if(!text) return;
+  const ptsEl=document.getElementById('sub-pts-'+pid);
+  const pts=Math.max(1,parseInt(ptsEl?.value)||5);
   const list=lists.find(l=>l.id===activeList);
-  list.tasks.push({id:tidxc++,text:text.trim(),pts:5,done:false,pid});
+  list.tasks.push({id:tidxc++,text,pts,done:false,pid,note:''});
+  renderChecklist(); renderLists();
+}
+function cancelSub(pid){
+  const row=document.getElementById('sub-add-row-'+pid); if(row) row.classList.remove('visible');
+}
+function editTask(id){
+  const list=lists.find(l=>l.id===activeList); if(!list) return;
+  const t=list.tasks.find(x=>x.id===id); if(!t) return;
+  const span=document.getElementById('task-text-'+id); if(!span) return;
+  const oldText=t.text;
+  span.outerHTML=`<input class="task-edit-input" id="task-edit-${id}" value="${oldText.replace(/"/g,'&quot;')}" onblur="saveEdit(${id})" onkeydown="if(event.key==='Enter')saveEdit(${id});if(event.key==='Escape'){this.value='${oldText.replace(/'/g,"\\'")}';saveEdit(${id});}">`;
+  const inp=document.getElementById('task-edit-'+id); if(inp){ inp.focus(); inp.select(); }
+}
+function saveEdit(id){
+  const inp=document.getElementById('task-edit-'+id); if(!inp) return;
+  const val=inp.value.trim();
+  const list=lists.find(l=>l.id===activeList); if(!list) return;
+  const t=list.tasks.find(x=>x.id===id); if(!t) return;
+  if(val) t.text=val;
   renderChecklist();
+}
+function toggleNote(id){
+  const area=document.getElementById('task-note-input-'+id); if(!area) return;
+  const vis=area.classList.toggle('visible');
+  if(vis){ area.focus(); area.setSelectionRange(area.value.length,area.value.length); }
+}
+function saveNote(id){
+  const area=document.getElementById('task-note-input-'+id); if(!area) return;
+  const list=lists.find(l=>l.id===activeList); if(!list) return;
+  const t=list.tasks.find(x=>x.id===id); if(!t) return;
+  t.note=area.value.trim();
+  renderChecklist();
+}
+function copyTask(id){
+  const list=lists.find(l=>l.id===activeList); if(!list) return;
+  const t=list.tasks.find(x=>x.id===id); if(!t) return;
+  // copy the task + its subtasks
+  const newPid=tidxc++;
+  list.tasks.push({id:newPid,text:t.text+' (copy)',pts:t.pts,done:false,pid:t.pid,note:t.note||''});
+  list.tasks.filter(x=>x.pid===id).forEach(s=>{
+    list.tasks.push({id:tidxc++,text:s.text,pts:s.pts,done:false,pid:newPid,note:s.note||''});
+  });
+  renderChecklist(); renderLists(); showToast('Task copied!');
+}
+function duplicateList(id){
+  const orig=lists.find(l=>l.id===id); if(!orig) return;
+  const newId=lidx++;
+  const newTasks=[];
+  const idMap={};
+  orig.tasks.filter(t=>!t.pid).forEach(t=>{ const nid=tidxc++; idMap[t.id]=nid; newTasks.push({...t,id:nid,done:false}); });
+  orig.tasks.filter(t=>t.pid).forEach(t=>{ newTasks.push({...t,id:tidxc++,pid:idMap[t.pid]||null,done:false}); });
+  lists.push({id:newId,name:orig.name+' (copy)',icon:orig.icon,tasks:newTasks});
+  renderLists(); selectList(newId); showToast(`"${orig.name}" duplicated!`);
 }
 function toggleTask(id){
   const list=lists.find(l=>l.id===activeList), task=list.tasks.find(t=>t.id===id);
@@ -831,7 +1188,18 @@ function toggleTask(id){
 }
 function delTask(id){ const list=lists.find(l=>l.id===activeList); list.tasks=list.tasks.filter(t=>t.id!==id&&t.pid!==id); renderChecklist(); renderLists(); }
 function clearDone(){ const list=lists.find(l=>l.id===activeList); list.tasks=list.tasks.filter(t=>!t.done); renderChecklist(); renderLists(); }
-function deleteList(id){ if(!confirm('Delete this list?')) return; lists=lists.filter(l=>l.id!==id); if(activeList===id) activeList=lists[0]?.id||null; renderLists(); if(activeList) renderChecklist(); else document.getElementById('checklistMain').innerHTML='<div style="text-align:center;padding:var(--space-12);color:var(--color-text-faint);">Select a list.</div>'; }
+function deleteList(id){
+  const nm=(lists.find(l=>l.id===id)||{}).name||'list';
+  askConfirm(`Delete list "${nm}"? This cannot be undone.`, 'Delete List', 'Delete', (yes)=>{
+    if(!yes) return;
+    lists=lists.filter(l=>l.id!==id);
+    if(activeList===id){ activeList=lists[0]?.id||null; }
+    renderLists();
+    if(activeList) renderChecklist();
+    else document.getElementById('checklistMain').innerHTML='<div style="text-align:center;padding:var(--space-12);color:var(--color-text-faint);font-size:var(--text-sm);"><p>Select or create a list.</p></div>';
+    updateOwlTasks();
+  });
+}
 function updateHeaderPts(){ document.getElementById('headerPoints').textContent=`✦ ${totalPts} pts`; document.getElementById('owlTotalPts').textContent=totalPts; document.getElementById('owlXP').textContent=totalPts%100; document.getElementById('owlLevel').textContent=Math.floor(totalPts/100)+1; }
 
 // ── OWL COMPANION ─────────────────────────────────
@@ -920,6 +1288,20 @@ function renderThemes(){
         </div>
       </div>
     </div>`).join('');
+}
+
+// ── CONFIRM HELPER ────────────────────────────────
+let _confirmCb = null;
+function askConfirm(msg, title, okLabel, cb){
+  document.getElementById('confirmMsg').textContent = msg;
+  document.getElementById('confirmTitle').textContent = title || 'Confirm';
+  document.getElementById('confirmOkBtn').textContent = okLabel || 'OK';
+  document.getElementById('confirmModal').classList.remove('hidden');
+  _confirmCb = cb;
+}
+function confirmResolve(yes){
+  document.getElementById('confirmModal').classList.add('hidden');
+  if(_confirmCb){ const cb=_confirmCb; _confirmCb=null; cb(yes); }
 }
 
 // ── TOAST ─────────────────────────────────────────
@@ -1042,10 +1424,10 @@ renderThemes();
 applyThemeVars();
 renderSoundGrid();
 lists.push({id:lidx++,name:'Getting Started',icon:'✨',tasks:[
-  {id:tidxc++,text:'Start a timer from the Timers tab',pts:10,done:false,pid:null},
-  {id:tidxc++,text:'Pet Archibald the owl',pts:5,done:false,pid:null},
-  {id:tidxc++,text:'Try different themes',pts:5,done:false,pid:null},
-  {id:tidxc++,text:'Create your own checklist',pts:15,done:false,pid:null},
+  {id:tidxc++,text:'Start a timer from the Timers tab',pts:10,done:false,pid:null,note:''},
+  {id:tidxc++,text:'Pet Archibald the owl',pts:5,done:false,pid:null,note:''},
+  {id:tidxc++,text:'Try different themes',pts:5,done:false,pid:null,note:''},
+  {id:tidxc++,text:'Create your own checklist',pts:15,done:false,pid:null,note:''},
 ]});
 renderLists(); selectList(1);
 </script>
