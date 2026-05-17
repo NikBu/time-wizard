@@ -1,0 +1,42 @@
+/* ── TIMERS ─────────────────────────────────────── */
+.timer-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5);}
+@media(max-width:700px){.timer-grid{grid-template-columns:1fr;}}
+.timers-list{display:flex;flex-direction:column;gap:var(--space-3);}
+.timer-item{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-4);box-shadow:var(--shadow-sm);}
+.timer-item.running{border-color:var(--color-accent);}
+.timer-item.done{border-color:var(--color-gold);animation:glow-done 1.5s ease-in-out infinite alternate;}
+@keyframes glow-done{from{box-shadow:0 0 0 1px var(--color-gold);}to{box-shadow:0 0 16px oklch(from var(--color-gold) l c h / 0.3);}}
+.timer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);}
+.timer-name-input{background:transparent;border:none;font:inherit;font-weight:600;font-size:var(--text-sm);padding:0;color:var(--color-text);width:160px;}
+.timer-name-input:focus{outline:1px dashed var(--color-primary);border-radius:2px;}
+.timer-controls{display:flex;gap:var(--space-1);}
+.timer-display{font-family:var(--font-display);font-size:var(--text-2xl);font-weight:700;text-align:center;color:var(--color-text);letter-spacing:.02em;line-height:1;margin:var(--space-2) 0;}
+.timer-display.running{color:var(--color-accent);}
+.timer-display.done{color:var(--color-gold);}
+.timer-progress-wrap{height:3px;background:var(--color-surface-dynamic);border-radius:var(--radius-full);overflow:hidden;margin-bottom:var(--space-2);}
+.timer-progress{height:100%;background:var(--color-accent);border-radius:var(--radius-full);transition:width .5s linear;}
+.timer-footer{display:flex;align-items:center;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-faint);}
+.repeat-custom-area{margin-top:var(--space-2);}
+
+/* TIMER EDIT PANEL */
+.timer-edit-panel{background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);margin-top:var(--space-3);display:flex;flex-direction:column;gap:var(--space-3);}
+.edit-row{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;}
+.nudge-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-sm);background:var(--color-surface-dynamic);color:var(--color-text-muted);font-size:var(--text-xs);transition:background var(--trans);}
+.nudge-btn:hover{background:var(--color-border);color:var(--color-text);}
+
+/* SOUND PREVIEW */
+.sound-preview-btn{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-surface);font-size:var(--text-xs);color:var(--color-text-muted);transition:all var(--trans);cursor:pointer;}
+.sound-preview-btn:hover,.sound-preview-btn.active{border-color:var(--color-primary);color:var(--color-primary);background:var(--color-primary-highlight);}
+
+/* TIMER BASE MARKER */
+.base-marker{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--color-text-faint);margin-right:4px;vertical-align:middle;}
+.base-marker.modified{background:var(--color-gold);}
+
+/* THEMED NUMBER INPUT SPINNERS */
+input[type=number]{-moz-appearance:textfield;}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.num-spin-wrap{display:flex;align-items:center;gap:0;border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;background:var(--color-surface-2);}
+.num-spin-wrap input{border:none;border-radius:0;text-align:center;padding:var(--space-2) var(--space-1);width:60px;background:transparent;}
+.num-spin-btn{display:flex;align-items:center;justify-content:center;width:28px;height:100%;background:var(--color-surface-offset);color:var(--color-text-muted);border:none;cursor:pointer;font-size:var(--text-base);transition:background var(--trans),color var(--trans);align-self:stretch;}
+.num-spin-btn:hover{background:var(--color-surface-dynamic);color:var(--color-text);}

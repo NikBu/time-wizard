@@ -1,0 +1,44 @@
+/* ── CHECKLIST ──────────────────────────────────── */
+.checklist-layout{display:grid;grid-template-columns:220px 1fr;gap:var(--space-6);}
+@media(max-width:700px){.checklist-layout{grid-template-columns:1fr;}}
+.lists-sidebar{display:flex;flex-direction:column;gap:var(--space-1);}
+.list-item-btn{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-lg);font-size:var(--text-sm);color:var(--color-text-muted);transition:background var(--trans),color var(--trans);}
+.list-item-btn:hover{background:var(--color-surface-offset);color:var(--color-text);}
+.list-item-btn.active{background:var(--color-primary-highlight);color:var(--color-primary);font-weight:600;}
+.list-count{font-size:var(--text-xs);color:var(--color-text-faint);margin-left:auto;}
+.list-actions{display:none;gap:var(--space-1);}
+.list-item-btn:hover .list-actions{display:flex;}
+.checklist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);flex-wrap:wrap;gap:var(--space-2);}
+.checklist-title{font-family:var(--font-display);font-size:var(--text-lg);font-weight:700;}
+.progress-bar-wrap{height:4px;background:var(--color-surface-dynamic);border-radius:var(--radius-full);overflow:hidden;margin-bottom:var(--space-4);}
+.progress-bar{height:100%;background:var(--color-accent);border-radius:var(--radius-full);transition:width .4s ease;}
+.task-item{display:flex;align-items:flex-start;gap:var(--space-3);padding:var(--space-3);border-radius:var(--radius-lg);background:var(--color-surface);border:1px solid var(--color-border);margin-bottom:var(--space-2);transition:border-color var(--trans);}
+.task-item:hover{border-color:var(--color-primary-highlight);}
+.task-item.done .task-text{text-decoration:line-through;color:var(--color-text-muted);}
+.task-item.depth-1{margin-left:var(--space-8);border-left:2px solid var(--color-primary-highlight);}
+.task-item.depth-2{margin-left:calc(var(--space-8)*2);border-left:2px solid var(--color-accent-highlight);}
+.task-check{width:18px;height:18px;flex-shrink:0;margin-top:2px;accent-color:var(--color-accent);cursor:pointer;}
+/* task-text */
+.task-text{flex:1;font-size:var(--text-sm);line-height:1.5;}
+.task-pts{font-size:var(--text-xs);color:var(--color-text-faint);white-space:nowrap;}
+.task-actions{display:none;gap:var(--space-1);flex-shrink:0;}
+.task-item:hover .task-actions{display:flex;}
+
+/* TASK NOTES */
+/* task-note */
+.task-note{font-size:var(--text-xs);color:var(--color-text-muted);background:var(--color-surface-offset);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3);margin-top:var(--space-2);white-space:pre-wrap;}
+
+/* SUBTASK INPUT ROW */
+.sub-add-row{display:flex;gap:var(--space-2);margin:var(--space-2) 0 var(--space-2) var(--space-8);}
+
+/* EDIT MODE */
+.task-edit-input{width:100%;background:var(--color-surface-2);border:1px solid var(--color-primary);border-radius:var(--radius-md);padding:var(--space-1) var(--space-2);font-size:var(--text-sm);}
+
+/* INLINE DUPLICATE BADGE */
+.dup-badge{display:inline-flex;align-items:center;gap:4px;padding:1px var(--space-2);border-radius:var(--radius-full);font-size:var(--text-xs);background:var(--color-accent-highlight);color:var(--color-accent);margin-left:var(--space-2);}
+
+/* TASK TEXT COLLAPSE */
+.task-text-inner{overflow:hidden;max-height:4.5em;transition:max-height .3s ease;}
+.task-text-inner.expanded{max-height:1000px;}
+.expand-btn{font-size:var(--text-xs);color:var(--color-primary);background:none;border:none;cursor:pointer;padding:0;margin-top:2px;display:none;}
+.expand-btn.visible{display:inline-block;}
