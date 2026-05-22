@@ -76,12 +76,9 @@ function tickFn(){
     if(!t.running||t.done) return;
     t.rem--;
     if(t.rem<=0){
-      t.rem=0; // clamp — never let display go negative
-      if(!t.firing){
-        t.firing=true;
-        timerDone(t);
-        needFullRender=true;
-      }
+      t.rem=0; // clamp so display never goes negative
+      timerDone(t);
+      needFullRender=true;
     }
   });
   if(needFullRender){ renderTimers(); return; }
@@ -103,17 +100,16 @@ function timerDone(t){
   showToast(`⏰ "${t.name}" done! (×${t.reps})`,'success');
   const r=t.rep;
   if(r.mode==='once'){ t.running=false; t.done=true; }
-  else if(r.mode==='fixed'){ if(r.count>0&&t.reps>=r.count){ t.running=false;t.done=true; } else { t.rem=Math.max(1,Math.round(t.tot)); } }
-  else if(r.mode==='increase'){ if(r.max>0&&t.reps>=r.max){ t.running=false;t.done=true; } else { t.tot=Math.max(1,Math.round(r.base+r.step*t.reps)); t.rem=t.tot; } }
-  else if(r.mode==='decrease'){ const nx=Math.round(t.tot-r.step); if(nx<r.minDur){ t.running=false;t.done=true; } else { t.tot=nx; t.rem=nx; } }
-  else if(r.mode==='custom'){ r.si=(r.si+1)%r.seq.length; t.tot=Math.max(1,Math.round(r.seq[r.si])); t.rem=t.tot; }
-  else if(r.mode==='fibonacci'){ r.fi=(r.fi+1)%r.fib.length; t.tot=Math.max(1,Math.round(r.fib[r.fi])); t.rem=t.tot; }
-  else if(r.mode==='random'){ t.tot=Math.max(1,Math.floor(r.rMin+Math.random()*(r.rMax-r.rMin))); t.rem=t.tot; }
-  else { t.rem=Math.max(1,Math.round(t.tot)); }
-  t.firing=false; // clear guard so next cycle can fire
+  else if(r.mode==='fixed'){ if(r.count>0&&t.reps>=r.count){ t.running=false;t.done=true; } else t.rem=t.tot; }
+  else if(r.mode==='increase'){ if(r.max>0&&t.reps>=r.max){ t.running=false;t.done=true; } else { t.tot=r.base+r.step*t.reps; t.rem=t.tot; } }
+  else if(r.mode==='decrease'){ const nx=t.tot-r.step; if(nx<r.minDur){ t.running=false;t.done=true; } else { t.tot=nx; t.rem=nx; } }
+  else if(r.mode==='custom'){ r.si=(r.si+1)%r.seq.length; t.tot=r.seq[r.si]; t.rem=t.tot; }
+  else if(r.mode==='fibonacci'){ r.fi=(r.fi+1)%r.fib.length; t.tot=r.fib[r.fi]; t.rem=t.tot; }
+  else if(r.mode==='random'){ t.tot=Math.floor(r.rMin+Math.random()*(r.rMax-r.rMin)); t.rem=t.tot; }
+  else t.rem=t.tot;
 }
 function toggleTimer(id){ const t=timers.find(x=>x.id===id); if(!t||t.done) return; t.running=!t.running; if(t.running){ archNotify('timer_add'); if(!tick) tick=setInterval(tickFn,1000); } else if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; } renderTimers(); }
-function resetTimer(id){ const t=timers.find(x=>x.id===id); if(!t) return; t.running=false;t.done=false;t.rem=t.orig;t.tot=t.orig;t.reps=0;t.firing=false; if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; } renderTimers(); }
+function resetTimer(id){ const t=timers.find(x=>x.id===id); if(!t) return; t.running=false;t.done=false;t.rem=t.orig;t.tot=t.orig;t.reps=0; if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; } renderTimers(); }
 function deleteTimer(id){ timers=timers.filter(x=>x.id!==id); if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; } renderTimers(); }
 function toggleEditPanel(id){
   const t=timers.find(x=>x.id===id); if(!t) return;
