@@ -1,6 +1,44 @@
 // ── TIMERS ────────────────────────────────────────
-let timers=[], tidx=1, tick=null;
+let timers=[], tidx=1;
 let _lastTouchedId=null;
+
+// ── Background-safe ticker via Web Worker ─────────────────────────────────
+// Browsers throttle setInterval on the main thread in background tabs.
+// A Worker runs on a separate thread that is never throttled.
+const _tickWorkerBlob = new Blob([`
+  let iv = null;
+  self.onmessage = function(e) {
+    if (e.data === 'start' && !iv) {
+      iv = setInterval(() => self.postMessage('tick'), 200);
+    } else if (e.data === 'stop') {
+      clearInterval(iv); iv = null;
+    }
+  };
+`], { type: 'application/javascript' });
+const _tickWorkerURL = URL.createObjectURL(_tickWorkerBlob);
+let _tickWorker = null;
+
+function startTickWorker() {
+  if (_tickWorker) return;
+  _tickWorker = new Worker(_tickWorkerURL);
+  _tickWorker.onmessage = () => tickAll();
+  _tickWorker.postMessage('start');
+}
+function stopTickWorker() {
+  if (!_tickWorker) return;
+  _tickWorker.postMessage('stop');
+  _tickWorker.terminate();
+  _tickWorker = null;
+}
+
+// Re-anchor lastTick timestamps when tab becomes visible again,
+// preventing a large accumulated delta from causing a sudden time jump.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    const now = Date.now();
+    timers.forEach(t => { if (t.running) t.lastTick = now; });
+  }
+});
 
 document.getElementById('openAddTimer').addEventListener('click',()=>{
   document.getElementById('addTimerForm').style.cssText='display:flex;flex-direction:column;gap:var(--space-3);';
@@ -66,86 +104,107 @@ function addPreset(min,sec,name,sound,mode){
 }
 function pushTimer(o){
   const id=tidx++;
-  timers.push({id,name:o.name,tot:o.tot,orig:o.tot,rem:o.tot,sound:o.sound,rep:JSON.parse(JSON.stringify(o.rep)),running:false,done:false,reps:0,capToMax:true});
+  timers.push({id,name:o.name,tot:o.tot,orig:o.tot,rem:o.tot,sound:o.sound,rep:JSON.parse(JSON.stringify(o.rep)),running:false,done:false,reps:0,capToMax:true,lastTick:null});
   if(o.rep.mode==='increase') timers[timers.length-1].rep.base=o.tot;
   _lastTouchedId=id;
   archNotify('timer_add');
   renderTimers(); updateHeaderTimer(); showToast(`Timer "${o.name}" added!`);
 }
-function tickFn(){
-  let needFullRender=false;
-  timers.forEach(t=>{
-    if(!t.running||t.done) return;
-    t.rem--;
-    if(t.rem<=0){
-      t.rem=0;
+
+// ── Core tick: called ~5× per second from the Worker ──────────────────────
+// Uses wall-clock delta so accuracy is independent of how often ticks fire.
+function tickAll(){
+  const now = Date.now();
+  let needFullRender = false;
+
+  timers.forEach(t => {
+    if (!t.running || t.done) return;
+
+    // Initialise lastTick on first call after start
+    if (t.lastTick === null) { t.lastTick = now; return; }
+
+    const elapsed = (now - t.lastTick) / 1000; // seconds elapsed
+    t.lastTick = now;
+    t.rem = Math.max(0, t.rem - elapsed);
+
+    if (t.rem <= 0) {
+      t.rem = 0;
       timerDone(t);
-      needFullRender=true;
+      needFullRender = true;
     }
   });
-  if(needFullRender){ renderTimers(); updateHeaderTimer(); return; }
-  timers.forEach(t=>{
-    if(!t.running||t.done) return;
-    const disp=document.querySelector('#titem_'+t.id+' .timer-display');
-    if(disp) disp.textContent=fmt(t.rem);
-    const pct=t.tot>0?Math.max(0,Math.min(100,100-(t.rem/t.tot)*100)):100;
-    const bar=document.querySelector('#titem_'+t.id+' .timer-progress-fill');
-    if(bar) bar.style.width=pct+'%';
-    const slbl=document.getElementById('sliderLabel_'+t.id);
-    if(slbl) slbl.textContent=fmt(t.rem);
-    const slider=document.querySelector('#titem_'+t.id+' .time-slider');
-    if(slider && document.activeElement!==slider) slider.value=t.rem;
+
+  if (needFullRender) { renderTimers(); updateHeaderTimer(); return; }
+
+  timers.forEach(t => {
+    if (!t.running || t.done) return;
+    const remInt = Math.ceil(t.rem); // display as whole seconds
+    const disp = document.querySelector('#titem_'+t.id+' .timer-display');
+    if (disp) disp.textContent = fmt(remInt);
+    const pct = t.tot > 0 ? Math.max(0, Math.min(100, 100 - (t.rem / t.tot) * 100)) : 100;
+    const bar = document.querySelector('#titem_'+t.id+' .timer-progress-fill');
+    if (bar) bar.style.width = pct + '%';
+    const slbl = document.getElementById('sliderLabel_'+t.id);
+    if (slbl) slbl.textContent = fmt(remInt);
+    const slider = document.querySelector('#titem_'+t.id+' .time-slider');
+    if (slider && document.activeElement !== slider) slider.value = t.rem;
   });
   updateHeaderTimer();
 }
+
 function timerDone(t){
-  playSound(t.sound); archNotify('timer_done'); t.reps++;
+  playSound(t.sound); duckMusicForAlarm(3000); archNotify('timer_done'); t.reps++;
   showToast(`⏰ "${t.name}" done! (×${t.reps})`,'success');
   const r=t.rep;
   if(r.mode==='once'){
-    // Reset to initial state instead of freezing as "Complete"
     t.running=false; t.rem=t.orig; t.tot=t.orig;
   } else if(r.mode==='fixed'){
     if(r.count>0&&t.reps>=r.count){ t.running=false; t.rem=t.orig; t.tot=t.orig; }
-    else t.rem=t.tot;
+    else { t.rem=t.tot; t.lastTick=Date.now(); }
   } else if(r.mode==='increase'){
     if(r.max>0&&t.reps>=r.max){ t.running=false; t.rem=t.orig; t.tot=t.orig; }
-    else { t.tot=r.base+r.step*t.reps; t.rem=t.tot; }
+    else { t.tot=r.base+r.step*t.reps; t.rem=t.tot; t.lastTick=Date.now(); }
   } else if(r.mode==='decrease'){
     const nx=t.tot-r.step;
     if(nx<r.minDur){ t.running=false; t.rem=t.orig; t.tot=t.orig; }
-    else { t.tot=nx; t.rem=nx; }
+    else { t.tot=nx; t.rem=nx; t.lastTick=Date.now(); }
   } else if(r.mode==='custom'){
-    r.si=(r.si+1)%r.seq.length; t.tot=r.seq[r.si]; t.rem=t.tot;
+    r.si=(r.si+1)%r.seq.length; t.tot=r.seq[r.si]; t.rem=t.tot; t.lastTick=Date.now();
   } else if(r.mode==='fibonacci'){
-    r.fi=(r.fi+1)%r.fib.length; t.tot=r.fib[r.fi]; t.rem=t.tot;
+    r.fi=(r.fi+1)%r.fib.length; t.tot=r.fib[r.fi]; t.rem=t.tot; t.lastTick=Date.now();
   } else if(r.mode==='random'){
-    t.tot=Math.floor(r.rMin+Math.random()*(r.rMax-r.rMin)); t.rem=t.tot;
+    t.tot=Math.floor(r.rMin+Math.random()*(r.rMax-r.rMin)); t.rem=t.tot; t.lastTick=Date.now();
   } else {
-    t.rem=t.tot;
+    t.rem=t.tot; t.lastTick=Date.now();
   }
-  // Stop global tick if nothing is running
-  if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; }
+  // Stop worker if nothing is running
+  if(!timers.some(x=>x.running)) stopTickWorker();
 }
+
 function toggleTimer(id){
   const t=timers.find(x=>x.id===id); if(!t) return;
   t.running=!t.running;
   _lastTouchedId=id;
-  if(t.running){ archNotify('timer_add'); if(!tick) tick=setInterval(tickFn,1000); }
-  else if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; }
+  if(t.running){
+    t.lastTick=Date.now(); // anchor wall clock on start
+    archNotify('timer_add');
+    startTickWorker();
+  } else if(!timers.some(x=>x.running)){
+    stopTickWorker();
+  }
   renderTimers(); updateHeaderTimer();
 }
 function resetTimer(id){
   const t=timers.find(x=>x.id===id); if(!t) return;
-  t.running=false; t.rem=t.orig; t.tot=t.orig; t.reps=0;
+  t.running=false; t.rem=t.orig; t.tot=t.orig; t.reps=0; t.lastTick=null;
   _lastTouchedId=id;
-  if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; }
+  if(!timers.some(x=>x.running)) stopTickWorker();
   renderTimers(); updateHeaderTimer();
 }
 function deleteTimer(id){
   timers=timers.filter(x=>x.id!==id);
   if(_lastTouchedId===id) _lastTouchedId = timers.length ? timers[timers.length-1].id : null;
-  if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; }
+  if(!timers.some(x=>x.running)) stopTickWorker();
   renderTimers(); updateHeaderTimer();
 }
 function toggleEditPanel(id){
@@ -154,10 +213,10 @@ function toggleEditPanel(id){
 }
 function liveAdjustTimer(id, val){
   const t=timers.find(x=>x.id===id); if(!t) return;
-  t.rem=parseInt(val);
+  t.rem=parseFloat(val);
   _lastTouchedId=id;
-  const lbl=document.getElementById('sliderLabel_'+id); if(lbl) lbl.textContent=fmt(t.rem);
-  const disp=document.querySelector('#titem_'+id+' .timer-display'); if(disp) disp.textContent=fmt(t.rem);
+  const lbl=document.getElementById('sliderLabel_'+id); if(lbl) lbl.textContent=fmt(Math.ceil(t.rem));
+  const disp=document.querySelector('#titem_'+id+' .timer-display'); if(disp) disp.textContent=fmt(Math.ceil(t.rem));
   const pct=t.tot>0?Math.max(0,Math.min(100,100-(t.rem/t.tot)*100)):100;
   const bar=document.querySelector('#titem_'+id+' .timer-progress-fill'); if(bar) bar.style.width=pct+'%';
   updateHeaderTimer();
@@ -175,11 +234,9 @@ function resetToBase(id){
   t.tot = t.orig; t.rem = Math.min(t.rem, t.orig); renderTimers();
 }
 
-// Cap checkbox applies immediately without needing Save
 function setCapToMax(id, checked){
   const t=timers.find(x=>x.id===id); if(!t) return;
   t.capToMax=checked;
-  // If cap re-enabled and rem exceeds tot, clamp it down
   if(checked && t.rem > t.tot){ t.rem = t.tot; renderTimers(); }
 }
 
@@ -195,7 +252,6 @@ function saveTimerEdit(id){
     t.orig=newDur; t.tot=newDur; if(!t.running) t.rem=newDur;
   }
   if(sndInput) t.sound=sndInput.value;
-  // capToMax is already applied live via setCapToMax()
   t.editOpen=false;
   renderTimers(); updateHeaderTimer(); showToast('Timer updated!');
 }
@@ -243,13 +299,14 @@ function cycleInfo(t){
   if(r.mode==='random') return `Random · range ${fmt(r.rMin)}–${fmt(r.rMax)} · ring #${reps+1}`;
   return `Ring #${reps+1}`;
 }
-function fmt(s){ const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`:`${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
+function fmt(s){ s=Math.max(0,Math.round(s)); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`:`${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
 const repLabels={once:'Once',fixed:'Repeating',increase:'↑ Increasing',decrease:'↓ Decreasing',custom:'Custom Seq',fibonacci:'Fibonacci',random:'Random'};
 const sndEmoji={bell:'🔔',trombone:'🎺',harp:'🎵',chime:'🎶',drum:'🥁',bounce:'🎷',none:'🔇'};
 function renderTimers(){
   const el=document.getElementById('timersList');
   if(!timers.length){ el.innerHTML='<div style="text-align:center;padding:var(--space-12);color:var(--color-text-faint);font-size:var(--text-sm);"><i data-lucide="timer" style="width:36px;height:36px;margin:0 auto var(--space-3);opacity:.3;"></i><p>No timers yet.</p></div>'; lucide.createIcons(); return; }
   el.innerHTML=timers.map(t=>{
+    const remInt=Math.ceil(t.rem);
     const pct=t.tot>0?Math.max(0,Math.min(100,100-(t.rem/t.tot)*100)):100;
     const cls=t.running?'running':'';
     const editOpen=t.editOpen?'open':'';
@@ -263,7 +320,6 @@ function renderTimers(){
       ['none','🔇','Silent'],
     ].map(([v,e,l])=>`<option value="${v}" ${t.sound===v?'selected':''}>${e} ${l}</option>`).join('');
     const customOpts=(_customSounds||[]).map((cs,i)=>`<option value="custom_${i}" ${t.sound===`custom_${i}`?'selected':''}>🎧 ${cs.name}</option>`).join('');
-    // Duration in min+sec for edit panel
     const editMins=Math.floor(t.orig/60);
     const editSecs=t.orig%60;
     return `<div class="timer-item ${cls}" id="titem_${t.id}">
@@ -275,7 +331,7 @@ function renderTimers(){
           <button class="btn btn-icon btn-danger" onclick="deleteTimer(${t.id})" title="Delete"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>
         </div>
       </div>
-      <div class="timer-display ${cls}">${fmt(t.rem)}</div>
+      <div class="timer-display ${cls}">${fmt(remInt)}</div>
       <div class="timer-progress"><div class="timer-progress-fill" style="width:${pct}%"></div>${t.tot>t.orig?`<div class="timer-orig-marker" style="right:${Math.round((1-t.orig/t.tot)*100)}%"></div>`:''}</div>
       <div class="timer-meta">
         <span class="badge">${sndEmoji[t.sound]||'🎧'} ${(_customSounds||[]).find((c,i)=>`custom_${i}`===t.sound)?.name||t.sound}</span>
@@ -293,7 +349,7 @@ function renderTimers(){
         <span class="section-label">Adjust remaining time</span>
         <div class="time-slider-wrap">
           <input type="range" class="time-slider" min="0" max="${Math.max(t.tot,t.rem)}" value="${t.rem}" oninput="liveAdjustTimer(${t.id},this.value)" onchange="liveAdjustTimer(${t.id},this.value)">
-          <div class="time-slider-labels"><span>0:00</span><span id="sliderLabel_${t.id}">${fmt(t.rem)}</span><span>${fmt(t.tot)}</span></div>
+          <div class="time-slider-labels"><span>0:00</span><span id="sliderLabel_${t.id}">${fmt(remInt)}</span><span>${fmt(t.tot)}</span></div>
         </div>
         <div class="adj-btns">
           <button class="adj-btn" onclick="nudgeTimer(${t.id},-300)">−5 min</button>
@@ -330,7 +386,6 @@ function renderTimers(){
 let _pinnedTimerId = null;
 
 function getCurrentTimer(){
-  // Priority: pinned (if still exists), then running with least time, then last touched
   if(_pinnedTimerId){
     const pinned=timers.find(x=>x.id===_pinnedTimerId);
     if(pinned) return pinned;
@@ -350,7 +405,7 @@ function updateHeaderTimer(){
   badge.classList.remove('htb-hidden');
   const label=document.getElementById('htbLabel');
   const nameEl=document.getElementById('htbName');
-  if(label) label.textContent=fmt(t.rem);
+  if(label) label.textContent=fmt(Math.ceil(t.rem));
   if(nameEl) nameEl.textContent=t.name;
   badge.classList.toggle('htb-running',t.running);
 }
@@ -372,7 +427,7 @@ function renderHeaderTimerList(){
     return `<div class="htd-row${isPinned?' htd-pinned':''}" onclick="pinHeaderTimer(${t.id})">
       <div class="htd-row-info">
         <span class="htd-row-name">${t.name.replace(/</g,'&lt;')}</span>
-        <span class="htd-row-time ${t.running?'htd-running':''}">${fmt(t.rem)}</span>
+        <span class="htd-row-time ${t.running?'htd-running':''}">${fmt(Math.ceil(t.rem))}</span>
         ${t.reps>0?`<span class="badge gold" style="font-size:10px;">×${t.reps}</span>`:''}
       </div>
       <button class="btn btn-icon btn-ghost htd-playbtn" title="${t.running?'Pause':'Start'}" onclick="event.stopPropagation();toggleTimer(${t.id});renderHeaderTimerList();" style="width:26px;height:26px;">
@@ -390,7 +445,6 @@ function pinHeaderTimer(id){
   renderHeaderTimerList();
 }
 
-// Close header timer dropdown when clicking outside
 document.addEventListener('click', e=>{
   const drop=document.getElementById('headerTimerDrop');
   if(drop && drop.classList.contains('htd-open') && !drop.contains(e.target)){
