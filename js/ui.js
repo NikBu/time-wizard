@@ -1,4 +1,4 @@
-// ── CONFIRM HELPER ────────────────────────────────
+// ── CONFIRM HELPER ─────────────────────────────────
 let _confirmCb = null;
 function askConfirm(msg, title, okLabel, cb){
   document.getElementById('confirmMsg').textContent = msg;
@@ -86,11 +86,22 @@ function renderCustomSounds(){
     <div class="custom-snd-row">
       <span class="snd-icon">🎵</span>
       <span class="snd-name">${s.name}</span>
+      <span id="cslen_${i}" style="font-size:var(--text-xs);color:var(--color-text-faint);flex-shrink:0;min-width:36px;text-align:right;">${s.duration?fmtDuration(s.duration):'—'}</span>
       <button class="btn btn-ghost btn-sm" onclick="playCustomSound(${i})" title="Preview">▶</button>
       <button class="btn btn-ghost btn-sm" onclick="useCustomSound(${i})" title="Use as alarm">Use</button>
       <button class="btn btn-ghost btn-sm" onclick="removeCustomSound(${i})" title="Remove">✕</button>
     </div>
   `).join('');
+  // Populate durations asynchronously for any without them
+  _customSounds.forEach((s,i)=>{
+    if(s.duration) return;
+    const lbl=document.getElementById('cslen_'+i); if(!lbl) return;
+    const a=new Audio(s.url);
+    a.addEventListener('loadedmetadata',()=>{
+      if(isFinite(a.duration)){ s.duration=a.duration; lbl.textContent=fmtDuration(a.duration); }
+    });
+    a.load();
+  });
   // Also update the sound select in timer form
   const sel=document.getElementById('timerSound');
   if(sel){
@@ -102,6 +113,11 @@ function renderCustomSounds(){
       }
     });
   }
+}
+function fmtDuration(sec){
+  sec=Math.round(sec);
+  const m=Math.floor(sec/60), s=sec%60;
+  return m>0?`${m}:${String(s).padStart(2,'0')}`:`0:${String(s).padStart(2,'0')}`;
 }
 function playCustomSound(i){
   const s=_customSounds[i]; if(!s) return;
