@@ -31,6 +31,18 @@ function oscEnv(f,t,sg,eg,st,dur){
 }
 function playSound(type){
   if(type==='none') return;
+  // Handle custom uploaded alarm sounds (stored as "custom_0", "custom_1", etc.)
+  if(type && type.startsWith('custom_')){
+    const i = parseInt(type.split('_')[1]);
+    const cs = (typeof _customSounds !== 'undefined') && _customSounds[i];
+    if(cs){
+      try{ actx(); if(_actx.state==='suspended') _actx.resume(); }catch(e){}
+      const a = new Audio(cs.url);
+      a.volume = _alarmVol;
+      a.play().catch(()=>{});
+    }
+    return;
+  }
   try{
     const n = actx().currentTime;
     if(type==='bell'){ [110,82.4,65.4].forEach((f,i)=>oscEnv(f,'sine',.35,.001,n+i*.06,2.5)); }
