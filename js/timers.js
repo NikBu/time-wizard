@@ -1,4 +1,4 @@
-// ── TIMERS ────────────────────────────────────────
+// ── TIMERS ───────────────────────────────────────
 let timers=[], tidx=1, tick=null;
 
 document.getElementById('openAddTimer').addEventListener('click',()=>{
@@ -67,6 +67,7 @@ function pushTimer(o){
   const id=tidx++;
   timers.push({id,name:o.name,tot:o.tot,orig:o.tot,rem:o.tot,sound:o.sound,rep:JSON.parse(JSON.stringify(o.rep)),running:false,done:false,reps:0,capToMax:true});
   if(o.rep.mode==='increase') timers[timers.length-1].rep.base=o.tot;
+  archNotify('timer_add');
   renderTimers(); showToast(`Timer "${o.name}" added!`);
 }
 function tickFn(){
@@ -91,7 +92,7 @@ function tickFn(){
   });
 }
 function timerDone(t){
-  playSound(t.sound); duckMusicForAlarm(3000); archOnTimerDone(); t.reps++;
+  playSound(t.sound); duckMusicForAlarm(3000); archNotify('timer_done'); t.reps++;
   showToast(`⏰ "${t.name}" done! (×${t.reps})`,'success');
   const r=t.rep;
   if(r.mode==='once'){ t.running=false; t.done=true; }
@@ -103,7 +104,7 @@ function timerDone(t){
   else if(r.mode==='random'){ t.tot=Math.floor(r.rMin+Math.random()*(r.rMax-r.rMin)); t.rem=t.tot; }
   else t.rem=t.tot;
 }
-function toggleTimer(id){ const t=timers.find(x=>x.id===id); if(!t||t.done) return; t.running=!t.running; if(t.running){ archOnTimerStart(); if(!tick) tick=setInterval(tickFn,1000); } else if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; } renderTimers(); }
+function toggleTimer(id){ const t=timers.find(x=>x.id===id); if(!t||t.done) return; t.running=!t.running; if(t.running){ archNotify('timer_add'); if(!tick) tick=setInterval(tickFn,1000); } else if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; } renderTimers(); }
 function resetTimer(id){ const t=timers.find(x=>x.id===id); if(!t) return; t.running=false;t.done=false;t.rem=t.orig;t.tot=t.orig;t.reps=0; if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; } renderTimers(); }
 function deleteTimer(id){ timers=timers.filter(x=>x.id!==id); if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; } renderTimers(); }
 function toggleEditPanel(id){
@@ -184,12 +185,6 @@ function cycleInfo(t){
   if(r.mode==='random') return `Random · range ${fmt(r.rMin)}–${fmt(r.rMax)} · ring #${reps+1}`;
   return `Ring #${reps+1}`;
 }
-function stepNum(id, delta){
-  const el=document.getElementById(id); if(!el) return;
-  const cur=parseFloat(el.value)||0, mn=parseFloat(el.min)||0, mx=parseFloat(el.max)||Infinity;
-  el.value=Math.max(mn,Math.min(mx,cur+delta));
-  el.dispatchEvent(new Event('input'));
-}
 function fmt(s){ const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`:`${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
 const repLabels={once:'Once',fixed:'Repeating',increase:'↑ Increasing',decrease:'↓ Decreasing',custom:'Custom Seq',fibonacci:'Fibonacci',random:'Random'};
 const sndEmoji={bell:'🔔',viola:'🎻',harp:'🎵',chime:'🎶',drum:'🥁',whistle:'🎷',none:'🔇'};
@@ -201,7 +196,7 @@ function renderTimers(){
     const cls=t.done?'done':t.running?'running':'';
     const editOpen=t.editOpen?'open':'';
     const builtinOpts=Object.entries(sndEmoji).map(([v,e])=>`<option value="${v}" ${t.sound===v?'selected':''}>${e} ${v}</option>`).join('');
-    const customOpts=(typeof customSounds!=='undefined'?customSounds:[]).map(cs=>`<option value="${cs.id}" ${t.sound===cs.id?'selected':''}>🎧 ${cs.name}</option>`).join('');
+    const customOpts=(_customSounds||[]).map((cs,i)=>`<option value="custom_${i}" ${t.sound===`custom_${i}`?'selected':''}>🎧 ${cs.name}</option>`).join('');
     return `<div class="timer-item ${cls}" id="titem_${t.id}">
       <div class="timer-header">
         <input class="timer-name-input" value="${t.name.replace(/"/g,'&quot;')}" onchange="timers.find(x=>x.id==${t.id}).name=this.value">
@@ -214,7 +209,7 @@ function renderTimers(){
       <div class="timer-display ${cls}">${t.done?'✓ Complete':fmt(t.rem)}</div>
       <div class="timer-progress"><div class="timer-progress-fill" style="width:${pct}%"></div>${t.tot>t.orig?`<div class="timer-orig-marker" style="right:${Math.round((1-t.orig/t.tot)*100)}%"></div>`:''}</div>
       <div class="timer-meta">
-        <span class="badge">${sndEmoji[t.sound]||'🎧'} ${(typeof customSounds!=='undefined'?customSounds:[]).find(c=>c.id===t.sound)?.name||t.sound}</span>
+        <span class="badge">${sndEmoji[t.sound]||'🎧'} ${(_customSounds||[]).find((c,i)=>`custom_${i}`===t.sound)?.name||t.sound}</span>
         <span class="badge accent">${repLabels[t.rep.mode]||t.rep.mode}</span>
         ${t.reps>0?`<span class="badge gold">×${t.reps}</span>`:''}
       </div>

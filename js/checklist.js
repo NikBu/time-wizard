@@ -2,7 +2,6 @@
 let lists=[], lidx=1, tidxc=1, activeList=null, totalPts=0;
 
 function openNewListModal(){ document.getElementById('newListModal').classList.remove('hidden'); document.getElementById('newListName').focus(); }
-function closeModal(id){ document.getElementById(id).classList.add('hidden'); }
 function createList(){
   const name=document.getElementById('newListName').value.trim();
   if(!name){ showToast('Enter a list name.','error'); return; }
@@ -47,7 +46,7 @@ function renderChecklist(){
     <div class="checklist-stats">
       <div class="stat-pill"><strong>${dc}</strong> / ${top.length} done</div>
       <div class="stat-pill"><strong>${pct}%</strong></div>
-      <div class="stat-pill">✦ <strong>${dpts}</strong>/${tpts} pts</div>
+      <div class="stat-pill">✶ <strong>${dpts}</strong>/${tpts} pts</div>
     </div>
     <ul class="task-tree" id="taskTree">${renderNodes(list.tasks,null)}</ul>
     <div class="add-task-row mt-3">
@@ -70,7 +69,7 @@ function renderNodes(tasks,pid,depth){
       <div class="task-body" style="flex:1;min-width:0;">
         <div style="display:flex;align-items:baseline;gap:var(--space-2);flex-wrap:wrap;">
           <span class="task-text" id="task-text-${t.id}">${t.text}</span>
-          <span class="task-points">✦${t.pts}</span>
+          <span class="task-points">✶${t.pts}</span>
         </div>
         <button class="task-expand-btn" id="task-expbtn-${t.id}" onclick="toggleTaskExpand(${t.id})">Show more</button>
         ${hasNote?`<div class="task-note" id="task-note-${t.id}">${t.note}</div><button class="task-expand-btn" id="task-notebtn-${t.id}" onclick="toggleNoteExpand(${t.id})">Show more</button>`:`<div class="task-note" id="task-note-${t.id}" style="display:none;"></div>`}
@@ -183,14 +182,18 @@ function duplicateList(id){
   renderLists(); selectList(newId); showToast(`"${orig.name}" duplicated!`);
 }
 function toggleTask(id){
-  const list=lists.find(l=>l.id===activeList), task=list.tasks.find(t=>t.id===id);
+  const list=lists.find(l=>l.id===activeList); if(!list) return;
+  const task=list.tasks.find(t=>t.id===id); if(!task) return;
   task.done=!task.done;
   if(task.done){
     totalPts+=task.pts; updateHeaderPts();
-    archOnTaskDone(task.pts);
-    showToast(`✦ +${task.pts} pts! "${task.text}"`,'success');
+    archNotify('task_done');
+    showToast(`✶ +${task.pts} pts! "${task.text}"`,'success');
     list.tasks.filter(t=>t.pid===id&&!t.done).forEach(s=>{ s.done=true; totalPts+=s.pts; });
-  } else { totalPts=Math.max(0,totalPts-task.pts); updateHeaderPts(); list.tasks.filter(t=>t.pid===id).forEach(s=>s.done=false); }
+  } else {
+    totalPts=Math.max(0,totalPts-task.pts); updateHeaderPts();
+    list.tasks.filter(t=>t.pid===id).forEach(s=>s.done=false);
+  }
   renderChecklist(); renderLists();
 }
 function delTask(id){ const list=lists.find(l=>l.id===activeList); list.tasks=list.tasks.filter(t=>t.id!==id&&t.pid!==id); renderChecklist(); renderLists(); }
@@ -207,7 +210,7 @@ function deleteList(id){
   });
 }
 function updateHeaderPts(){
-  const hp=document.getElementById('headerPoints'); if(hp) hp.textContent=`✦ ${totalPts} pts`;
+  const hp=document.getElementById('headerPoints'); if(hp) hp.textContent=`✶ ${totalPts} pts`;
   const lvl=document.getElementById('owlLevel'); if(lvl) lvl.textContent=Math.floor(totalPts/100)+1;
   const wiz=document.getElementById('owlWisdom'); if(wiz) wiz.textContent=totalPts;
 }
