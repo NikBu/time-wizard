@@ -1,0 +1,10 @@
+/* THEMES */
+.themes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--space-4);}
+.theme-card{border-radius:var(--radius-xl);overflow:hidden;cursor:pointer;border:2px solid var(--color-border);transition:border-color var(--trans),transform var(--trans),box-shadow var(--trans);}
+.theme-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
+.theme-card.selected{border-color:var(--color-primary);}
+.theme-preview{height:90px;padding:var(--space-3);}
+.theme-preview-title{font-size:var(--text-sm);font-weight:600;margin-bottom:4px;}
+.theme-preview-bar{height:5px;border-radius:var(--radius-full);width:70%;margin-bottom:4px;}
+.theme-preview-bar2{height:5px;border-radius:var(--radius-full);width:40%;}
+.theme-footer{padding:var(--space-3) var(--space-4);font-size:var(--text-sm);font-weight:600;display:flex;justify-content:space-between;align-items:center;}

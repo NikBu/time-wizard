@@ -1,0 +1,25 @@
+/* MUSIC VISUALIZER */
+.viz-bar{width:4px;border-radius:var(--radius-full);background:var(--color-accent);transform-origin:bottom;animation:none;transition:height .1s ease;}
+.viz-bar.active{animation:vizBounce calc(0.4s + var(--i) * 0.07s) ease-in-out infinite alternate;}
+@keyframes vizBounce{from{height:4px;}to{height:28px;}}
+/* AMBIENT TRACK ROW */
+.ambient-row{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-surface-offset);cursor:pointer;transition:background var(--trans),border-color var(--trans);}
+.ambient-row:hover{background:var(--color-surface-dynamic);border-color:var(--color-primary);}
+.ambient-row.selected{background:var(--color-primary-highlight);border-color:var(--color-primary);}
+.ambient-row .amb-icon{font-size:20px;flex-shrink:0;}
+.ambient-row .amb-info{flex:1;min-width:0;}
+.ambient-row .amb-name{font-size:var(--text-sm);font-weight:600;}
+.ambient-row .amb-desc{font-size:var(--text-xs);color:var(--color-text-muted);}
+
+/* FLOATING MUSIC WIDGET */
+#musicWidget{position:fixed;bottom:var(--space-5);right:var(--space-5);z-index:200;display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);font-size:var(--text-xs);transition:opacity .2s,transform .2s;}
+#musicWidget.hidden-widget{opacity:0;pointer-events:none;transform:translateY(8px);}
+#musicWidget .mw-bars{display:flex;align-items:flex-end;gap:2px;height:16px;}
+#musicWidget .mw-bar{width:3px;border-radius:var(--radius-full);background:var(--color-primary);animation:none;}
+#musicWidget .mw-bar.active{animation:vizBounce calc(0.4s + var(--i)*0.07s) ease-in-out infinite alternate;}
+#musicWidget .mw-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-muted);}
+#musicWidget .mw-vol{display:flex;align-items:center;gap:var(--space-1);}
+#musicWidget input[type=range]{width:64px;height:4px;accent-color:var(--color-primary);}
+
+/* MUSIC DROP ZONE */
+#musicDropZone.drag-over{border-color:var(--color-primary);background:var(--color-primary-highlight);}
