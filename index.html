@@ -42,6 +42,16 @@
     TimeWizard
   </div>
   <div class="header-right">
+    <div id="headerTimerDrop" class="header-timer">
+      <button type="button" class="badge header-timer-badge htb-hidden" id="headerTimerBadge" onclick="toggleHeaderTimerList()" title="Current timer">
+        <span class="htb-label" id="htbLabel">00:00</span>
+        <span class="htb-name" id="htbName">No timer</span>
+        <i data-lucide="chevron-down" style="width:12px;height:12px;"></i>
+      </button>
+      <div class="header-timer-dropdown">
+        <div class="htd-list" id="headerTimerList"></div>
+      </div>
+    </div>
     <div id="headerPoints" class="badge gold">✶ 0 pts</div>
     <button class="icon-btn" onclick="exportData()" aria-label="Export data" title="Export data">
       <i data-lucide="download-cloud" style="width:16px;height:16px;"></i>
@@ -98,11 +108,11 @@
           <label for="timerSound">Alert Sound</label>
           <select id="timerSound">
             <option value="bell">🔔 Low Ominous Bell</option>
-            <option value="viola">🎻 Viola Tune</option>
+            <option value="trombone">🎺 Trombone Tune</option>
             <option value="harp">🎵 Harp Tune</option>
             <option value="chime">🎶 Crystal Chime</option>
             <option value="drum">🥁 Deep Drum</option>
-            <option value="whistle">🎷 Soft Whistle</option>
+            <option value="bounce">🎷 Bounce</option>
             <option value="none">🔇 Silent</option>
           </select>
         </div>
@@ -132,13 +142,13 @@
           <button class="btn btn-secondary" onclick="addPreset(25,0,'Pomodoro','bell','once')">🍅 Pomodoro — 25 min</button>
           <button class="btn btn-secondary" onclick="addPreset(5,0,'Short Break','harp','once')">☕ Short Break — 5 min</button>
           <button class="btn btn-secondary" onclick="addPreset(15,0,'Long Break','harp','once')">🌿 Long Break — 15 min</button>
-          <button class="btn btn-secondary" onclick="addPreset(60,0,'Deep Work','viola','fixed')">🧠 Deep Work — 1 hr (repeat)</button>
+          <button class="btn btn-secondary" onclick="addPreset(60,0,'Deep Work','trombone','fixed')">🧠 Deep Work — 1 hr (repeat)</button>
           <button class="btn btn-secondary" onclick="addPreset(0,30,'Stretch','chime','fixed')">🤸 Stretch — 30 min (repeat)</button>
           <button class="btn btn-secondary" onclick="addPreset(5,0,'Fib Session','bell','fibonacci')">🌀 Fibonacci sequence</button>
         </div>
 
       <!-- SOUND LIBRARY -->
-      <div class="card" style="margin-top:var(--space-4);" id="soundLibraryCard">
+      <div class="card" style="margin-top:var(--space-4);margin-bottom:var(--space-8);" id="soundLibraryCard">
         <div class="card-title" style="margin-bottom:var(--space-3);">Sound Library</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-4);" id="soundPreviewGrid">
           <!-- filled by JS -->
