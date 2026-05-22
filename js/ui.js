@@ -28,12 +28,12 @@ function stepNum(id,d){ const el=document.getElementById(id); if(!el) return; co
 
 // ── SOUND LIBRARY ─────────────────────────────────
 const SOUNDS = [
-  {id:'bell',  label:'Low Bell',   emoji:'🔔'},
-  {id:'viola', label:'Viola Tune', emoji:'🎻'},
-  {id:'harp',  label:'Harp',       emoji:'🎵'},
-  {id:'chime', label:'Chime',      emoji:'🎶'},
-  {id:'drum',  label:'Deep Drum',  emoji:'🥁'},
-  {id:'whistle',label:'Whistle',   emoji:'🎷'},
+  {id:'bell',     label:'Low Bell',       emoji:'🔔'},
+  {id:'trombone', label:'Trombone Tune',  emoji:'🎺'},
+  {id:'harp',     label:'Harp',           emoji:'🎵'},
+  {id:'chime',    label:'Chime',          emoji:'🎶'},
+  {id:'drum',     label:'Deep Drum',      emoji:'🥁'},
+  {id:'bounce',   label:'Bounce',         emoji:'🎷'},
 ];
 
 let _sndPlaying = null;

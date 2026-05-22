@@ -1,5 +1,6 @@
 // ── TIMERS ────────────────────────────────────────
 let timers=[], tidx=1, tick=null;
+let _lastTouchedId=null;
 
 document.getElementById('openAddTimer').addEventListener('click',()=>{
   document.getElementById('addTimerForm').style.cssText='display:flex;flex-direction:column;gap:var(--space-3);';
@@ -67,8 +68,9 @@ function pushTimer(o){
   const id=tidx++;
   timers.push({id,name:o.name,tot:o.tot,orig:o.tot,rem:o.tot,sound:o.sound,rep:JSON.parse(JSON.stringify(o.rep)),running:false,done:false,reps:0,capToMax:true});
   if(o.rep.mode==='increase') timers[timers.length-1].rep.base=o.tot;
+  _lastTouchedId=id;
   archNotify('timer_add');
-  renderTimers(); showToast(`Timer "${o.name}" added!`);
+  renderTimers(); updateHeaderTimer(); showToast(`Timer "${o.name}" added!`);
 }
 function tickFn(){
   let needFullRender=false;
@@ -81,7 +83,7 @@ function tickFn(){
       needFullRender=true;
     }
   });
-  if(needFullRender){ renderTimers(); return; }
+  if(needFullRender){ renderTimers(); updateHeaderTimer(); return; }
   timers.forEach(t=>{
     if(!t.running||t.done) return;
     const disp=document.querySelector('#titem_'+t.id+' .timer-display');
@@ -94,56 +96,108 @@ function tickFn(){
     const slider=document.querySelector('#titem_'+t.id+' .time-slider');
     if(slider && document.activeElement!==slider) slider.value=t.rem;
   });
+  updateHeaderTimer();
 }
 function timerDone(t){
   playSound(t.sound); archNotify('timer_done'); t.reps++;
   showToast(`⏰ "${t.name}" done! (×${t.reps})`,'success');
   const r=t.rep;
-  if(r.mode==='once'){ t.running=false; t.done=true; }
-  else if(r.mode==='fixed'){ if(r.count>0&&t.reps>=r.count){ t.running=false;t.done=true; } else t.rem=t.tot; }
-  else if(r.mode==='increase'){ if(r.max>0&&t.reps>=r.max){ t.running=false;t.done=true; } else { t.tot=r.base+r.step*t.reps; t.rem=t.tot; } }
-  else if(r.mode==='decrease'){ const nx=t.tot-r.step; if(nx<r.minDur){ t.running=false;t.done=true; } else { t.tot=nx; t.rem=nx; } }
-  else if(r.mode==='custom'){ r.si=(r.si+1)%r.seq.length; t.tot=r.seq[r.si]; t.rem=t.tot; }
-  else if(r.mode==='fibonacci'){ r.fi=(r.fi+1)%r.fib.length; t.tot=r.fib[r.fi]; t.rem=t.tot; }
-  else if(r.mode==='random'){ t.tot=Math.floor(r.rMin+Math.random()*(r.rMax-r.rMin)); t.rem=t.tot; }
-  else t.rem=t.tot;
+  if(r.mode==='once'){
+    // Reset to initial state instead of freezing as "Complete"
+    t.running=false; t.rem=t.orig; t.tot=t.orig;
+  } else if(r.mode==='fixed'){
+    if(r.count>0&&t.reps>=r.count){ t.running=false; t.rem=t.orig; t.tot=t.orig; }
+    else t.rem=t.tot;
+  } else if(r.mode==='increase'){
+    if(r.max>0&&t.reps>=r.max){ t.running=false; t.rem=t.orig; t.tot=t.orig; }
+    else { t.tot=r.base+r.step*t.reps; t.rem=t.tot; }
+  } else if(r.mode==='decrease'){
+    const nx=t.tot-r.step;
+    if(nx<r.minDur){ t.running=false; t.rem=t.orig; t.tot=t.orig; }
+    else { t.tot=nx; t.rem=nx; }
+  } else if(r.mode==='custom'){
+    r.si=(r.si+1)%r.seq.length; t.tot=r.seq[r.si]; t.rem=t.tot;
+  } else if(r.mode==='fibonacci'){
+    r.fi=(r.fi+1)%r.fib.length; t.tot=r.fib[r.fi]; t.rem=t.tot;
+  } else if(r.mode==='random'){
+    t.tot=Math.floor(r.rMin+Math.random()*(r.rMax-r.rMin)); t.rem=t.tot;
+  } else {
+    t.rem=t.tot;
+  }
+  // Stop global tick if nothing is running
+  if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; }
 }
-function toggleTimer(id){ const t=timers.find(x=>x.id===id); if(!t||t.done) return; t.running=!t.running; if(t.running){ archNotify('timer_add'); if(!tick) tick=setInterval(tickFn,1000); } else if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; } renderTimers(); }
-function resetTimer(id){ const t=timers.find(x=>x.id===id); if(!t) return; t.running=false;t.done=false;t.rem=t.orig;t.tot=t.orig;t.reps=0; if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; } renderTimers(); }
-function deleteTimer(id){ timers=timers.filter(x=>x.id!==id); if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; } renderTimers(); }
+function toggleTimer(id){
+  const t=timers.find(x=>x.id===id); if(!t) return;
+  t.running=!t.running;
+  _lastTouchedId=id;
+  if(t.running){ archNotify('timer_add'); if(!tick) tick=setInterval(tickFn,1000); }
+  else if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; }
+  renderTimers(); updateHeaderTimer();
+}
+function resetTimer(id){
+  const t=timers.find(x=>x.id===id); if(!t) return;
+  t.running=false; t.rem=t.orig; t.tot=t.orig; t.reps=0;
+  _lastTouchedId=id;
+  if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; }
+  renderTimers(); updateHeaderTimer();
+}
+function deleteTimer(id){
+  timers=timers.filter(x=>x.id!==id);
+  if(_lastTouchedId===id) _lastTouchedId = timers.length ? timers[timers.length-1].id : null;
+  if(!timers.some(x=>x.running)){ clearInterval(tick); tick=null; }
+  renderTimers(); updateHeaderTimer();
+}
 function toggleEditPanel(id){
   const t=timers.find(x=>x.id===id); if(!t) return;
   t.editOpen=!t.editOpen; renderTimers();
 }
 function liveAdjustTimer(id, val){
-  const t=timers.find(x=>x.id===id); if(!t||t.done) return;
+  const t=timers.find(x=>x.id===id); if(!t) return;
   t.rem=parseInt(val);
+  _lastTouchedId=id;
   const lbl=document.getElementById('sliderLabel_'+id); if(lbl) lbl.textContent=fmt(t.rem);
   const disp=document.querySelector('#titem_'+id+' .timer-display'); if(disp) disp.textContent=fmt(t.rem);
   const pct=t.tot>0?Math.max(0,Math.min(100,100-(t.rem/t.tot)*100)):100;
   const bar=document.querySelector('#titem_'+id+' .timer-progress-fill'); if(bar) bar.style.width=pct+'%';
+  updateHeaderTimer();
 }
 function nudgeTimer(id, delta){
-  const t=timers.find(x=>x.id===id); if(!t||t.done) return;
+  const t=timers.find(x=>x.id===id); if(!t) return;
+  _lastTouchedId=id;
   const newRem = t.rem + delta;
   if(t.capToMax){ t.rem = Math.max(0, Math.min(t.tot, newRem)); }
   else { t.rem = Math.max(0, newRem); if(t.rem > t.tot){ t.tot = t.rem; } }
-  renderTimers();
+  renderTimers(); updateHeaderTimer();
 }
 function resetToBase(id){
   const t=timers.find(x=>x.id===id); if(!t) return;
   t.tot = t.orig; t.rem = Math.min(t.rem, t.orig); renderTimers();
 }
+
+// Cap checkbox applies immediately without needing Save
+function setCapToMax(id, checked){
+  const t=timers.find(x=>x.id===id); if(!t) return;
+  t.capToMax=checked;
+  // If cap re-enabled and rem exceeds tot, clamp it down
+  if(checked && t.rem > t.tot){ t.rem = t.tot; renderTimers(); }
+}
+
 function saveTimerEdit(id){
   const t=timers.find(x=>x.id===id); if(!t) return;
-  const durInput=document.getElementById('eDur_'+id);
+  const minInput=document.getElementById('eDurMin_'+id);
+  const secInput=document.getElementById('eDurSec_'+id);
   const sndInput=document.getElementById('eSnd_'+id);
-  const capInput=document.getElementById('eCap_'+id);
-  if(durInput){ const newDur=Math.max(1,parseInt(durInput.value)||1)*60; t.orig=newDur; t.tot=newDur; if(!t.running) t.rem=newDur; }
+  if(minInput||secInput){
+    const mins=Math.max(0,parseInt(minInput?.value)||0);
+    const secs=Math.max(0,Math.min(59,parseInt(secInput?.value)||0));
+    const newDur=Math.max(1, mins*60+secs);
+    t.orig=newDur; t.tot=newDur; if(!t.running) t.rem=newDur;
+  }
   if(sndInput) t.sound=sndInput.value;
-  if(capInput) t.capToMax=capInput.checked;
+  // capToMax is already applied live via setCapToMax()
   t.editOpen=false;
-  renderTimers(); showToast('Timer updated!');
+  renderTimers(); updateHeaderTimer(); showToast('Timer updated!');
 }
 
 function repeatSettingsPanel(t){
@@ -191,26 +245,37 @@ function cycleInfo(t){
 }
 function fmt(s){ const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`:`${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
 const repLabels={once:'Once',fixed:'Repeating',increase:'↑ Increasing',decrease:'↓ Decreasing',custom:'Custom Seq',fibonacci:'Fibonacci',random:'Random'};
-const sndEmoji={bell:'🔔',viola:'🎻',harp:'🎵',chime:'🎶',drum:'🥁',whistle:'🎷',none:'🔇'};
+const sndEmoji={bell:'🔔',trombone:'🎺',harp:'🎵',chime:'🎶',drum:'🥁',bounce:'🎷',none:'🔇'};
 function renderTimers(){
   const el=document.getElementById('timersList');
   if(!timers.length){ el.innerHTML='<div style="text-align:center;padding:var(--space-12);color:var(--color-text-faint);font-size:var(--text-sm);"><i data-lucide="timer" style="width:36px;height:36px;margin:0 auto var(--space-3);opacity:.3;"></i><p>No timers yet.</p></div>'; lucide.createIcons(); return; }
   el.innerHTML=timers.map(t=>{
     const pct=t.tot>0?Math.max(0,Math.min(100,100-(t.rem/t.tot)*100)):100;
-    const cls=t.done?'done':t.running?'running':'';
+    const cls=t.running?'running':'';
     const editOpen=t.editOpen?'open':'';
-    const builtinOpts=Object.entries(sndEmoji).map(([v,e])=>`<option value="${v}" ${t.sound===v?'selected':''}>${e} ${v}</option>`).join('');
+    const builtinOpts=[
+      ['bell','🔔','Low Ominous Bell'],
+      ['trombone','🎺','Trombone Tune'],
+      ['harp','🎵','Harp Tune'],
+      ['chime','🎶','Crystal Chime'],
+      ['drum','🥁','Deep Drum'],
+      ['bounce','🎷','Bounce'],
+      ['none','🔇','Silent'],
+    ].map(([v,e,l])=>`<option value="${v}" ${t.sound===v?'selected':''}>${e} ${l}</option>`).join('');
     const customOpts=(_customSounds||[]).map((cs,i)=>`<option value="custom_${i}" ${t.sound===`custom_${i}`?'selected':''}>🎧 ${cs.name}</option>`).join('');
+    // Duration in min+sec for edit panel
+    const editMins=Math.floor(t.orig/60);
+    const editSecs=t.orig%60;
     return `<div class="timer-item ${cls}" id="titem_${t.id}">
       <div class="timer-header">
-        <input class="timer-name-input" value="${t.name.replace(/"/g,'&quot;')}" onchange="timers.find(x=>x.id==${t.id}).name=this.value">
+        <input class="timer-name-input" value="${t.name.replace(/"/g,'&quot;')}" onchange="timers.find(x=>x.id==${t.id}).name=this.value;updateHeaderTimer();">
         <div class="timer-controls">
           <button class="btn btn-icon btn-ghost" onclick="toggleEditPanel(${t.id})" title="Edit"><i data-lucide="${t.editOpen?'chevron-up':'settings-2'}" style="width:13px;height:13px;"></i></button>
           <button class="btn btn-icon btn-ghost" onclick="resetTimer(${t.id})" title="Reset"><i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i></button>
           <button class="btn btn-icon btn-danger" onclick="deleteTimer(${t.id})" title="Delete"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>
         </div>
       </div>
-      <div class="timer-display ${cls}">${t.done?'✓ Complete':fmt(t.rem)}</div>
+      <div class="timer-display ${cls}">${fmt(t.rem)}</div>
       <div class="timer-progress"><div class="timer-progress-fill" style="width:${pct}%"></div>${t.tot>t.orig?`<div class="timer-orig-marker" style="right:${Math.round((1-t.orig/t.tot)*100)}%"></div>`:''}</div>
       <div class="timer-meta">
         <span class="badge">${sndEmoji[t.sound]||'🎧'} ${(_customSounds||[]).find((c,i)=>`custom_${i}`===t.sound)?.name||t.sound}</span>
@@ -220,14 +285,14 @@ function renderTimers(){
       <div class="timer-action-row">
         <button class="btn ${t.running?'btn-secondary':'btn-primary'}" onclick="toggleTimer(${t.id})">
           <i data-lucide="${t.running?'pause':'play'}" style="width:13px;height:13px;"></i>
-          ${t.running?'Pause':t.done?'Done':'Start'}
+          ${t.running?'Pause':'Start'}
         </button>
       </div>
       <div class="timer-edit-panel ${editOpen}" id="tedit_${t.id}">
         <div style="margin-bottom:var(--space-3);">${repeatSettingsPanel(t)}</div>
         <span class="section-label">Adjust remaining time</span>
         <div class="time-slider-wrap">
-          <input type="range" class="time-slider" min="0" max="${Math.max(t.tot,t.rem)}" value="${t.rem}" oninput="liveAdjustTimer(${t.id},this.value)" onchange="liveAdjustTimer(${t.id},this.value)" ${t.done?'disabled':''}>
+          <input type="range" class="time-slider" min="0" max="${Math.max(t.tot,t.rem)}" value="${t.rem}" oninput="liveAdjustTimer(${t.id},this.value)" onchange="liveAdjustTimer(${t.id},this.value)">
           <div class="time-slider-labels"><span>0:00</span><span id="sliderLabel_${t.id}">${fmt(t.rem)}</span><span>${fmt(t.tot)}</span></div>
         </div>
         <div class="adj-btns">
@@ -239,11 +304,16 @@ function renderTimers(){
           ${t.tot>t.orig?`<button class="adj-btn" onclick="resetToBase(${t.id})" style="border-color:var(--color-primary);color:var(--color-primary);">&#x21BA; Reset to ${fmt(t.orig)}</button>`:''}
         </div>
         <label style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);cursor:pointer;">
-          <input type="checkbox" id="eCap_${t.id}" ${t.capToMax?'checked':''} style="width:14px;height:14px;accent-color:var(--color-primary);"> Cap adjustments to original duration
+          <input type="checkbox" id="eCap_${t.id}" ${t.capToMax?'checked':''} onchange="setCapToMax(${t.id},this.checked)" style="width:14px;height:14px;accent-color:var(--color-primary);"> Cap adjustments to original duration
         </label>
         <span class="section-label">Edit settings</span>
         <div class="edit-form-grid">
-          <div class="form-group"><label>Duration (min)</label><div class="num-wrap" style="width:100%;"><input type="number" id="eDur_${t.id}" value="${Math.round(t.orig/60)}" min="1" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDur_${t.id}',1)">▲</button><button onclick="stepNum('eDur_${t.id}',-1)">▼</button></div></div></div>
+          <div class="form-group"><label>Duration</label>
+            <div style="display:flex;gap:var(--space-2);align-items:flex-end;">
+              <div style="flex:1;"><label style="font-size:var(--text-xs);color:var(--color-text-faint);">min</label><div class="num-wrap" style="width:100%;"><input type="number" id="eDurMin_${t.id}" value="${editMins}" min="0" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurMin_${t.id}',1)">▲</button><button onclick="stepNum('eDurMin_${t.id}',-1)">▼</button></div></div></div>
+              <div style="flex:1;"><label style="font-size:var(--text-xs);color:var(--color-text-faint);">sec</label><div class="num-wrap" style="width:100%;"><input type="number" id="eDurSec_${t.id}" value="${editSecs}" min="0" max="59" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurSec_${t.id}',1)">▲</button><button onclick="stepNum('eDurSec_${t.id}',-1)">▼</button></div></div></div>
+            </div>
+          </div>
           <div class="form-group"><label>Sound</label><select id="eSnd_${t.id}">${builtinOpts}${customOpts}</select></div>
         </div>
         <div style="display:flex;gap:var(--space-2);margin-top:var(--space-3);">
@@ -255,3 +325,75 @@ function renderTimers(){
   }).join('');
   lucide.createIcons();
 }
+
+// ── HEADER TIMER BADGE ────────────────────────────
+let _pinnedTimerId = null;
+
+function getCurrentTimer(){
+  // Priority: pinned (if still exists), then running with least time, then last touched
+  if(_pinnedTimerId){
+    const pinned=timers.find(x=>x.id===_pinnedTimerId);
+    if(pinned) return pinned;
+    _pinnedTimerId=null;
+  }
+  const running=timers.filter(x=>x.running);
+  if(running.length) return running.reduce((a,b)=>a.rem<b.rem?a:b);
+  if(_lastTouchedId) return timers.find(x=>x.id===_lastTouchedId)||null;
+  return timers.length?timers[0]:null;
+}
+
+function updateHeaderTimer(){
+  const badge=document.getElementById('headerTimerBadge');
+  if(!badge) return;
+  const t=getCurrentTimer();
+  if(!t){ badge.classList.add('htb-hidden'); return; }
+  badge.classList.remove('htb-hidden');
+  const label=document.getElementById('htbLabel');
+  const nameEl=document.getElementById('htbName');
+  if(label) label.textContent=fmt(t.rem);
+  if(nameEl) nameEl.textContent=t.name;
+  badge.classList.toggle('htb-running',t.running);
+}
+
+function toggleHeaderTimerList(){
+  const drop=document.getElementById('headerTimerDrop');
+  if(!drop) return;
+  const isOpen=drop.classList.toggle('htd-open');
+  if(isOpen) renderHeaderTimerList();
+}
+
+function renderHeaderTimerList(){
+  const list=document.getElementById('headerTimerList');
+  if(!list) return;
+  if(!timers.length){ list.innerHTML='<div class="htd-empty">No timers yet.</div>'; return; }
+  const cur=getCurrentTimer();
+  list.innerHTML=timers.map(t=>{
+    const isPinned=(_pinnedTimerId===t.id)||(cur&&cur.id===t.id&&!_pinnedTimerId&&!timers.some(x=>x.running));
+    return `<div class="htd-row${isPinned?' htd-pinned':''}" onclick="pinHeaderTimer(${t.id})">
+      <div class="htd-row-info">
+        <span class="htd-row-name">${t.name.replace(/</g,'&lt;')}</span>
+        <span class="htd-row-time ${t.running?'htd-running':''}">${fmt(t.rem)}</span>
+        ${t.reps>0?`<span class="badge gold" style="font-size:10px;">×${t.reps}</span>`:''}
+      </div>
+      <button class="btn btn-icon btn-ghost htd-playbtn" title="${t.running?'Pause':'Start'}" onclick="event.stopPropagation();toggleTimer(${t.id});renderHeaderTimerList();" style="width:26px;height:26px;">
+        <i data-lucide="${t.running?'pause':'play'}" style="width:12px;height:12px;"></i>
+      </button>
+    </div>`;
+  }).join('');
+  lucide.createIcons();
+}
+
+function pinHeaderTimer(id){
+  _pinnedTimerId = (_pinnedTimerId===id) ? null : id;
+  _lastTouchedId=id;
+  updateHeaderTimer();
+  renderHeaderTimerList();
+}
+
+// Close header timer dropdown when clicking outside
+document.addEventListener('click', e=>{
+  const drop=document.getElementById('headerTimerDrop');
+  if(drop && drop.classList.contains('htd-open') && !drop.contains(e.target)){
+    drop.classList.remove('htd-open');
+  }
+});

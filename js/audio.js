@@ -46,7 +46,8 @@ function playSound(type){
   try{
     const n = actx().currentTime;
     if(type==='bell'){ [110,82.4,65.4].forEach((f,i)=>oscEnv(f,'sine',.35,.001,n+i*.06,2.5)); }
-    else if(type==='viola'){
+    else if(type==='trombone'){
+      // Trombone tune (was 'viola') — four note descending phrase
       [[293.66,0],[329.63,.4],[369.99,.8],[293.66,1.2]].forEach(([f,d])=>{
         const o=actx().createOscillator(),g=actx().createGain(),flt=actx().createBiquadFilter();
         o.type='sawtooth';o.frequency.value=f;flt.type='lowpass';flt.frequency.value=700;
@@ -57,13 +58,15 @@ function playSound(type){
     } else if(type==='harp'){ [523.25,659.25,783.99,1046.5,783.99,659.25].forEach((f,i)=>oscEnv(f,'triangle',.18,.001,n+i*.18,.6)); }
     else if(type==='chime'){ [1046.5,1318.5,1568,2093].forEach((f,i)=>oscEnv(f,'sine',.14,.001,n+i*.12,.5)); }
     else if(type==='drum'){
-      const buf=actx().createBuffer(1,actx().sampleRate*.3,actx().sampleRate);
-      const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,6);
+      // Extended Deep Drum — longer decay (~0.9s total)
+      const buf=actx().createBuffer(1,Math.ceil(actx().sampleRate*.9),actx().sampleRate);
+      const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,5);
       const s=actx().createBufferSource(),g=actx().createGain(),f=actx().createBiquadFilter();
-      f.type='lowpass';f.frequency.value=180;s.buffer=buf;g.gain.value=.8;
+      f.type='lowpass';f.frequency.value=180;s.buffer=buf;g.gain.value=.85;
       s.connect(f);f.connect(g);g.connect(alarmDest());s.start(n);
-      oscEnv(60,'sine',.5,.001,n,.5);
-    } else if(type==='whistle'){
+      oscEnv(58,'sine',.5,.001,n,.9);
+    } else if(type==='bounce'){
+      // Bounce (was 'whistle') — rising-falling sine sweep
       const o=actx().createOscillator(),g=actx().createGain();
       o.type='sine';o.frequency.setValueAtTime(880,n);o.frequency.linearRampToValueAtTime(1100,n+.3);
       o.frequency.linearRampToValueAtTime(880,n+.6);
