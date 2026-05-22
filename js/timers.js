@@ -76,7 +76,7 @@ function tickFn(){
     if(!t.running||t.done) return;
     t.rem--;
     if(t.rem<=0){
-      t.rem=0; // clamp so display never goes negative
+      t.rem=0;
       timerDone(t);
       needFullRender=true;
     }
@@ -96,7 +96,7 @@ function tickFn(){
   });
 }
 function timerDone(t){
-  playSound(t.sound); duckMusicForAlarm(3000); archNotify('timer_done'); t.reps++;
+  playSound(t.sound); archNotify('timer_done'); t.reps++;
   showToast(`⏰ "${t.name}" done! (×${t.reps})`,'success');
   const r=t.rep;
   if(r.mode==='once'){ t.running=false; t.done=true; }
