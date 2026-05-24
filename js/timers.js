@@ -1,4 +1,4 @@
-// ── TIMERS ────────────────────────────────────────
+// ── TIMERS ────────────────────────────────────────────────────────────────
 let timers=[], tidx=1;
 let _lastTouchedId=null;
 
@@ -107,16 +107,17 @@ function pushTimer(o){
   renderTimers(); updateHeaderTimer(); showToast(`Timer "${o.name}" added!`);
 }
 
-// ── Slider fill helper ─────────────────────────────────────────────────
-// --slider-pct = remaining fraction of max, as a percentage.
-// CSS gradient fills the RIGHT side (remaining time) with the primary colour.
+// ── Slider fill helper ──────────────────────────────────────────────────────
+// --slider-pct = elapsed fraction (position of thumb from left).
+// CSS fills left→right up to the thumb with a teal gradient.
 function updateSliderFill(slider, rem, tot) {
   const max = Math.max(tot, parseFloat(slider.max) || tot);
-  const pct = max > 0 ? Math.max(0, Math.min(100, (rem / max) * 100)) : 0;
+  const elapsed = max - rem;
+  const pct = max > 0 ? Math.max(0, Math.min(100, (elapsed / max) * 100)) : 0;
   slider.style.setProperty('--slider-pct', pct.toFixed(2) + '%');
 }
 
-// ── Core tick ─────────────────────────────────────────────────────────
+// ── Core tick ──────────────────────────────────────────────────────────────
 function tickAll(){
   const now = Date.now();
   let needFullRender = false;
@@ -299,8 +300,9 @@ function renderTimers(){
   el.innerHTML=timers.map(t=>{
     const remInt=Math.ceil(t.rem);
     const sliderMax=Math.max(t.tot,t.rem);
-    // Remaining fraction for right-side fill (thumb and fill both move left together)
-    const sliderPct=sliderMax>0?Math.max(0,Math.min(100,(t.rem/sliderMax)*100)):0;
+    // Elapsed fraction → left-side fill grows as time passes
+    const elapsed=sliderMax-t.rem;
+    const sliderPct=sliderMax>0?Math.max(0,Math.min(100,(elapsed/sliderMax)*100)):0;
     const cls=t.running?'running':'';
     const editOpen=t.editOpen?'open':'';
     const builtinOpts=[
@@ -316,8 +318,9 @@ function renderTimers(){
     const editHrs =Math.floor(t.orig/3600);
     const editMins=Math.floor((t.orig%3600)/60);
     const editSecs=t.orig%60;
+    const origMarkerPct=sliderMax>0?((sliderMax-t.orig)/sliderMax*100).toFixed(2):0;
     const origMarker=t.tot>t.orig
-      ? `<div class="slider-orig-marker" style="left:${((t.orig/sliderMax)*100).toFixed(2)}%"></div>`
+      ? `<div class="slider-orig-marker" style="left:${origMarkerPct}%"></div>`
       : '';
     return `<div class="timer-item ${cls}" id="titem_${t.id}">
       <div class="timer-header">
@@ -364,11 +367,15 @@ function renderTimers(){
         <div style="margin-bottom:var(--space-3);">${repeatSettingsPanel(t)}</div>
         <span class="section-label">Duration &amp; Sound</span>
         <div class="edit-form-grid" style="margin-top:var(--space-2);">
-          <div class="form-group"><label>Duration</label>
+          <div class="form-group">
+            <label>Duration</label>
             <div class="dur-hms">
-              <div><label>hr</label><div class="num-wrap"><input type="number" id="eDurHr_${t.id}" value="${editHrs}" min="0" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurHr_${t.id}',1)">▲</button><button onclick="stepNum('eDurHr_${t.id}',-1)">▼</button></div></div></div>
-              <div><label>min</label><div class="num-wrap"><input type="number" id="eDurMin_${t.id}" value="${editMins}" min="0" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurMin_${t.id}',1)">▲</button><button onclick="stepNum('eDurMin_${t.id}',-1)">▼</button></div></div></div>
-              <div><label>sec</label><div class="num-wrap"><input type="number" id="eDurSec_${t.id}" value="${editSecs}" min="0" max="59" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurSec_${t.id}',1)">▲</button><button onclick="stepNum('eDurSec_${t.id}',-1)">▼</button></div></div></div>
+              <span class="dur-label">hr</span>
+              <span class="dur-label">min</span>
+              <span class="dur-label">sec</span>
+              <div class="dur-input"><div class="num-wrap"><input type="number" id="eDurHr_${t.id}" value="${editHrs}" min="0"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurHr_${t.id}',1)">▲</button><button onclick="stepNum('eDurHr_${t.id}',-1)">▼</button></div></div></div>
+              <div class="dur-input"><div class="num-wrap"><input type="number" id="eDurMin_${t.id}" value="${editMins}" min="0"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurMin_${t.id}',1)">▲</button><button onclick="stepNum('eDurMin_${t.id}',-1)">▼</button></div></div></div>
+              <div class="dur-input"><div class="num-wrap"><input type="number" id="eDurSec_${t.id}" value="${editSecs}" min="0" max="59"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurSec_${t.id}',1)">▲</button><button onclick="stepNum('eDurSec_${t.id}',-1)">▼</button></div></div></div>
             </div>
           </div>
           <div class="form-group"><label>Sound</label><select id="eSnd_${t.id}">${builtinOpts}${customOpts}</select></div>
