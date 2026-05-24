@@ -327,14 +327,29 @@ function renderTimers(){
       <div class="timer-header">
         <input class="timer-name-input" value="${t.name.replace(/"/g,'&quot;')}" onchange="timers.find(x=>x.id==${t.id}).name=this.value;updateHeaderTimer();">
         <div class="timer-controls">
-          <button class="btn btn-icon btn-ghost" onclick="toggleEditPanel(${t.id})" title="Edit"><i data-lucide="${t.editOpen?'chevron-up':'settings-2'}" style="width:13px;height:13px;"></i></button>
+          <button class="btn btn-icon btn-ghost" onclick="toggleEditPanel(${t.id})" title="Settings"><i data-lucide="${t.editOpen?'chevron-up':'settings-2'}" style="width:13px;height:13px;"></i></button>
           <button class="btn btn-icon btn-ghost" onclick="resetTimer(${t.id})" title="Reset"><i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i></button>
           <button class="btn btn-icon btn-danger" onclick="deleteTimer(${t.id})" title="Delete"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>
         </div>
       </div>
       <div class="timer-display ${cls}">${fmt(remInt)}</div>
       <div class="timer-progress"><div class="timer-progress-fill" style="width:${pct}%"></div>${t.tot>t.orig?`<div class="timer-orig-marker" style="right:${Math.round((1-t.orig/t.tot)*100)}%"></div>`:''}</div>
-      <div class="timer-meta">
+      <div class="time-slider-wrap" style="margin-top:var(--space-2);">
+        <input type="range" class="time-slider" min="0" max="${Math.max(t.tot,t.rem)}" value="${t.rem}" oninput="liveAdjustTimer(${t.id},this.value)" onchange="liveAdjustTimer(${t.id},this.value)">
+        <div class="time-slider-labels"><span>0:00</span><span id="sliderLabel_${t.id}">${fmt(remInt)}</span><span>${fmt(t.tot)}</span></div>
+      </div>
+      <div class="adj-btns" style="margin-bottom:0;">
+        <button class="adj-btn" onclick="nudgeTimer(${t.id},-300)">−5 min</button>
+        <button class="adj-btn" onclick="nudgeTimer(${t.id},-60)">−1 min</button>
+        <button class="adj-btn" onclick="nudgeTimer(${t.id},60)">+1 min</button>
+        <button class="adj-btn" onclick="nudgeTimer(${t.id},300)">+5 min</button>
+        <button class="adj-btn" onclick="nudgeTimer(${t.id},600)">+10 min</button>
+        ${t.tot>t.orig?`<button class="adj-btn" onclick="resetToBase(${t.id})" style="border-color:var(--color-primary);color:var(--color-primary);">&#x21BA; Reset to ${fmt(t.orig)}</button>`:''}
+      </div>
+      <label style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-2);cursor:pointer;">
+        <input type="checkbox" id="eCap_${t.id}" ${t.capToMax?'checked':''} onchange="setCapToMax(${t.id},this.checked)" style="width:14px;height:14px;accent-color:var(--color-primary);"> Cap adjustments to original duration
+      </label>
+      <div class="timer-meta" style="margin-top:var(--space-3);">
         <span class="badge">${sndEmoji[t.sound]||'🎧'} ${(_customSounds||[]).find((c,i)=>`custom_${i}`===t.sound)?.name||t.sound}</span>
         <span class="badge accent">${repLabels[t.rep.mode]||t.rep.mode}</span>
         ${t.reps>0?`<span class="badge gold">×${t.reps}</span>`:''}
@@ -346,25 +361,10 @@ function renderTimers(){
         </button>
       </div>
       <div class="timer-edit-panel ${editOpen}" id="tedit_${t.id}">
+        <span class="section-label">Repeat</span>
         <div style="margin-bottom:var(--space-3);">${repeatSettingsPanel(t)}</div>
-        <span class="section-label">Adjust remaining time</span>
-        <div class="time-slider-wrap">
-          <input type="range" class="time-slider" min="0" max="${Math.max(t.tot,t.rem)}" value="${t.rem}" oninput="liveAdjustTimer(${t.id},this.value)" onchange="liveAdjustTimer(${t.id},this.value)">
-          <div class="time-slider-labels"><span>0:00</span><span id="sliderLabel_${t.id}">${fmt(remInt)}</span><span>${fmt(t.tot)}</span></div>
-        </div>
-        <div class="adj-btns">
-          <button class="adj-btn" onclick="nudgeTimer(${t.id},-300)">−5 min</button>
-          <button class="adj-btn" onclick="nudgeTimer(${t.id},-60)">−1 min</button>
-          <button class="adj-btn" onclick="nudgeTimer(${t.id},60)">+1 min</button>
-          <button class="adj-btn" onclick="nudgeTimer(${t.id},300)">+5 min</button>
-          <button class="adj-btn" onclick="nudgeTimer(${t.id},600)">+10 min</button>
-          ${t.tot>t.orig?`<button class="adj-btn" onclick="resetToBase(${t.id})" style="border-color:var(--color-primary);color:var(--color-primary);">&#x21BA; Reset to ${fmt(t.orig)}</button>`:''}
-        </div>
-        <label style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);cursor:pointer;">
-          <input type="checkbox" id="eCap_${t.id}" ${t.capToMax?'checked':''} onchange="setCapToMax(${t.id},this.checked)" style="width:14px;height:14px;accent-color:var(--color-primary);"> Cap adjustments to original duration
-        </label>
-        <span class="section-label">Edit settings</span>
-        <div class="edit-form-grid">
+        <span class="section-label">Duration &amp; Sound</span>
+        <div class="edit-form-grid" style="margin-top:var(--space-2);">
           <div class="form-group"><label>Duration</label>
             <div style="display:flex;gap:var(--space-2);align-items:flex-end;">
               <div style="flex:1;"><label style="font-size:var(--text-xs);color:var(--color-text-faint);">min</label><div class="num-wrap" style="width:100%;"><input type="number" id="eDurMin_${t.id}" value="${editMins}" min="0" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurMin_${t.id}',1)">▲</button><button onclick="stepNum('eDurMin_${t.id}',-1)">▼</button></div></div></div>
