@@ -29,18 +29,19 @@
 .timer-edit-panel.open{display:block;}
 
 /* SLIDER
-   --slider-pct = elapsed fraction (0% at start, 100% at end) = thumb position.
-   Fill covers left side up to the thumb with a subtle teal gradient.
-   Track (right of thumb) stays neutral. */
+   --slider-pct = remaining fraction (rem / max).
+   Fill covers 0% → --slider-pct with a gradient: darker teal at left, full primary at thumb.
+   No horizontal padding on the track — padding caused thumb travel != fill travel. */
 .time-slider-wrap{position:relative;display:flex;flex-direction:column;gap:var(--space-1);margin-top:var(--space-2);margin-bottom:0;}
 .time-slider{
   -webkit-appearance:none;appearance:none;
   width:100%;height:5px;border-radius:var(--radius-full);outline:none;cursor:pointer;
+  padding:0;
   background:linear-gradient(
     to right,
-    oklch(from var(--color-primary) calc(l + 0.12) c h / 0.6) 0%,
-    var(--color-primary) var(--slider-pct, 0%),
-    var(--color-surface-dynamic) var(--slider-pct, 0%),
+    oklch(from var(--color-primary) calc(l - 0.1) c h) 0%,
+    var(--color-primary) var(--slider-pct, 100%),
+    var(--color-surface-dynamic) var(--slider-pct, 100%),
     var(--color-surface-dynamic) 100%
   );
 }
@@ -55,22 +56,10 @@
 .adj-btn:hover{background:var(--color-primary-highlight);border-color:var(--color-primary);color:var(--color-primary);}
 .edit-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);}
 
-/* Duration h/m/s — 2-row grid: labels on top, inputs below, all 3 fields side by side */
-.dur-hms{
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  grid-template-rows:auto auto;
-  gap:var(--space-1) var(--space-2);
-  align-items:end;
-}
-.dur-hms .dur-label{
-  font-size:var(--text-xs);
-  color:var(--color-text-faint);
-  grid-row:1;
-}
-.dur-hms .dur-input{
-  grid-row:2;
-}
+/* Duration h/m/s — flat flex row: each .dur-field is label+input stacked, all three side by side */
+.dur-hms{display:flex;gap:var(--space-2);}
+.dur-field{display:flex;flex-direction:column;gap:var(--space-1);flex:1;min-width:0;}
+.dur-field label{font-size:var(--text-xs);color:var(--color-text-faint);}
 
 /* SOUND PREVIEW */
 .snd-btn{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:var(--text-xs);font-weight:500;width:100%;text-align:left;transition:background var(--trans),border-color var(--trans);}
@@ -82,15 +71,12 @@
 
 /* THEMED NUMBER INPUT SPINNERS */
 input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type=number] { -moz-appearance: textfield; appearance: textfield; padding-right: var(--space-1); }
-.num-wrap { position: relative; display: inline-flex; align-items: stretch; width:100%; }
-.num-wrap input[type=number] { border-radius: var(--radius-md) 0 0 var(--radius-md); border-right: none; flex: 1; min-width:0; }
-.num-spin { display: flex; flex-direction: column; border: 1px solid var(--color-border); border-radius: 0 var(--radius-md) var(--radius-md) 0; overflow: hidden; }
-.num-spin button { flex: 1; width: 22px; background: var(--color-surface-offset); border: none; color: var(--color-text-muted); cursor: pointer; font-size: 10px; line-height: 1; padding: 0; transition: background var(--trans), color var(--trans); }
-.num-spin button:hover { background: var(--color-primary-highlight); color: var(--color-primary); }
-.num-spin button:active { background: var(--color-primary); color: var(--color-text-inverse); }
-.num-spin .spin-up { border-bottom: 1px solid var(--color-border); }
+input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;appearance:textfield;padding-right:var(--space-1);}
+.num-wrap{position:relative;display:inline-flex;align-items:stretch;width:100%;}
+.num-wrap input[type=number]{border-radius:var(--radius-md) 0 0 var(--radius-md);border-right:none;flex:1;min-width:0;}
+.num-spin{display:flex;flex-direction:column;border:1px solid var(--color-border);border-radius:0 var(--radius-md) var(--radius-md) 0;overflow:hidden;}
+.num-spin button{flex:1;width:22px;background:var(--color-surface-offset);border:none;color:var(--color-text-muted);cursor:pointer;font-size:10px;line-height:1;padding:0;transition:background var(--trans),color var(--trans);}
+.num-spin button:hover{background:var(--color-primary-highlight);color:var(--color-primary);}
+.num-spin button:active{background:var(--color-primary);color:var(--color-text-inverse);}
+.num-spin .spin-up{border-bottom:1px solid var(--color-border);}

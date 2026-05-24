@@ -108,12 +108,11 @@ function pushTimer(o){
 }
 
 // ── Slider fill helper ──────────────────────────────────────────────────────
-// --slider-pct = elapsed fraction (position of thumb from left).
-// CSS fills left→right up to the thumb with a teal gradient.
+// --slider-pct = remaining fraction (rem / max).
+// CSS fills 0 → pct with a dark-to-primary teal gradient, then neutral track.
 function updateSliderFill(slider, rem, tot) {
   const max = Math.max(tot, parseFloat(slider.max) || tot);
-  const elapsed = max - rem;
-  const pct = max > 0 ? Math.max(0, Math.min(100, (elapsed / max) * 100)) : 0;
+  const pct = max > 0 ? Math.max(0, Math.min(100, (rem / max) * 100)) : 0;
   slider.style.setProperty('--slider-pct', pct.toFixed(2) + '%');
 }
 
@@ -253,11 +252,11 @@ function repeatSettingsPanel(t){
   if(r.mode==='once') return statusLine||'';
   let fields='';
   if(r.mode==='fixed'){
-    fields=`<div class="form-row" style="gap:var(--space-2);"><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Repeat count (0=∞)</label><div class="num-wrap" style="width:100%;"><input type="number" id="rp_count_${t.id}" value="${r.count||0}" min="0" style="width:100%;" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_count_${t.id}',1)">▲</button><button onclick="stepNum('rp_count_${t.id}',-1)">▼</button></div></div></div></div>`;
+    fields=`<div class="form-row" style="gap:var(--space-2);"><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Repeat count (0=∞)</label><div class="num-wrap"><input type="number" id="rp_count_${t.id}" value="${r.count||0}" min="0" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_count_${t.id}',1)">▲</button><button onclick="stepNum('rp_count_${t.id}',-1)">▼</button></div></div></div></div>`;
   } else if(r.mode==='increase'){
-    fields=`<div class="form-row" style="gap:var(--space-2);"><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Step increase (min)</label><div class="num-wrap" style="width:100%;"><input type="number" id="rp_step_${t.id}" value="${r.step/60}" min="1" step="0.5" style="width:100%;" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_step_${t.id}',1)">▲</button><button onclick="stepNum('rp_step_${t.id}',-1)">▼</button></div></div></div><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Max repeats (0=∞)</label><div class="num-wrap" style="width:100%;"><input type="number" id="rp_max_${t.id}" value="${r.max||0}" min="0" style="width:100%;" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_max_${t.id}',1)">▲</button><button onclick="stepNum('rp_max_${t.id}',-1)">▼</button></div></div></div></div>`;
+    fields=`<div class="form-row" style="gap:var(--space-2);"><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Step increase (min)</label><div class="num-wrap"><input type="number" id="rp_step_${t.id}" value="${r.step/60}" min="1" step="0.5" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_step_${t.id}',1)">▲</button><button onclick="stepNum('rp_step_${t.id}',-1)">▼</button></div></div></div><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Max repeats (0=∞)</label><div class="num-wrap"><input type="number" id="rp_max_${t.id}" value="${r.max||0}" min="0" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_max_${t.id}',1)">▲</button><button onclick="stepNum('rp_max_${t.id}',-1)">▼</button></div></div></div></div>`;
   } else if(r.mode==='decrease'){
-    fields=`<div class="form-row" style="gap:var(--space-2);"><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Step decrease (min)</label><div class="num-wrap" style="width:100%;"><input type="number" id="rp_down_${t.id}" value="${r.step/60}" min="1" step="0.5" style="width:100%;" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_down_${t.id}',1)">▲</button><button onclick="stepNum('rp_down_${t.id}',-1)">▼</button></div></div></div><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Min duration (min)</label><div class="num-wrap" style="width:100%;"><input type="number" id="rp_min_${t.id}" value="${r.minDur/60}" min="0.5" step="0.5" style="width:100%;" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_min_${t.id}',1)">▲</button><button onclick="stepNum('rp_min_${t.id}',-1)">▼</button></div></div></div></div>`;
+    fields=`<div class="form-row" style="gap:var(--space-2);"><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Step decrease (min)</label><div class="num-wrap"><input type="number" id="rp_down_${t.id}" value="${r.step/60}" min="1" step="0.5" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_down_${t.id}',1)">▲</button><button onclick="stepNum('rp_down_${t.id}',-1)">▼</button></div></div></div><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Min duration (min)</label><div class="num-wrap"><input type="number" id="rp_min_${t.id}" value="${r.minDur/60}" min="0.5" step="0.5" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_min_${t.id}',1)">▲</button><button onclick="stepNum('rp_min_${t.id}',-1)">▼</button></div></div></div></div>`;
   } else if(r.mode==='custom'){
     const seqStr=(r.seq||[]).map(s=>(s/60).toFixed(0)).join(', ');
     const curIdx=(r.si||0);
@@ -266,7 +265,7 @@ function repeatSettingsPanel(t){
     const fi=(r.fi||0); const fseq=r.fib||[60,60,120,180,300,480,780];
     fields=`<div style="font-size:var(--text-xs);color:var(--color-text-muted);">Sequence: ${fseq.map(s=>fmt(s)).join(' → ')}</div><div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:4px;">Current step: ${fi+1} · next: ${fmt(fseq[(fi+1)%fseq.length])}</div>`;
   } else if(r.mode==='random'){
-    fields=`<div class="form-row" style="gap:var(--space-2);"><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Min (min)</label><div class="num-wrap" style="width:100%;"><input type="number" id="rp_rmin_${t.id}" value="${r.rMin/60}" min="1" step="1" style="width:100%;" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_rmin_${t.id}',1)">▲</button><button onclick="stepNum('rp_rmin_${t.id}',-1)">▼</button></div></div></div><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Max (min)</label><div class="num-wrap" style="width:100%;"><input type="number" id="rp_rmax_${t.id}" value="${r.rMax/60}" min="1" step="1" style="width:100%;" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_rmax_${t.id}',1)">▲</button><button onclick="stepNum('rp_rmax_${t.id}',-1)">▼</button></div></div></div></div>`;
+    fields=`<div class="form-row" style="gap:var(--space-2);"><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Min (min)</label><div class="num-wrap"><input type="number" id="rp_rmin_${t.id}" value="${r.rMin/60}" min="1" step="1" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_rmin_${t.id}',1)">▲</button><button onclick="stepNum('rp_rmin_${t.id}',-1)">▼</button></div></div></div><div class="form-group" style="flex:1;"><label style="font-size:var(--text-xs);">Max (min)</label><div class="num-wrap"><input type="number" id="rp_rmax_${t.id}" value="${r.rMax/60}" min="1" step="1" onchange="liveRepSave(${t.id})"><div class="num-spin"><button class="spin-up" onclick="stepNum('rp_rmax_${t.id}',1)">▲</button><button onclick="stepNum('rp_rmax_${t.id}',-1)">▼</button></div></div></div></div>`;
   }
   return `<details style="font-size:var(--text-xs);"><summary style="cursor:pointer;font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-faint);margin-bottom:var(--space-2);user-select:none;">${repLabels[r.mode]} settings ${reps>0?`· ring #${reps+1}`:''}</summary>${statusLine}<div style="display:flex;flex-direction:column;gap:var(--space-2);margin-top:var(--space-2);">${fields}</div></details>`;
 }
@@ -300,9 +299,8 @@ function renderTimers(){
   el.innerHTML=timers.map(t=>{
     const remInt=Math.ceil(t.rem);
     const sliderMax=Math.max(t.tot,t.rem);
-    // Elapsed fraction → left-side fill grows as time passes
-    const elapsed=sliderMax-t.rem;
-    const sliderPct=sliderMax>0?Math.max(0,Math.min(100,(elapsed/sliderMax)*100)):0;
+    // rem/max → fill shrinks left-to-right as time runs out
+    const sliderPct=sliderMax>0?Math.max(0,Math.min(100,(t.rem/sliderMax)*100)):0;
     const cls=t.running?'running':'';
     const editOpen=t.editOpen?'open':'';
     const builtinOpts=[
@@ -318,7 +316,8 @@ function renderTimers(){
     const editHrs =Math.floor(t.orig/3600);
     const editMins=Math.floor((t.orig%3600)/60);
     const editSecs=t.orig%60;
-    const origMarkerPct=sliderMax>0?((sliderMax-t.orig)/sliderMax*100).toFixed(2):0;
+    // orig-marker sits at rem=orig on the remaining-time scale
+    const origMarkerPct=sliderMax>0?(t.orig/sliderMax*100).toFixed(2):0;
     const origMarker=t.tot>t.orig
       ? `<div class="slider-orig-marker" style="left:${origMarkerPct}%"></div>`
       : '';
@@ -370,12 +369,18 @@ function renderTimers(){
           <div class="form-group">
             <label>Duration</label>
             <div class="dur-hms">
-              <span class="dur-label">hr</span>
-              <span class="dur-label">min</span>
-              <span class="dur-label">sec</span>
-              <div class="dur-input"><div class="num-wrap"><input type="number" id="eDurHr_${t.id}" value="${editHrs}" min="0"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurHr_${t.id}',1)">▲</button><button onclick="stepNum('eDurHr_${t.id}',-1)">▼</button></div></div></div>
-              <div class="dur-input"><div class="num-wrap"><input type="number" id="eDurMin_${t.id}" value="${editMins}" min="0"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurMin_${t.id}',1)">▲</button><button onclick="stepNum('eDurMin_${t.id}',-1)">▼</button></div></div></div>
-              <div class="dur-input"><div class="num-wrap"><input type="number" id="eDurSec_${t.id}" value="${editSecs}" min="0" max="59"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurSec_${t.id}',1)">▲</button><button onclick="stepNum('eDurSec_${t.id}',-1)">▼</button></div></div></div>
+              <div class="dur-field">
+                <label>hr</label>
+                <div class="num-wrap"><input type="number" id="eDurHr_${t.id}" value="${editHrs}" min="0"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurHr_${t.id}',1)">▲</button><button onclick="stepNum('eDurHr_${t.id}',-1)">▼</button></div></div>
+              </div>
+              <div class="dur-field">
+                <label>min</label>
+                <div class="num-wrap"><input type="number" id="eDurMin_${t.id}" value="${editMins}" min="0"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurMin_${t.id}',1)">▲</button><button onclick="stepNum('eDurMin_${t.id}',-1)">▼</button></div></div>
+              </div>
+              <div class="dur-field">
+                <label>sec</label>
+                <div class="num-wrap"><input type="number" id="eDurSec_${t.id}" value="${editSecs}" min="0" max="59"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurSec_${t.id}',1)">▲</button><button onclick="stepNum('eDurSec_${t.id}',-1)">▼</button></div></div>
+              </div>
             </div>
           </div>
           <div class="form-group"><label>Sound</label><select id="eSnd_${t.id}">${builtinOpts}${customOpts}</select></div>
