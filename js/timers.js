@@ -3,8 +3,6 @@ let timers=[], tidx=1;
 let _lastTouchedId=null;
 
 // ── Background-safe ticker via Web Worker ─────────────────────────────────
-// Browsers throttle setInterval on the main thread in background tabs.
-// A Worker runs on a separate thread that is never throttled.
 const _tickWorkerBlob = new Blob([`
   let iv = null;
   self.onmessage = function(e) {
@@ -31,8 +29,6 @@ function stopTickWorker() {
   _tickWorker = null;
 }
 
-// Re-anchor lastTick timestamps when tab becomes visible again,
-// preventing a large accumulated delta from causing a sudden time jump.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     const now = Date.now();
@@ -112,34 +108,26 @@ function pushTimer(o){
 }
 
 // ── Slider fill helper ─────────────────────────────────────────────────
+// --slider-pct = remaining fraction of max, as a percentage.
+// CSS gradient fills the RIGHT side (remaining time) with the primary colour.
 function updateSliderFill(slider, rem, tot) {
-  // Filled portion = elapsed (left side), so pct = elapsed / max
   const max = Math.max(tot, parseFloat(slider.max) || tot);
-  const pct = max > 0 ? Math.max(0, Math.min(100, 100 - (rem / max) * 100)) : 100;
+  const pct = max > 0 ? Math.max(0, Math.min(100, (rem / max) * 100)) : 0;
   slider.style.setProperty('--slider-pct', pct.toFixed(2) + '%');
 }
 
-// ── Core tick: called ~5× per second from the Worker ──────────────────────
-// Uses wall-clock delta so accuracy is independent of how often ticks fire.
+// ── Core tick ─────────────────────────────────────────────────────────
 function tickAll(){
   const now = Date.now();
   let needFullRender = false;
 
   timers.forEach(t => {
     if (!t.running || t.done) return;
-
-    // Initialise lastTick on first call after start
     if (t.lastTick === null) { t.lastTick = now; return; }
-
-    const elapsed = (now - t.lastTick) / 1000; // seconds elapsed
+    const elapsed = (now - t.lastTick) / 1000;
     t.lastTick = now;
     t.rem = Math.max(0, t.rem - elapsed);
-
-    if (t.rem <= 0) {
-      t.rem = 0;
-      timerDone(t);
-      needFullRender = true;
-    }
+    if (t.rem <= 0) { t.rem = 0; timerDone(t); needFullRender = true; }
   });
 
   if (needFullRender) { renderTimers(); updateHeaderTimer(); return; }
@@ -161,7 +149,6 @@ function tickAll(){
 }
 
 function timerDone(t){
-  // Music ducking is handled automatically by the playSound wrapper in music.js
   playSound(t.sound); archNotify('timer_done'); t.reps++;
   showToast(`⏰ "${t.name}" done! (×${t.reps})`,'success');
   const r=t.rep;
@@ -193,13 +180,8 @@ function toggleTimer(id){
   const t=timers.find(x=>x.id===id); if(!t) return;
   t.running=!t.running;
   _lastTouchedId=id;
-  if(t.running){
-    t.lastTick=Date.now();
-    archNotify('timer_add');
-    startTickWorker();
-  } else if(!timers.some(x=>x.running)){
-    stopTickWorker();
-  }
+  if(t.running){ t.lastTick=Date.now(); archNotify('timer_add'); startTickWorker(); }
+  else if(!timers.some(x=>x.running)){ stopTickWorker(); }
   renderTimers(); updateHeaderTimer();
 }
 function resetTimer(id){
@@ -317,7 +299,8 @@ function renderTimers(){
   el.innerHTML=timers.map(t=>{
     const remInt=Math.ceil(t.rem);
     const sliderMax=Math.max(t.tot,t.rem);
-    const sliderPct=sliderMax>0?Math.max(0,Math.min(100,100-(t.rem/sliderMax)*100)):100;
+    // Remaining fraction for right-side fill (thumb and fill both move left together)
+    const sliderPct=sliderMax>0?Math.max(0,Math.min(100,(t.rem/sliderMax)*100)):0;
     const cls=t.running?'running':'';
     const editOpen=t.editOpen?'open':'';
     const builtinOpts=[
@@ -330,13 +313,11 @@ function renderTimers(){
       ['none','🔇','Silent'],
     ].map(([v,e,l])=>`<option value="${v}" ${t.sound===v?'selected':''}>${e} ${l}</option>`).join('');
     const customOpts=(_customSounds||[]).map((cs,i)=>`<option value="custom_${i}" ${t.sound===`custom_${i}`?'selected':''}>🎧 ${cs.name}</option>`).join('');
-    // Decompose orig into h/m/s for the edit fields
     const editHrs =Math.floor(t.orig/3600);
     const editMins=Math.floor((t.orig%3600)/60);
     const editSecs=t.orig%60;
-    // Orig-marker position on slider (only shown when timer was extended)
     const origMarker=t.tot>t.orig
-      ? `<div class="slider-orig-marker" style="left:${((1-t.orig/sliderMax)*100).toFixed(2)}%"></div>`
+      ? `<div class="slider-orig-marker" style="left:${((t.orig/sliderMax)*100).toFixed(2)}%"></div>`
       : '';
     return `<div class="timer-item ${cls}" id="titem_${t.id}">
       <div class="timer-header">
@@ -384,10 +365,10 @@ function renderTimers(){
         <span class="section-label">Duration &amp; Sound</span>
         <div class="edit-form-grid" style="margin-top:var(--space-2);">
           <div class="form-group"><label>Duration</label>
-            <div style="display:flex;gap:var(--space-2);align-items:flex-end;">
-              <div style="flex:1;"><label style="font-size:var(--text-xs);color:var(--color-text-faint);">hr</label><div class="num-wrap" style="width:100%;"><input type="number" id="eDurHr_${t.id}" value="${editHrs}" min="0" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurHr_${t.id}',1)">▲</button><button onclick="stepNum('eDurHr_${t.id}',-1)">▼</button></div></div></div>
-              <div style="flex:1;"><label style="font-size:var(--text-xs);color:var(--color-text-faint);">min</label><div class="num-wrap" style="width:100%;"><input type="number" id="eDurMin_${t.id}" value="${editMins}" min="0" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurMin_${t.id}',1)">▲</button><button onclick="stepNum('eDurMin_${t.id}',-1)">▼</button></div></div></div>
-              <div style="flex:1;"><label style="font-size:var(--text-xs);color:var(--color-text-faint);">sec</label><div class="num-wrap" style="width:100%;"><input type="number" id="eDurSec_${t.id}" value="${editSecs}" min="0" max="59" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurSec_${t.id}',1)">▲</button><button onclick="stepNum('eDurSec_${t.id}',-1)">▼</button></div></div></div>
+            <div class="dur-hms">
+              <div><label>hr</label><div class="num-wrap"><input type="number" id="eDurHr_${t.id}" value="${editHrs}" min="0" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurHr_${t.id}',1)">▲</button><button onclick="stepNum('eDurHr_${t.id}',-1)">▼</button></div></div></div>
+              <div><label>min</label><div class="num-wrap"><input type="number" id="eDurMin_${t.id}" value="${editMins}" min="0" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurMin_${t.id}',1)">▲</button><button onclick="stepNum('eDurMin_${t.id}',-1)">▼</button></div></div></div>
+              <div><label>sec</label><div class="num-wrap"><input type="number" id="eDurSec_${t.id}" value="${editSecs}" min="0" max="59" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurSec_${t.id}',1)">▲</button><button onclick="stepNum('eDurSec_${t.id}',-1)">▼</button></div></div></div>
             </div>
           </div>
           <div class="form-group"><label>Sound</label><select id="eSnd_${t.id}">${builtinOpts}${customOpts}</select></div>
