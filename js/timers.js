@@ -153,7 +153,8 @@ function tickAll(){
 }
 
 function timerDone(t){
-  playSound(t.sound); duckMusicForAlarm(3000); archNotify('timer_done'); t.reps++;
+  // Music ducking is handled automatically by the playSound wrapper in music.js
+  playSound(t.sound); archNotify('timer_done'); t.reps++;
   showToast(`⏰ "${t.name}" done! (×${t.reps})`,'success');
   const r=t.rep;
   if(r.mode==='once'){
