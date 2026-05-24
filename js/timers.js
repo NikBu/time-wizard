@@ -111,6 +111,14 @@ function pushTimer(o){
   renderTimers(); updateHeaderTimer(); showToast(`Timer "${o.name}" added!`);
 }
 
+// ── Slider fill helper ─────────────────────────────────────────────────
+function updateSliderFill(slider, rem, tot) {
+  // Filled portion = elapsed (left side), so pct = elapsed / max
+  const max = Math.max(tot, parseFloat(slider.max) || tot);
+  const pct = max > 0 ? Math.max(0, Math.min(100, 100 - (rem / max) * 100)) : 100;
+  slider.style.setProperty('--slider-pct', pct.toFixed(2) + '%');
+}
+
 // ── Core tick: called ~5× per second from the Worker ──────────────────────
 // Uses wall-clock delta so accuracy is independent of how often ticks fire.
 function tickAll(){
@@ -138,16 +146,16 @@ function tickAll(){
 
   timers.forEach(t => {
     if (!t.running || t.done) return;
-    const remInt = Math.ceil(t.rem); // display as whole seconds
+    const remInt = Math.ceil(t.rem);
     const disp = document.querySelector('#titem_'+t.id+' .timer-display');
     if (disp) disp.textContent = fmt(remInt);
-    const pct = t.tot > 0 ? Math.max(0, Math.min(100, 100 - (t.rem / t.tot) * 100)) : 100;
-    const bar = document.querySelector('#titem_'+t.id+' .timer-progress-fill');
-    if (bar) bar.style.width = pct + '%';
     const slbl = document.getElementById('sliderLabel_'+t.id);
     if (slbl) slbl.textContent = fmt(remInt);
     const slider = document.querySelector('#titem_'+t.id+' .time-slider');
-    if (slider && document.activeElement !== slider) slider.value = t.rem;
+    if (slider && document.activeElement !== slider) {
+      slider.value = t.rem;
+      updateSliderFill(slider, t.rem, t.tot);
+    }
   });
   updateHeaderTimer();
 }
@@ -178,7 +186,6 @@ function timerDone(t){
   } else {
     t.rem=t.tot; t.lastTick=Date.now();
   }
-  // Stop worker if nothing is running
   if(!timers.some(x=>x.running)) stopTickWorker();
 }
 
@@ -187,7 +194,7 @@ function toggleTimer(id){
   t.running=!t.running;
   _lastTouchedId=id;
   if(t.running){
-    t.lastTick=Date.now(); // anchor wall clock on start
+    t.lastTick=Date.now();
     archNotify('timer_add');
     startTickWorker();
   } else if(!timers.some(x=>x.running)){
@@ -218,8 +225,7 @@ function liveAdjustTimer(id, val){
   _lastTouchedId=id;
   const lbl=document.getElementById('sliderLabel_'+id); if(lbl) lbl.textContent=fmt(Math.ceil(t.rem));
   const disp=document.querySelector('#titem_'+id+' .timer-display'); if(disp) disp.textContent=fmt(Math.ceil(t.rem));
-  const pct=t.tot>0?Math.max(0,Math.min(100,100-(t.rem/t.tot)*100)):100;
-  const bar=document.querySelector('#titem_'+id+' .timer-progress-fill'); if(bar) bar.style.width=pct+'%';
+  const slider=document.querySelector('#titem_'+id+' .time-slider'); if(slider) updateSliderFill(slider, t.rem, t.tot);
   updateHeaderTimer();
 }
 function nudgeTimer(id, delta){
@@ -234,7 +240,6 @@ function resetToBase(id){
   const t=timers.find(x=>x.id===id); if(!t) return;
   t.tot = t.orig; t.rem = Math.min(t.rem, t.orig); renderTimers();
 }
-
 function setCapToMax(id, checked){
   const t=timers.find(x=>x.id===id); if(!t) return;
   t.capToMax=checked;
@@ -243,13 +248,15 @@ function setCapToMax(id, checked){
 
 function saveTimerEdit(id){
   const t=timers.find(x=>x.id===id); if(!t) return;
+  const hrInput =document.getElementById('eDurHr_'+id);
   const minInput=document.getElementById('eDurMin_'+id);
   const secInput=document.getElementById('eDurSec_'+id);
   const sndInput=document.getElementById('eSnd_'+id);
-  if(minInput||secInput){
+  if(hrInput||minInput||secInput){
+    const hrs =Math.max(0,parseInt(hrInput?.value)||0);
     const mins=Math.max(0,parseInt(minInput?.value)||0);
     const secs=Math.max(0,Math.min(59,parseInt(secInput?.value)||0));
-    const newDur=Math.max(1, mins*60+secs);
+    const newDur=Math.max(1, hrs*3600+mins*60+secs);
     t.orig=newDur; t.tot=newDur; if(!t.running) t.rem=newDur;
   }
   if(sndInput) t.sound=sndInput.value;
@@ -303,12 +310,14 @@ function cycleInfo(t){
 function fmt(s){ s=Math.max(0,Math.round(s)); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`:`${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
 const repLabels={once:'Once',fixed:'Repeating',increase:'↑ Increasing',decrease:'↓ Decreasing',custom:'Custom Seq',fibonacci:'Fibonacci',random:'Random'};
 const sndEmoji={bell:'🔔',trombone:'🎺',harp:'🎵',chime:'🎶',drum:'🥁',bounce:'🎷',none:'🔇'};
+
 function renderTimers(){
   const el=document.getElementById('timersList');
   if(!timers.length){ el.innerHTML='<div style="text-align:center;padding:var(--space-12);color:var(--color-text-faint);font-size:var(--text-sm);"><i data-lucide="timer" style="width:36px;height:36px;margin:0 auto var(--space-3);opacity:.3;"></i><p>No timers yet.</p></div>'; lucide.createIcons(); return; }
   el.innerHTML=timers.map(t=>{
     const remInt=Math.ceil(t.rem);
-    const pct=t.tot>0?Math.max(0,Math.min(100,100-(t.rem/t.tot)*100)):100;
+    const sliderMax=Math.max(t.tot,t.rem);
+    const sliderPct=sliderMax>0?Math.max(0,Math.min(100,100-(t.rem/sliderMax)*100)):100;
     const cls=t.running?'running':'';
     const editOpen=t.editOpen?'open':'';
     const builtinOpts=[
@@ -321,8 +330,14 @@ function renderTimers(){
       ['none','🔇','Silent'],
     ].map(([v,e,l])=>`<option value="${v}" ${t.sound===v?'selected':''}>${e} ${l}</option>`).join('');
     const customOpts=(_customSounds||[]).map((cs,i)=>`<option value="custom_${i}" ${t.sound===`custom_${i}`?'selected':''}>🎧 ${cs.name}</option>`).join('');
-    const editMins=Math.floor(t.orig/60);
+    // Decompose orig into h/m/s for the edit fields
+    const editHrs =Math.floor(t.orig/3600);
+    const editMins=Math.floor((t.orig%3600)/60);
     const editSecs=t.orig%60;
+    // Orig-marker position on slider (only shown when timer was extended)
+    const origMarker=t.tot>t.orig
+      ? `<div class="slider-orig-marker" style="left:${((1-t.orig/sliderMax)*100).toFixed(2)}%"></div>`
+      : '';
     return `<div class="timer-item ${cls}" id="titem_${t.id}">
       <div class="timer-header">
         <input class="timer-name-input" value="${t.name.replace(/"/g,'&quot;')}" onchange="timers.find(x=>x.id==${t.id}).name=this.value;updateHeaderTimer();">
@@ -333,12 +348,15 @@ function renderTimers(){
         </div>
       </div>
       <div class="timer-display ${cls}">${fmt(remInt)}</div>
-      <div class="timer-progress"><div class="timer-progress-fill" style="width:${pct}%"></div>${t.tot>t.orig?`<div class="timer-orig-marker" style="right:${Math.round((1-t.orig/t.tot)*100)}%"></div>`:''}</div>
-      <div class="time-slider-wrap" style="margin-top:var(--space-2);">
-        <input type="range" class="time-slider" min="0" max="${Math.max(t.tot,t.rem)}" value="${t.rem}" oninput="liveAdjustTimer(${t.id},this.value)" onchange="liveAdjustTimer(${t.id},this.value)">
+      <div class="time-slider-wrap">
+        <input type="range" class="time-slider" min="0" max="${sliderMax}" value="${t.rem}"
+          style="--slider-pct:${sliderPct.toFixed(2)}%"
+          oninput="liveAdjustTimer(${t.id},this.value)"
+          onchange="liveAdjustTimer(${t.id},this.value)">
+        ${origMarker}
         <div class="time-slider-labels"><span>0:00</span><span id="sliderLabel_${t.id}">${fmt(remInt)}</span><span>${fmt(t.tot)}</span></div>
       </div>
-      <div class="adj-btns" style="margin-bottom:0;">
+      <div class="adj-btns">
         <button class="adj-btn" onclick="nudgeTimer(${t.id},-300)">−5 min</button>
         <button class="adj-btn" onclick="nudgeTimer(${t.id},-60)">−1 min</button>
         <button class="adj-btn" onclick="nudgeTimer(${t.id},60)">+1 min</button>
@@ -367,6 +385,7 @@ function renderTimers(){
         <div class="edit-form-grid" style="margin-top:var(--space-2);">
           <div class="form-group"><label>Duration</label>
             <div style="display:flex;gap:var(--space-2);align-items:flex-end;">
+              <div style="flex:1;"><label style="font-size:var(--text-xs);color:var(--color-text-faint);">hr</label><div class="num-wrap" style="width:100%;"><input type="number" id="eDurHr_${t.id}" value="${editHrs}" min="0" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurHr_${t.id}',1)">▲</button><button onclick="stepNum('eDurHr_${t.id}',-1)">▼</button></div></div></div>
               <div style="flex:1;"><label style="font-size:var(--text-xs);color:var(--color-text-faint);">min</label><div class="num-wrap" style="width:100%;"><input type="number" id="eDurMin_${t.id}" value="${editMins}" min="0" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurMin_${t.id}',1)">▲</button><button onclick="stepNum('eDurMin_${t.id}',-1)">▼</button></div></div></div>
               <div style="flex:1;"><label style="font-size:var(--text-xs);color:var(--color-text-faint);">sec</label><div class="num-wrap" style="width:100%;"><input type="number" id="eDurSec_${t.id}" value="${editSecs}" min="0" max="59" style="width:100%;"><div class="num-spin"><button class="spin-up" onclick="stepNum('eDurSec_${t.id}',1)">▲</button><button onclick="stepNum('eDurSec_${t.id}',-1)">▼</button></div></div></div>
             </div>
