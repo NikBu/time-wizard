@@ -107,9 +107,7 @@ function pushTimer(o){
   renderTimers(); updateHeaderTimer(); showToast(`Timer "${o.name}" added!`);
 }
 
-// ── Slider fill helper ──────────────────────────────────────────────────────
-// --slider-pct = remaining fraction (rem / max).
-// CSS fills 0 → pct with a dark-to-primary teal gradient, then neutral track.
+// ── Slider fill helper ─────────────────────────────────────────────────────
 function updateSliderFill(slider, rem, tot) {
   const max = Math.max(tot, parseFloat(slider.max) || tot);
   const pct = max > 0 ? Math.max(0, Math.min(100, (rem / max) * 100)) : 0;
@@ -143,6 +141,12 @@ function tickAll(){
     if (slider && document.activeElement !== slider) {
       slider.value = t.rem;
       updateSliderFill(slider, t.rem, t.tot);
+    }
+    // patch open dropdown row time in-place
+    const drop = document.getElementById('headerTimerDrop');
+    if (drop && drop.classList.contains('htd-open')) {
+      const rowTime = document.getElementById('htdTime_'+t.id);
+      if (rowTime) rowTime.textContent = fmt(remInt);
     }
   });
   updateHeaderTimer();
@@ -299,7 +303,6 @@ function renderTimers(){
   el.innerHTML=timers.map(t=>{
     const remInt=Math.ceil(t.rem);
     const sliderMax=Math.max(t.tot,t.rem);
-    // rem/max → fill shrinks left-to-right as time runs out
     const sliderPct=sliderMax>0?Math.max(0,Math.min(100,(t.rem/sliderMax)*100)):0;
     const cls=t.running?'running':'';
     const editOpen=t.editOpen?'open':'';
@@ -316,7 +319,6 @@ function renderTimers(){
     const editHrs =Math.floor(t.orig/3600);
     const editMins=Math.floor((t.orig%3600)/60);
     const editSecs=t.orig%60;
-    // orig-marker sits at rem=orig on the remaining-time scale
     const origMarkerPct=sliderMax>0?(t.orig/sliderMax*100).toFixed(2):0;
     const origMarker=t.tot>t.orig
       ? `<div class="slider-orig-marker" style="left:${origMarkerPct}%"></div>`
@@ -395,7 +397,7 @@ function renderTimers(){
   lucide.createIcons();
 }
 
-// ── HEADER TIMER BADGE ────────────────────────────
+// ── HEADER TIMER BADGE ────────────────────────────────────────────────────
 let _pinnedTimerId = null;
 
 function getCurrentTimer(){
@@ -410,6 +412,23 @@ function getCurrentTimer(){
   return timers.length?timers[0]:null;
 }
 
+// Build a 3×3 dot grid: up to 9 slots, green=running, dim=idle, empty=no timer
+function buildDotGrid(){
+  const total = Math.min(timers.length, 9);
+  // sort: running first, then idle
+  const sorted = [
+    ...timers.filter(t=>t.running),
+    ...timers.filter(t=>!t.running)
+  ].slice(0, 9);
+  const dots = Array.from({length:9}, (_,i) => {
+    if(i >= total) return '<span class="htb-dot htb-dot-empty"></span>';
+    return sorted[i].running
+      ? '<span class="htb-dot htb-dot-active"></span>'
+      : '<span class="htb-dot htb-dot-idle"></span>';
+  });
+  return `<span class="htb-dots">${dots.join('')}</span>`;
+}
+
 function updateHeaderTimer(){
   const badge=document.getElementById('headerTimerBadge');
   if(!badge) return;
@@ -418,8 +437,10 @@ function updateHeaderTimer(){
   badge.classList.remove('htb-hidden');
   const label=document.getElementById('htbLabel');
   const nameEl=document.getElementById('htbName');
+  const dotsEl=document.getElementById('htbDots');
   if(label) label.textContent=fmt(Math.ceil(t.rem));
   if(nameEl) nameEl.textContent=t.name;
+  if(dotsEl) dotsEl.innerHTML=buildDotGrid();
   badge.classList.toggle('htb-running',t.running);
 }
 
@@ -440,7 +461,7 @@ function renderHeaderTimerList(){
     return `<div class="htd-row${isPinned?' htd-pinned':''}" onclick="pinHeaderTimer(${t.id})">
       <div class="htd-row-info">
         <span class="htd-row-name">${t.name.replace(/</g,'&lt;')}</span>
-        <span class="htd-row-time ${t.running?'htd-running':''}">${fmt(Math.ceil(t.rem))}</span>
+        <span class="htd-row-time ${t.running?'htd-running':''}" id="htdTime_${t.id}">${fmt(Math.ceil(t.rem))}</span>
         ${t.reps>0?`<span class="badge gold" style="font-size:10px;">×${t.reps}</span>`:''}
       </div>
       <button class="btn btn-icon btn-ghost htd-playbtn" title="${t.running?'Pause':'Start'}" onclick="event.stopPropagation();toggleTimer(${t.id});renderHeaderTimerList();" style="width:26px;height:26px;">
