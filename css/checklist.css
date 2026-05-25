@@ -7,14 +7,9 @@
 .lists-sidebar { display: flex; flex-direction: column; gap: var(--space-2); }
 
 .list-item-btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  width: 100%;
-  text-align: left;
-  font-size: var(--text-sm);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
+  width: 100%; text-align: left; font-size: var(--text-sm);
   color: var(--color-text-muted);
   transition: background var(--trans), color var(--trans);
   user-select: none;
@@ -55,45 +50,28 @@
 
 /* ── Task tree ───────────────────────────────────── */
 .task-tree { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
-/* Nested sub-trees sit inside task-body, so no extra left margin needed —
-   depth is communicated by the depth-1/depth-2 classes on the <li> itself */
 .task-tree--nested { margin-top: var(--space-2); }
 
 .task-item {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  display: flex; align-items: flex-start; gap: var(--space-2);
+  padding: var(--space-3); background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
   transition: background var(--trans);
 }
 .task-item.done .task-text { text-decoration: line-through; color: var(--color-text-faint); opacity: 0.7; }
-
-/* Depth visual treatment — each level gets slightly offset background */
 .task-item.depth-1 { background: var(--color-surface-offset); border-color: var(--color-divider); }
 .task-item.depth-2 { background: var(--color-surface-dynamic); border-color: var(--color-divider); border-style: dashed; }
-
 .task-item.drag-over { outline: 2px dashed var(--color-primary); outline-offset: -2px; }
 .task-item.dragging  { opacity: 0.4; }
 
 /* ── Collapse button ─────────────────────────────── */
 .task-collapse-btn {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-faint);
-  transition: color var(--trans), background var(--trans);
-  margin-top: 2px;
+  flex-shrink: 0; width: 18px; height: 18px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm); color: var(--color-text-faint);
+  transition: color var(--trans), background var(--trans); margin-top: 2px;
 }
 .task-collapse-btn:hover { color: var(--color-primary); background: var(--color-primary-highlight); }
-/* Spacer when no collapse button (leaf node) */
 .task-collapse-spacer { flex-shrink: 0; width: 18px; height: 18px; }
 
 /* ── Drag handle ────────────────────────────────── */
@@ -118,6 +96,14 @@
 /* ── Task body ───────────────────────────────────── */
 .task-body { flex: 1; min-width: 0; }
 
+/* Task text + points + hover actions all on one line */
+.task-main-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
 .task-text {
   font-size: var(--text-sm); line-height: 1.5;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
@@ -126,8 +112,17 @@
 
 .task-points {
   display: inline-flex; align-items: center; gap: 3px;
-  font-size: var(--text-xs); color: var(--color-gold); font-weight: 600; margin-left: var(--space-2);
+  font-size: var(--text-xs); color: var(--color-gold); font-weight: 600;
+  white-space: nowrap; flex-shrink: 0;
 }
+
+/* Actions live inside task-main-row, pushed to the right */
+.task-actions {
+  display: flex; gap: var(--space-1);
+  opacity: 0; transition: opacity var(--trans); flex-shrink: 0;
+  margin-left: auto;
+}
+.task-item:hover .task-actions { opacity: 1; }
 
 .task-expand-btn {
   font-size: var(--text-xs); color: var(--color-primary);
@@ -145,13 +140,32 @@
 .task-note-input { width: 100%; margin-top: var(--space-2); font-size: var(--text-xs); resize: vertical; min-height: 48px; display: none; }
 .task-note-input.visible { display: block; }
 
-/* ── Actions ─────────────────────────────────────── */
-.task-actions { display: flex; gap: var(--space-1); opacity: 0; transition: opacity var(--trans); flex-shrink: 0; }
-.task-item:hover .task-actions { opacity: 1; }
-
 /* ── Subtask add row ─────────────────────────────── */
 .sub-add-row { gap: var(--space-2); margin-top: var(--space-2); display: none; }
 .sub-add-row.visible { display: flex; }
+
+/* Always-visible "+ subtask" trigger button */
+.task-add-sub-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  background: none;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  cursor: pointer;
+  transition: color var(--trans), border-color var(--trans), background var(--trans);
+}
+.task-add-sub-btn:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary-highlight);
+}
+/* Hide trigger when the input row is already open */
+.sub-add-row.visible ~ .task-add-sub-btn { display: none; }
 
 /* ── Inline edit ─────────────────────────────────── */
 .task-edit-input {
