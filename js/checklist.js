@@ -1,6 +1,6 @@
 // ── CHECKLISTS ────────────────────────────────────
 // Task shape: { id, text, pts, done, pid, depth, collapsed, note }
-// depth: 0 = top-level, 1 = subtask, 2 = sub-subtask (max)
+// depth: 0 = top-level, 1 = subtask, 2 = sub-subtask (max, no children)
 // pid: parent task id, or null for top-level
 // collapsed: if true, children are hidden in the renderer
 
@@ -8,7 +8,7 @@ const MAX_DEPTH = 2;
 let lists=[], lidx=1, tidxc=1, activeList=null, totalPts=0;
 let _dragSrcListId=null, _dragSrcTaskId=null;
 
-// ── HELPERS ───────────────────────────────────────
+// ── HELPERS ──────────────────────────────────────
 function _getList(){ return lists.find(l=>l.id===activeList); }
 function _getTask(id){ const l=_getList(); return l&&l.tasks.find(t=>t.id===id); }
 function _descendants(tasks, pid){
@@ -22,7 +22,7 @@ function _reDepth(tasks, id, newDepth){
   _children(tasks,id).forEach(c=>_reDepth(tasks,c.id,newDepth+1));
 }
 
-// ── LIST MANAGEMENT ───────────────────────────────
+// ── LIST MANAGEMENT ──────────────────────────────
 function openNewListModal(){ document.getElementById('newListModal').classList.remove('hidden'); document.getElementById('newListName').focus(); }
 function createList(){
   const name=document.getElementById('newListName').value.trim();
@@ -34,7 +34,7 @@ function createList(){
   renderLists(); selectList(id); showToast(`"${name}" created!`);
 }
 
-// ── RENAME LIST ───────────────────────────────────
+// ── RENAME LIST ──────────────────────────────────
 function startRenameList(id){
   const list=lists.find(l=>l.id===id); if(!list) return;
   const titleEl=document.getElementById('checklist-title-text');
@@ -48,7 +48,7 @@ function startRenameList(id){
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();inp.blur();} if(e.key==='Escape'){inp.value=list.name;inp.blur();} e.stopPropagation(); });
 }
 
-// ── LIST DRAG-REORDER ─────────────────────────────
+// ── LIST DRAG-REORDER ────────────────────────────
 function _onListDragStart(e,id){ _dragSrcListId=id; e.dataTransfer.effectAllowed='move'; e.currentTarget.classList.add('dragging'); }
 function _onListDragOver(e,id){ e.preventDefault(); if(_dragSrcListId===id) return; e.dataTransfer.dropEffect='move'; document.querySelectorAll('.list-item-btn').forEach(el=>el.classList.remove('drag-over')); e.currentTarget.classList.add('drag-over'); }
 function _onListDrop(e,id){
@@ -85,7 +85,7 @@ function renderLists(){
 
 function selectList(id){ activeList=id; renderLists(); renderChecklist(); }
 
-// ── RENDER CHECKLIST ──────────────────────────────
+// ── RENDER CHECKLIST ─────────────────────────────
 function renderChecklist(){
   const main=document.getElementById('checklistMain'), list=_getList();
   if(!list) return;
@@ -130,11 +130,30 @@ function _renderNodes(tasks, pid){
     const hasChildren=children.length>0;
     const isCollapsed=!!t.collapsed;
     const hasNote=t.note&&t.note.trim();
-    const canAddChild=t.depth<MAX_DEPTH;
+    // depth-2 tasks cannot have children, so no collapse btn or add-child
+    const canHaveChildren=t.depth<MAX_DEPTH;
     const depthClass=t.depth===0?'':t.depth===1?'depth-1':'depth-2';
+
+    // Collapse button: 3 states
+    // depth-2 nodes get no button at all (they can never have children)
+    let collapseBtn='';
+    if(canHaveChildren){
+      if(!hasChildren){
+        // State 1: leaf — visible but inert dot indicator
+        collapseBtn=`<span class="task-collapse-btn task-collapse-leaf" title="No subtasks yet">·</span>`;
+      } else if(isCollapsed){
+        // State 2: has children, collapsed
+        collapseBtn=`<button class="task-collapse-btn task-collapse-closed" onclick="toggleCollapse(${t.id})" title="Expand subtasks">▶</button>`;
+      } else {
+        // State 3: has children, expanded
+        collapseBtn=`<button class="task-collapse-btn task-collapse-open" onclick="toggleCollapse(${t.id})" title="Collapse subtasks">▼</button>`;
+      }
+    }
+
     const childrenHtml=(!isCollapsed&&hasChildren)
       ? `<ul class="task-tree task-tree--nested" ondragover="_onTaskDragOver(event,${t.id})" ondrop="_onTaskDrop(event,${t.id})">${_renderNodes(tasks,t.id)}</ul>`
       : '';
+
     return `<li class="task-item ${t.done?'done':''} ${depthClass}" id="task-li-${t.id}"
         draggable="true"
         ondragstart="_onTaskDragStart(event,${t.id})"
@@ -142,11 +161,7 @@ function _renderNodes(tasks, pid){
         ondrop="_onTaskDrop(event,${t.id})"
         ondragend="_onTaskDragEnd()">
       <span class="task-drag-handle" title="Drag to reorder">⠿</span>
-      ${hasChildren
-        ? `<button class="task-collapse-btn" onclick="toggleCollapse(${t.id})" title="${isCollapsed?'Expand':'Collapse'}">
-             <i data-lucide="${isCollapsed?'chevron-right':'chevron-down'}" style="width:11px;height:11px;"></i>
-           </button>`
-        : `<span class="task-collapse-spacer"></span>`}
+      ${collapseBtn}
       <div class="task-check" onclick="toggleTask(${t.id})" role="checkbox" aria-checked="${t.done}">
         ${t.done?'<i data-lucide="check" style="width:11px;height:11px;"></i>':''}
       </div>
@@ -158,7 +173,9 @@ function _renderNodes(tasks, pid){
             <button class="btn btn-icon btn-ghost btn-sm" title="Edit" onclick="editTask(${t.id})"><i data-lucide="pencil" style="width:11px;height:11px;"></i></button>
             <button class="btn btn-icon btn-ghost btn-sm" title="Note" onclick="toggleNote(${t.id})"><i data-lucide="sticky-note" style="width:11px;height:11px;"></i></button>
             <button class="btn btn-icon btn-ghost btn-sm" title="Copy" onclick="copyTask(${t.id})"><i data-lucide="copy" style="width:11px;height:11px;"></i></button>
-            ${t.depth>0?`<button class="btn btn-icon btn-ghost btn-sm" title="Promote (Shift+Tab)" onclick="dedentTask(${t.id})"><i data-lucide="arrow-left" style="width:11px;height:11px;"></i></button>`:''}
+            ${canHaveChildren
+              ? `<button class="btn btn-icon btn-ghost btn-sm" title="Add subtask" onclick="showSubAdd(${t.id})"><i data-lucide="corner-down-right" style="width:11px;height:11px;"></i></button>`
+              : ''}
             <button class="btn btn-icon btn-danger btn-sm" onclick="delTask(${t.id})"><i data-lucide="x" style="width:11px;height:11px;"></i></button>
           </div>
         </div>
@@ -168,34 +185,30 @@ function _renderNodes(tasks, pid){
           :`<div class="task-note" id="task-note-${t.id}" style="display:none;"></div>`}
         <textarea class="task-note-input" id="task-note-input-${t.id}" placeholder="Add a note…" onblur="saveNote(${t.id})">${t.note||''}</textarea>
         ${childrenHtml}
-        ${canAddChild?`
+        ${canHaveChildren?`
         <div class="sub-add-row" id="sub-add-row-${t.id}">
           <input type="text" id="sub-input-${t.id}" placeholder="Subtask… (Enter adds · Tab indents · Shift+Tab dedents)"
-            style="flex:1;font-size:var(--text-xs);"
-            onkeydown="_onSubKey(event,${t.id})">
+            style="flex:1;font-size:var(--text-xs);" onkeydown="_onSubKey(event,${t.id})">
           <div class="num-wrap">
             <input type="number" id="sub-pts-${t.id}" value="5" min="1" max="100" style="width:48px;font-size:var(--text-xs);" title="Points">
             <div class="num-spin"><button onclick="stepNum('sub-pts-${t.id}',1)">▲</button><button onclick="stepNum('sub-pts-${t.id}',-1)">▼</button></div>
           </div>
           <button class="btn btn-primary btn-sm" onclick="commitSub(${t.id})">Add</button>
           <button class="btn btn-ghost btn-sm" onclick="cancelSub(${t.id})">✕</button>
-        </div>
-        <button class="task-add-sub-btn" onclick="showSubAdd(${t.id})" title="Add subtask">
-          <i data-lucide="plus" style="width:10px;height:10px;"></i> subtask
-        </button>`:``}
+        </div>`:''}
       </div>
     </li>`;
   }).join('');
 }
 
-// ── COLLAPSE ──────────────────────────────────────
+// ── COLLAPSE ─────────────────────────────────────
 function toggleCollapse(id){
   const t=_getTask(id); if(!t) return;
   t.collapsed=!t.collapsed;
   renderChecklist();
 }
 
-// ── KEYBOARD NAV FOR SUB-INPUTS ───────────────────
+// ── KEYBOARD NAV FOR SUB-INPUTS ──────────────────
 function _onSubKey(e, pid){
   if(e.key==='Escape'){ e.preventDefault(); cancelSub(pid); return; }
   if(e.key==='Enter'){
@@ -227,7 +240,7 @@ function _onSubKey(e, pid){
   }
 }
 
-// ── INDENT / DEDENT ───────────────────────────────
+// ── INDENT / DEDENT ─────────────────────────────
 function indentTask(id){
   const list=_getList(); if(!list) return;
   const t=list.tasks.find(x=>x.id===id); if(!t) return;
@@ -251,7 +264,7 @@ function dedentTask(id){
   renderChecklist(); renderLists();
 }
 
-// ── TASK CRUD ─────────────────────────────────────
+// ── TASK CRUD ────────────────────────────────────
 function addTask(){
   const list=_getList(); if(!list) return;
   const inp=document.getElementById('newTaskInput'), text=inp.value.trim(); if(!text) return;
@@ -399,7 +412,7 @@ function deleteList(id){
   });
 }
 
-// ── TASK DRAG-REORDER ─────────────────────────────
+// ── TASK DRAG-REORDER ────────────────────────────
 function _onTaskDragStart(e,id){
   _dragSrcTaskId=id; e.stopPropagation(); e.dataTransfer.effectAllowed='move';
   e.currentTarget.classList.add('dragging');
@@ -434,7 +447,7 @@ function _onTaskDragEnd(){
   _dragSrcTaskId=null;
 }
 
-// ── EXPAND / OVERFLOW BUTTONS ─────────────────────
+// ── EXPAND / OVERFLOW BUTTONS ────────────────────
 function _checkOverflow(el){ return el&&el.scrollHeight>el.clientHeight+2; }
 function _initExpandBtns(){
   requestAnimationFrame(()=>{
@@ -458,7 +471,7 @@ function toggleNoteExpand(id){
   if(!el) return; el.classList.toggle('expanded'); if(btn) btn.textContent=el.classList.contains('expanded')?'Show less':'Show more';
 }
 
-// ── POINTS + HEADER ───────────────────────────────
+// ── POINTS + HEADER ──────────────────────────────
 function updateHeaderPts(){
   const hp=document.getElementById('headerPoints'); if(hp) hp.textContent=`✦ ${totalPts} pts`;
   const lvl=document.getElementById('owlLevel'); if(lvl) lvl.textContent=Math.floor(totalPts/100)+1;

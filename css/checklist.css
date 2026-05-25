@@ -5,7 +5,6 @@
 
 /* ── Sidebar ─────────────────────────────────────── */
 .lists-sidebar { display: flex; flex-direction: column; gap: var(--space-2); }
-
 .list-item-btn {
   display: flex; align-items: center; justify-content: space-between;
   padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
@@ -19,7 +18,6 @@
 .list-item-btn.active .list-count { background: var(--color-primary); color: #fff; }
 .list-item-btn.drag-over { outline: 2px dashed var(--color-primary); outline-offset: -2px; }
 .list-item-btn.dragging  { opacity: 0.45; }
-
 .list-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list-count {
   font-size: var(--text-xs); background: var(--color-surface-dynamic);
@@ -27,7 +25,7 @@
   color: var(--color-text-muted); white-space: nowrap; flex-shrink: 0;
 }
 .list-actions { display: none; gap: var(--space-1); align-items: center; }
-.list-item-btn:hover .list-actions { display: flex; }
+.list-item-btn:hover .list-actions,
 .list-item-btn.active .list-actions { display: flex; }
 
 /* ── Main panel header ───────────────────────────── */
@@ -43,12 +41,12 @@
   transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ── Stats row ───────────────────────────────────── */
+/* ── Stats row ──────────────────────────────────── */
 .checklist-stats { display: flex; gap: var(--space-4); margin-bottom: var(--space-4); flex-wrap: wrap; }
 .stat-pill { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-xs); color: var(--color-text-muted); }
 .stat-pill strong { color: var(--color-text); font-weight: 600; }
 
-/* ── Task tree ───────────────────────────────────── */
+/* ── Task tree ──────────────────────────────────── */
 .task-tree { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
 .task-tree--nested { margin-top: var(--space-2); }
 
@@ -64,15 +62,52 @@
 .task-item.drag-over { outline: 2px dashed var(--color-primary); outline-offset: -2px; }
 .task-item.dragging  { opacity: 0.4; }
 
-/* ── Collapse button ─────────────────────────────── */
+/* ── Collapse button ─────────────────────────────────
+   Three states: leaf (dot, inert), open (▼, clickable), closed (▶, clickable)
+   All three are always visible. depth-2 nodes get nothing. */
 .task-collapse-btn {
-  flex-shrink: 0; width: 18px; height: 18px; padding: 0;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: var(--radius-sm); color: var(--color-text-faint);
-  transition: color var(--trans), background var(--trans); margin-top: 2px;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  line-height: 1;
+  margin-top: 1px;
+  transition: background var(--trans), color var(--trans);
 }
-.task-collapse-btn:hover { color: var(--color-primary); background: var(--color-primary-highlight); }
-.task-collapse-spacer { flex-shrink: 0; width: 18px; height: 18px; }
+/* Leaf state — inert dot, subtle */
+.task-collapse-leaf {
+  color: var(--color-text-faint);
+  cursor: default;
+  font-size: 16px;
+  line-height: 1;
+}
+/* Open state — teal, shows children are expanded */
+.task-collapse-open {
+  background: var(--color-primary-highlight);
+  color: var(--color-primary);
+  cursor: pointer;
+  border: 1px solid var(--color-primary);
+}
+.task-collapse-open:hover {
+  background: var(--color-primary);
+  color: #fff;
+}
+/* Closed state — muted surface, shows children are hidden */
+.task-collapse-closed {
+  background: var(--color-surface-dynamic);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+}
+.task-collapse-closed:hover {
+  background: var(--color-primary-highlight);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
 
 /* ── Drag handle ────────────────────────────────── */
 .task-drag-handle {
@@ -93,44 +128,31 @@
 .task-check:hover { border-color: var(--color-primary); }
 .task-item.done .task-check { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 
-/* ── Task body ───────────────────────────────────── */
+/* ── Task body ──────────────────────────────────── */
 .task-body { flex: 1; min-width: 0; }
-
-/* Task text + points + hover actions all on one line */
-.task-main-row {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
+.task-main-row { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
 .task-text {
   font-size: var(--text-sm); line-height: 1.5;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .task-text.expanded { display: block; overflow: visible; }
-
 .task-points {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: var(--text-xs); color: var(--color-gold); font-weight: 600;
   white-space: nowrap; flex-shrink: 0;
 }
-
-/* Actions live inside task-main-row, pushed to the right */
 .task-actions {
   display: flex; gap: var(--space-1);
-  opacity: 0; transition: opacity var(--trans); flex-shrink: 0;
-  margin-left: auto;
+  opacity: 0; transition: opacity var(--trans); flex-shrink: 0; margin-left: auto;
 }
 .task-item:hover .task-actions { opacity: 1; }
-
 .task-expand-btn {
   font-size: var(--text-xs); color: var(--color-primary);
   background: none; border: none; cursor: pointer; padding: 2px 0; margin-top: 2px; display: none;
 }
 .task-expand-btn.visible { display: inline-block; }
 
-/* ── Notes ───────────────────────────────────────── */
+/* ── Notes ──────────────────────────────────────── */
 .task-note {
   font-size: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-1);
   line-height: 1.5; white-space: pre-wrap;
@@ -140,32 +162,9 @@
 .task-note-input { width: 100%; margin-top: var(--space-2); font-size: var(--text-xs); resize: vertical; min-height: 48px; display: none; }
 .task-note-input.visible { display: block; }
 
-/* ── Subtask add row ─────────────────────────────── */
+/* ── Subtask add row ────────────────────────────── */
 .sub-add-row { gap: var(--space-2); margin-top: var(--space-2); display: none; }
 .sub-add-row.visible { display: flex; }
-
-/* Always-visible "+ subtask" trigger button */
-.task-add-sub-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  margin-top: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--color-text-faint);
-  background: none;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 2px var(--space-2);
-  cursor: pointer;
-  transition: color var(--trans), border-color var(--trans), background var(--trans);
-}
-.task-add-sub-btn:hover {
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-  background: var(--color-primary-highlight);
-}
-/* Hide trigger when the input row is already open */
-.sub-add-row.visible ~ .task-add-sub-btn { display: none; }
 
 /* ── Inline edit ─────────────────────────────────── */
 .task-edit-input {
@@ -174,7 +173,7 @@
   border-radius: var(--radius-md); padding: 2px var(--space-2);
 }
 
-/* ── Add task row ────────────────────────────────── */
+/* ── Add task row ───────────────────────────────── */
 .add-task-row { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
 .add-task-row input { flex: 1; }
 .points-input { width: 70px !important; flex: none !important; }
