@@ -13,18 +13,23 @@ function createList(){
   renderLists(); selectList(id); showToast(`"${name}" created!`);
 }
 
-// ── LIST RENAME ──────────────────────────────────
-function startRenameList(id, el){
-  if(el.querySelector('input')) return; // already editing
+// ── LIST RENAME (double-click) ────────────────────
+function startRenameList(id){
+  // Find the rendered element — it must exist at call time
+  const el=document.querySelector(`.list-item-btn[data-lid="${id}"]`);
+  if(!el || el.querySelector('input')) return; // already editing
   const list=lists.find(l=>l.id===id); if(!list) return;
-  const oldText=`${list.icon} ${list.name}`;
-  const span=el.querySelector('.list-label');
+
+  const labelEl=el.querySelector('.list-label');
+  if(!labelEl) return;
+
   const inp=document.createElement('input');
   inp.className='list-rename-input';
   inp.value=list.name;
-  inp.style.cssText='flex:1;min-width:0;font-size:var(--text-xs);background:var(--color-surface-2);border:1px solid var(--color-primary);border-radius:var(--radius-sm);padding:1px var(--space-1);color:var(--color-text);outline:none;';
-  span.replaceWith(inp);
+  inp.style.cssText='flex:1;min-width:0;font-size:var(--text-sm);background:var(--color-surface-2);border:1px solid var(--color-primary);border-radius:var(--radius-sm);padding:1px var(--space-2);color:var(--color-text);outline:none;';
+  labelEl.replaceWith(inp);
   inp.focus(); inp.select();
+
   const commit=()=>{
     const val=inp.value.trim();
     if(val) list.name=val;
@@ -34,33 +39,31 @@ function startRenameList(id, el){
   inp.addEventListener('keydown', e=>{
     if(e.key==='Enter'){ e.preventDefault(); inp.blur(); }
     if(e.key==='Escape'){ inp.value=list.name; inp.blur(); }
+    e.stopPropagation();
   });
 }
 
-// ── LIST DRAG-REORDER ────────────────────────────
-function _onListDragStart(e, id){
-  _dragSrcListId=id;
-  e.dataTransfer.effectAllowed='move';
+// ── LIST DRAG-REORDER ─────────────────────────────
+function _onListDragStart(e,id){
+  _dragSrcListId=id; e.dataTransfer.effectAllowed='move';
   e.currentTarget.classList.add('dragging');
 }
-function _onListDragOver(e, id){
+function _onListDragOver(e,id){
   e.preventDefault();
   if(_dragSrcListId===id) return;
   e.dataTransfer.dropEffect='move';
   document.querySelectorAll('.list-item-btn').forEach(el=>el.classList.remove('drag-over'));
   e.currentTarget.classList.add('drag-over');
 }
-function _onListDrop(e, id){
+function _onListDrop(e,id){
   e.preventDefault();
   document.querySelectorAll('.list-item-btn').forEach(el=>el.classList.remove('drag-over','dragging'));
-  if(_dragSrcListId===null||_dragSrcListId===id) return;
+  if(_dragSrcListId===null||_dragSrcListId===id){ _dragSrcListId=null; return; }
   const from=lists.findIndex(l=>l.id===_dragSrcListId);
   const to=lists.findIndex(l=>l.id===id);
-  if(from<0||to<0) return;
-  const [moved]=lists.splice(from,1);
-  lists.splice(to,0,moved);
-  _dragSrcListId=null;
-  renderLists();
+  if(from<0||to<0){ _dragSrcListId=null; return; }
+  const [moved]=lists.splice(from,1); lists.splice(to,0,moved);
+  _dragSrcListId=null; renderLists();
 }
 function _onListDragEnd(){
   document.querySelectorAll('.list-item-btn').forEach(el=>el.classList.remove('drag-over','dragging'));
@@ -73,25 +76,45 @@ function renderLists(){
   sb.innerHTML=lists.map(l=>{
     const done=l.tasks.filter(t=>!t.pid&&t.done).length, tot=l.tasks.filter(t=>!t.pid).length;
     return `<div class="list-item-btn ${activeList===l.id?'active':''}" 
+      data-lid="${l.id}"
       draggable="true"
-      onclick="selectList(${l.id})"
-      ondblclick="startRenameList(${l.id},this)"
       ondragstart="_onListDragStart(event,${l.id})"
       ondragover="_onListDragOver(event,${l.id})"
       ondrop="_onListDrop(event,${l.id})"
       ondragend="_onListDragEnd()"
-      title="Double-click to rename · Drag to reorder"
+      title="Double-click to rename \u00b7 Drag to reorder"
       style="cursor:pointer;">
-      <span class="list-label" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.icon} ${l.name}</span>
+      <span class="list-label">${l.icon} ${l.name}</span>
       <span class="list-count">${done}/${tot}</span>
       <span class="list-actions" onclick="event.stopPropagation()">
-        <button class="btn btn-icon btn-ghost btn-sm" title="Duplicate list" onclick="duplicateList(${l.id})" style="width:22px;height:22px;"><i data-lucide="copy" style="width:10px;height:10px;"></i></button>
-        <button class="btn btn-icon btn-danger btn-sm" title="Delete list" onclick="deleteList(${l.id})" style="width:22px;height:22px;"><i data-lucide="trash-2" style="width:10px;height:10px;"></i></button>
+        <button class="btn btn-icon btn-ghost btn-sm" title="Duplicate" onclick="duplicateList(${l.id})" style="width:22px;height:22px;"><i data-lucide="copy" style="width:10px;height:10px;"></i></button>
+        <button class="btn btn-icon btn-danger btn-sm" title="Delete" onclick="deleteList(${l.id})" style="width:22px;height:22px;"><i data-lucide="trash-2" style="width:10px;height:10px;"></i></button>
       </span>
     </div>`;
   }).join('');
+
+  // Attach click/dblclick via JS so we can distinguish them cleanly
+  document.querySelectorAll('.list-item-btn[data-lid]').forEach(el=>{
+    const id=parseInt(el.dataset.lid);
+    let clickTimer=null;
+    el.addEventListener('click', e=>{
+      // Ignore clicks that originated from the actions area
+      if(e.target.closest('.list-actions')) return;
+      // If this is part of a double-click sequence, cancel the single-click
+      clearTimeout(clickTimer);
+      if(e.detail===2){
+        // Double-click: rename
+        startRenameList(id);
+      } else {
+        // Single click: select (delay slightly so double-click can cancel it)
+        clickTimer=setTimeout(()=>selectList(id), 180);
+      }
+    });
+  });
+
   lucide.createIcons();
 }
+
 function selectList(id){ activeList=id; renderLists(); renderChecklist(); }
 
 function renderChecklist(){
@@ -112,7 +135,7 @@ function renderChecklist(){
     <div class="checklist-stats">
       <div class="stat-pill"><strong>${dc}</strong> / ${top.length} done</div>
       <div class="stat-pill"><strong>${pct}%</strong></div>
-      <div class="stat-pill">✶ <strong>${dpts}</strong>/${tpts} pts</div>
+      <div class="stat-pill">✦ <strong>${dpts}</strong>/${tpts} pts</div>
     </div>
     <ul class="task-tree" id="taskTree"
       ondragover="_onTaskDragOver(event,null)"
@@ -144,10 +167,10 @@ function renderNodes(tasks,pid,depth){
       <div class="task-body" style="flex:1;min-width:0;">
         <div style="display:flex;align-items:baseline;gap:var(--space-2);flex-wrap:wrap;">
           <span class="task-text" id="task-text-${t.id}">${t.text}</span>
-          <span class="task-points">✶${t.pts}</span>
+          <span class="task-points">✦${t.pts}</span>
         </div>
         <button class="task-expand-btn" id="task-expbtn-${t.id}" onclick="toggleTaskExpand(${t.id})">Show more</button>
-        ${hasNote?`<div class="task-note" id="task-note-${t.id}">${t.note}</div><button class="task-expand-btn" id="task-notebtn-${t.id}" onclick="toggleNoteExpand(${t.id})">Show less</button>`:`<div class="task-note" id="task-note-${t.id}" style="display:none;"></div>`}
+        ${hasNote?`<div class="task-note" id="task-note-${t.id}">${t.note}</div><button class="task-expand-btn" id="task-notebtn-${t.id}" onclick="toggleNoteExpand(${t.id})">Show more</button>`:`<div class="task-note" id="task-note-${t.id}" style="display:none;"></div>`}
         <textarea class="task-note-input" id="task-note-input-${t.id}" placeholder="Add a note..." onblur="saveNote(${t.id})">${t.note||''}</textarea>
         ${kids?`<ul class="task-tree" style="margin-top:var(--space-2);" ondragover="_onTaskDragOver(event,${t.id})" ondrop="_onTaskDrop(event,${t.id})">${kids}</ul>`:''}
         <div class="sub-add-row" id="sub-add-row-${t.id}">
@@ -168,41 +191,33 @@ function renderNodes(tasks,pid,depth){
   }).join('');
 }
 
-// ── TASK DRAG-REORDER ────────────────────────────
-function _onTaskDragStart(e, id){
-  _dragSrcTaskId=id;
-  e.stopPropagation();
-  e.dataTransfer.effectAllowed='move';
+// ── TASK DRAG-REORDER ─────────────────────────────
+function _onTaskDragStart(e,id){
+  _dragSrcTaskId=id; e.stopPropagation(); e.dataTransfer.effectAllowed='move';
   e.currentTarget.classList.add('dragging');
 }
-function _onTaskDragOver(e, id){
+function _onTaskDragOver(e,id){
   e.preventDefault(); e.stopPropagation();
   if(_dragSrcTaskId===id) return;
   e.dataTransfer.dropEffect='move';
   document.querySelectorAll('.task-item').forEach(el=>el.classList.remove('drag-over'));
-  if(id!==null){
-    const li=document.getElementById('task-li-'+id);
-    if(li) li.classList.add('drag-over');
-  }
+  if(id!==null){ const li=document.getElementById('task-li-'+id); if(li) li.classList.add('drag-over'); }
 }
-function _onTaskDrop(e, targetId){
+function _onTaskDrop(e,targetId){
   e.preventDefault(); e.stopPropagation();
   document.querySelectorAll('.task-item').forEach(el=>el.classList.remove('drag-over','dragging'));
   const srcId=_dragSrcTaskId; _dragSrcTaskId=null;
   if(srcId===null||srcId===targetId) return;
   const list=lists.find(l=>l.id===activeList); if(!list) return;
   const src=list.tasks.find(t=>t.id===srcId); if(!src) return;
-  // Only allow reorder within same parent level
   const target=targetId!==null?list.tasks.find(t=>t.id===targetId):null;
-  if(target && src.pid!==target.pid) return; // cross-level drops ignored
+  if(target&&src.pid!==target.pid) return; // cross-level drops ignored
   const sameLevelTasks=list.tasks.filter(t=>t.pid===src.pid);
   const fromIdx=sameLevelTasks.findIndex(t=>t.id===srcId);
   const toIdx=targetId!==null?sameLevelTasks.findIndex(t=>t.id===targetId):sameLevelTasks.length-1;
   if(fromIdx<0||toIdx<0) return;
-  // Reorder within the full tasks array preserving all other tasks
   const otherTasks=list.tasks.filter(t=>t.pid!==src.pid);
-  sameLevelTasks.splice(fromIdx,1);
-  sameLevelTasks.splice(toIdx,0,src);
+  sameLevelTasks.splice(fromIdx,1); sameLevelTasks.splice(toIdx,0,src);
   list.tasks=[...otherTasks,...sameLevelTasks];
   renderChecklist(); renderLists();
 }
@@ -211,17 +226,17 @@ function _onTaskDragEnd(){
   _dragSrcTaskId=null;
 }
 
-function _checkOverflow(el){ return el && el.scrollHeight > el.clientHeight + 2; }
+function _checkOverflow(el){ return el&&el.scrollHeight>el.clientHeight+2; }
 function _initExpandBtns(){
   requestAnimationFrame(()=>{
     document.querySelectorAll('.task-text').forEach(el=>{
       const id=el.id.replace('task-text-',''); const btn=document.getElementById('task-expbtn-'+id);
-      if(btn){ btn.classList.toggle('visible', _checkOverflow(el)); }
+      if(btn) btn.classList.toggle('visible',_checkOverflow(el));
     });
     document.querySelectorAll('.task-note').forEach(el=>{
       if(el.style.display==='none') return;
       const id=el.id.replace('task-note-',''); const btn=document.getElementById('task-notebtn-'+id);
-      if(btn){ btn.classList.toggle('visible', _checkOverflow(el)); }
+      if(btn) btn.classList.toggle('visible',_checkOverflow(el));
     });
   });
 }
@@ -255,10 +270,7 @@ function commitSub(pid){
   const pts=Math.max(1,parseInt(ptsEl?.value)||5);
   const list=lists.find(l=>l.id===activeList);
   list.tasks.push({id:tidxc++,text,pts,done:false,pid,note:''});
-  inp.value='';
-  inp.focus();
-  renderChecklist(); renderLists();
-  // Re-open the sub-add row and refocus after re-render
+  inp.value=''; renderChecklist(); renderLists();
   requestAnimationFrame(()=>{
     const row=document.getElementById('sub-add-row-'+pid);
     if(row){ row.classList.add('visible'); const ni=document.getElementById('sub-input-'+pid); if(ni) ni.focus(); }
@@ -314,7 +326,7 @@ function toggleTask(id){
   if(task.done){
     totalPts+=task.pts; updateHeaderPts();
     archNotify('task_done');
-    showToast(`✶ +${task.pts} pts! "${task.text}"`,'success');
+    showToast(`✦ +${task.pts} pts! "${task.text}"`,'success');
     list.tasks.filter(t=>t.pid===id&&!t.done).forEach(s=>{ s.done=true; totalPts+=s.pts; });
   } else {
     totalPts=Math.max(0,totalPts-task.pts); updateHeaderPts();
@@ -336,7 +348,7 @@ function deleteList(id){
   });
 }
 function updateHeaderPts(){
-  const hp=document.getElementById('headerPoints'); if(hp) hp.textContent=`✶ ${totalPts} pts`;
+  const hp=document.getElementById('headerPoints'); if(hp) hp.textContent=`✦ ${totalPts} pts`;
   const lvl=document.getElementById('owlLevel'); if(lvl) lvl.textContent=Math.floor(totalPts/100)+1;
   const wiz=document.getElementById('owlWisdom'); if(wiz) wiz.textContent=totalPts;
 }
