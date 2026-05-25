@@ -60,6 +60,7 @@ function previewSound(id){
   if(btn) btn.classList.add('playing');
   _sndPlaying=id;
   playSound(id);
+  // Deep Drum is ~2.2s; others are shorter — use 3s as safe ceiling
   setTimeout(()=>{
     if(_sndPlaying===id){
       _sndPlaying=null;
@@ -68,18 +69,47 @@ function previewSound(id){
   },3000);
 }
 
-// Custom sound upload
+// ── CUSTOM SOUND UPLOAD ────────────────────────────
 const _customSounds = [];
-function handleCustomSoundUpload(input){
-  const file = input.files[0]; if(!file) return;
-  const url = URL.createObjectURL(file);
-  const name = file.name.replace(/\.[^.]+$/,'');
-  _customSounds.push({name, url});
-  document.getElementById('uploadSoundName').textContent = file.name;
-  renderCustomSounds();
-  showToast(`Sound "${name}" added!`);
-  input.value='';
+let _previewAudio = null; // active preview Audio element
+
+function _addCustomFiles(files){
+  if(!files || !files.length) return;
+  let added = 0;
+  Array.from(files).forEach(file => {
+    if(!file.type.startsWith('audio/') && !/\.(mp3|wav|ogg|flac|m4a)$/i.test(file.name)) return;
+    const url = URL.createObjectURL(file);
+    const name = file.name.replace(/\.[^.]+$/, '');
+    _customSounds.push({name, url});
+    added++;
+  });
+  if(added) renderCustomSounds();
+  if(added===1) showToast(`Sound added!`);
+  else if(added>1) showToast(`${added} sounds added!`);
 }
+
+function handleCustomSoundUpload(input){
+  _addCustomFiles(input.files);
+  input.value = '';
+}
+
+// Drag-and-drop on the upload zone
+function soundDragOver(e){
+  e.preventDefault();
+  const zone = document.getElementById('customSoundDropZone');
+  if(zone) zone.classList.add('drag-over');
+}
+function soundDragLeave(e){
+  const zone = document.getElementById('customSoundDropZone');
+  if(zone) zone.classList.remove('drag-over');
+}
+function soundDrop(e){
+  e.preventDefault();
+  const zone = document.getElementById('customSoundDropZone');
+  if(zone) zone.classList.remove('drag-over');
+  _addCustomFiles(e.dataTransfer.files);
+}
+
 function renderCustomSounds(){
   const list=document.getElementById('customSoundsList'); if(!list) return;
   list.innerHTML=_customSounds.map((s,i)=>`
@@ -87,12 +117,12 @@ function renderCustomSounds(){
       <span class="snd-icon">🎵</span>
       <span class="snd-name">${s.name}</span>
       <span id="cslen_${i}" style="font-size:var(--text-xs);color:var(--color-text-faint);flex-shrink:0;min-width:36px;text-align:right;">${s.duration?fmtDuration(s.duration):'—'}</span>
-      <button class="btn btn-ghost btn-sm" onclick="playCustomSound(${i})" title="Preview">▶</button>
+      <button class="btn btn-ghost btn-sm" id="csprev_${i}" onclick="toggleCustomPreview(${i})" title="Preview">▶</button>
       <button class="btn btn-ghost btn-sm" onclick="useCustomSound(${i})" title="Use as alarm">Use</button>
       <button class="btn btn-ghost btn-sm" onclick="removeCustomSound(${i})" title="Remove">✕</button>
     </div>
   `).join('');
-  // Populate durations asynchronously for any without them
+  // Populate durations asynchronously
   _customSounds.forEach((s,i)=>{
     if(s.duration) return;
     const lbl=document.getElementById('cslen_'+i); if(!lbl) return;
@@ -102,33 +132,59 @@ function renderCustomSounds(){
     });
     a.load();
   });
-  // Also update the sound select in timer form
+  // Sync timer sound select
   const sel=document.getElementById('timerSound');
   if(sel){
-    const existing=[...sel.options].map(o=>o.value);
+    // Remove stale custom options first
+    [...sel.options].filter(o=>o.value.startsWith('custom_')).forEach(o=>o.remove());
     _customSounds.forEach((s,i)=>{
-      const v='custom_'+i;
-      if(!existing.includes(v)){
-        const opt=document.createElement('option'); opt.value=v; opt.textContent='🎵 '+s.name; sel.appendChild(opt);
-      }
+      const opt=document.createElement('option'); opt.value='custom_'+i; opt.textContent='🎧 '+s.name; sel.appendChild(opt);
     });
   }
 }
+
 function fmtDuration(sec){
   sec=Math.round(sec);
   const m=Math.floor(sec/60), s=sec%60;
   return m>0?`${m}:${String(s).padStart(2,'0')}`:`0:${String(s).padStart(2,'0')}`;
 }
-function playCustomSound(i){
+
+function toggleCustomPreview(i){
+  const btn = document.getElementById('csprev_'+i);
+  // Stop any currently playing preview
+  if(_previewAudio){
+    _previewAudio.pause();
+    _previewAudio.currentTime=0;
+    // Reset all preview buttons
+    document.querySelectorAll('[id^="csprev_"]').forEach(b=>{ b.textContent='▶'; b.classList.remove('playing'); });
+    const wasThis = _previewAudio._csIdx === i;
+    _previewAudio = null;
+    if(wasThis) return; // toggled off — done
+  }
+  // Start new preview
   const s=_customSounds[i]; if(!s) return;
   try{
-    const audio=new Audio(s.url); audio.volume=_alarmVol; audio.play();
+    const audio = new Audio(s.url);
+    audio.volume = _alarmVol;
+    audio._csIdx = i;
+    audio.play().catch(()=>{});
+    audio.addEventListener('ended', ()=>{
+      if(btn){ btn.textContent='▶'; btn.classList.remove('playing'); }
+      if(_previewAudio===audio) _previewAudio=null;
+    });
+    _previewAudio = audio;
+    if(btn){ btn.textContent='■'; btn.classList.add('playing'); }
   } catch(e){}
 }
+
 function useCustomSound(i){
   const sel=document.getElementById('timerSound'); if(!sel) return;
   sel.value='custom_'+i; showToast('Custom sound selected for new timers.');
 }
 function removeCustomSound(i){
+  // Stop preview if it's the one being removed
+  if(_previewAudio && _previewAudio._csIdx===i){
+    _previewAudio.pause(); _previewAudio=null;
+  }
   _customSounds.splice(i,1); renderCustomSounds();
 }

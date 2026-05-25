@@ -31,7 +31,6 @@ function oscEnv(f,t,sg,eg,st,dur){
 }
 function playSound(type){
   if(type==='none') return;
-  // Handle custom uploaded alarm sounds (stored as "custom_0", "custom_1", etc.)
   if(type && type.startsWith('custom_')){
     const i = parseInt(type.split('_')[1]);
     const cs = (typeof _customSounds !== 'undefined') && _customSounds[i];
@@ -47,7 +46,6 @@ function playSound(type){
     const n = actx().currentTime;
     if(type==='bell'){ [110,82.4,65.4].forEach((f,i)=>oscEnv(f,'sine',.35,.001,n+i*.06,2.5)); }
     else if(type==='trombone'){
-      // Trombone tune (was 'viola') — four note descending phrase
       [[293.66,0],[329.63,.4],[369.99,.8],[293.66,1.2]].forEach(([f,d])=>{
         const o=actx().createOscillator(),g=actx().createGain(),flt=actx().createBiquadFilter();
         o.type='sawtooth';o.frequency.value=f;flt.type='lowpass';flt.frequency.value=700;
@@ -58,15 +56,49 @@ function playSound(type){
     } else if(type==='harp'){ [523.25,659.25,783.99,1046.5,783.99,659.25].forEach((f,i)=>oscEnv(f,'triangle',.18,.001,n+i*.18,.6)); }
     else if(type==='chime'){ [1046.5,1318.5,1568,2093].forEach((f,i)=>oscEnv(f,'sine',.14,.001,n+i*.12,.5)); }
     else if(type==='drum'){
-      // Extended Deep Drum — longer decay (~0.9s total)
-      const buf=actx().createBuffer(1,Math.ceil(actx().sampleRate*.9),actx().sampleRate);
-      const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,5);
-      const s=actx().createBufferSource(),g=actx().createGain(),f=actx().createBiquadFilter();
-      f.type='lowpass';f.frequency.value=180;s.buffer=buf;g.gain.value=.85;
-      s.connect(f);f.connect(g);g.connect(alarmDest());s.start(n);
-      oscEnv(58,'sine',.5,.001,n,.9);
+      const sr = actx().sampleRate;
+      const dur = 2.2;
+      const len = Math.ceil(sr * dur);
+
+      // ── Layer 1: click transient (very short noise burst) ──
+      const clickLen = Math.ceil(sr * 0.012);
+      const clickBuf = actx().createBuffer(1, clickLen, sr);
+      const cd = clickBuf.getChannelData(0);
+      for(let i=0;i<clickLen;i++) cd[i]=(Math.random()*2-1)*Math.pow(1-i/clickLen,2);
+      const clickSrc = actx().createBufferSource();
+      const clickFlt = actx().createBiquadFilter(); clickFlt.type='bandpass'; clickFlt.frequency.value=3500; clickFlt.Q.value=0.8;
+      const clickG = actx().createGain(); clickG.gain.setValueAtTime(0.55,n); clickG.gain.exponentialRampToValueAtTime(0.001,n+0.015);
+      clickSrc.buffer=clickBuf; clickSrc.connect(clickFlt); clickFlt.connect(clickG); clickG.connect(alarmDest()); clickSrc.start(n);
+
+      // ── Layer 2: pitched sine sweep 90 Hz → 38 Hz (punch body) ──
+      const sweepOsc = actx().createOscillator(); sweepOsc.type='sine';
+      sweepOsc.frequency.setValueAtTime(90, n);
+      sweepOsc.frequency.exponentialRampToValueAtTime(38, n+0.12);
+      sweepOsc.frequency.exponentialRampToValueAtTime(30, n+0.5);
+      const sweepG = actx().createGain();
+      sweepG.gain.setValueAtTime(0.9, n);
+      sweepG.gain.linearRampToValueAtTime(0.75, n+0.04);
+      sweepG.gain.exponentialRampToValueAtTime(0.001, n+dur);
+      sweepOsc.connect(sweepG); sweepG.connect(alarmDest()); sweepOsc.start(n); sweepOsc.stop(n+dur+0.05);
+
+      // ── Layer 3: sub-bass sine at 48 Hz (deep weight) ──
+      const subOsc = actx().createOscillator(); subOsc.type='sine'; subOsc.frequency.value=48;
+      const subG = actx().createGain();
+      subG.gain.setValueAtTime(0.0, n);
+      subG.gain.linearRampToValueAtTime(0.65, n+0.008);
+      subG.gain.exponentialRampToValueAtTime(0.001, n+1.4);
+      subOsc.connect(subG); subG.connect(alarmDest()); subOsc.start(n); subOsc.stop(n+1.45);
+
+      // ── Layer 4: noise tail shaped through low-pass (resonant thump) ──
+      const noiseBuf = actx().createBuffer(1, len, sr);
+      const nd = noiseBuf.getChannelData(0);
+      for(let i=0;i<len;i++) nd[i]=(Math.random()*2-1)*Math.pow(Math.max(0,1-i/len),3.5);
+      const noiseSrc = actx().createBufferSource();
+      const noiseFlt = actx().createBiquadFilter(); noiseFlt.type='lowpass'; noiseFlt.frequency.value=120; noiseFlt.Q.value=4.5;
+      const noiseG = actx().createGain(); noiseG.gain.value=0.45;
+      noiseSrc.buffer=noiseBuf; noiseSrc.connect(noiseFlt); noiseFlt.connect(noiseG); noiseG.connect(alarmDest()); noiseSrc.start(n);
+
     } else if(type==='bounce'){
-      // Bounce (was 'whistle') — rising-falling sine sweep
       const o=actx().createOscillator(),g=actx().createGain();
       o.type='sine';o.frequency.setValueAtTime(880,n);o.frequency.linearRampToValueAtTime(1100,n+.3);
       o.frequency.linearRampToValueAtTime(880,n+.6);

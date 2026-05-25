@@ -145,7 +145,7 @@
           <button class="btn btn-secondary" onclick="addPreset(15,0,'Long Break','harp','once')">🌿 Long Break — 15 min</button>
           <button class="btn btn-secondary" onclick="addPreset(60,0,'Deep Work','trombone','fixed')">🧠 Deep Work — 1 hr (repeat)</button>
           <button class="btn btn-secondary" onclick="addPreset(0,30,'Stretch','chime','fixed')">🤸 Stretch — 30 min (repeat)</button>
-          <button class="btn btn-secondary" onclick="addPreset(5,0,'Fib Session','bell','fibonacci')">🌀 Fibonacci sequence</button>
+          <button class="btn btn-secondary" onclick="addRandomPreset()">🎲 Random — 5 to 30 min</button>
         </div>
 
       <!-- SOUND LIBRARY -->
@@ -159,14 +159,19 @@
           <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-2);">
             MP3, WAV, or OGG — played as timer alarm
           </p>
-          <div style="display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap;">
-            <label class="btn btn-secondary btn-sm" style="cursor:pointer;" for="customSoundUpload">
-              <i data-lucide="upload" style="width:12px;height:12px;"></i> Choose file
-              <input type="file" id="customSoundUpload" accept=".mp3,.wav,.ogg,audio/*" style="display:none;" onchange="handleCustomSoundUpload(this)">
-            </label>
-            <span id="uploadSoundName" style="font-size:var(--text-xs);color:var(--color-text-muted);">No file chosen</span>
+          <!-- Drop zone -->
+          <div id="customSoundDropZone"
+            style="border:2px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-3) var(--space-4);text-align:center;cursor:pointer;transition:border-color var(--trans),background var(--trans);margin-bottom:var(--space-2);"
+            onclick="document.getElementById('customSoundUpload').click()"
+            ondragover="soundDragOver(event)"
+            ondragleave="soundDragLeave(event)"
+            ondrop="soundDrop(event)">
+            <i data-lucide="upload" style="width:18px;height:18px;margin:0 auto var(--space-1);color:var(--color-text-faint);display:block;"></i>
+            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Drop files here or <span style="color:var(--color-primary);font-weight:600;">click to browse</span></div>
+            <div style="font-size:var(--text-xs);color:var(--color-text-faint);margin-top:2px;">MP3 · WAV · OGG &nbsp;·&nbsp; multiple files OK</div>
           </div>
-          <div id="customSoundsList" style="margin-top:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2);"></div>
+          <input type="file" id="customSoundUpload" accept=".mp3,.wav,.ogg,audio/*" multiple style="display:none;" onchange="handleCustomSoundUpload(this)">
+          <div id="customSoundsList" style="margin-top:var(--space-2);display:flex;flex-direction:column;gap:var(--space-2);"></div>
         </div>
       </div>
     </div>
