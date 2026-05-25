@@ -1,9 +1,9 @@
-/* ── CHECKLIST ─────────────────────────────────── */
+/* ── CHECKLIST ─────────────────────────────────────────── */
 
 .checklist-layout { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-5); }
 @media (max-width: 700px) { .checklist-layout { grid-template-columns: 1fr; } }
 
-/* ── Sidebar ─────────────────────────────────────── */
+/* ── Sidebar ──────────────────────────────────────────────────────────── */
 .lists-sidebar { display: flex; flex-direction: column; gap: var(--space-2); }
 .list-item-btn {
   display: flex; align-items: center; justify-content: space-between;
@@ -28,11 +28,11 @@
 .list-item-btn:hover .list-actions,
 .list-item-btn.active .list-actions { display: flex; }
 
-/* ── Main panel header ───────────────────────────── */
+/* ── Main panel header ─────────────────────────────────────────────── */
 .checklist-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
 .checklist-title { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; }
 
-/* ── Progress bar ────────────────────────────────── */
+/* ── Progress bar ────────────────────────────────────────────────── */
 .checklist-progress-bar { height: 4px; background: var(--color-surface-dynamic); border-radius: var(--radius-full); margin-bottom: var(--space-4); overflow: hidden; }
 .checklist-progress-fill {
   height: 100%;
@@ -41,12 +41,12 @@
   transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ── Stats row ──────────────────────────────────── */
+/* ── Stats row ─────────────────────────────────────────────────────── */
 .checklist-stats { display: flex; gap: var(--space-4); margin-bottom: var(--space-4); flex-wrap: wrap; }
 .stat-pill { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-xs); color: var(--color-text-muted); }
 .stat-pill strong { color: var(--color-text); font-weight: 600; }
 
-/* ── Task tree ──────────────────────────────────── */
+/* ── Task tree ─────────────────────────────────────────────────────── */
 .task-tree { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
 .task-tree--nested { margin-top: var(--space-2); }
 
@@ -62,7 +62,7 @@
 .task-item.drag-over { outline: 2px dashed var(--color-primary); outline-offset: -2px; }
 .task-item.dragging  { opacity: 0.4; }
 
-/* ── Collapse button ─────────────────────────────────
+/* ── Collapse button ───────────────────────────────────────────────
    Three states: leaf (dot, inert), open (▼, clickable), closed (▶, clickable)
    All three are always visible. depth-2 nodes get nothing. */
 .task-collapse-btn {
@@ -76,15 +76,20 @@
   font-size: 10px;
   line-height: 1;
   margin-top: 1px;
-  transition: background var(--trans), color var(--trans);
+  transition: background var(--trans), color var(--trans), border-color var(--trans);
 }
-/* Leaf state — inert dot, subtle */
+
+/* Leaf state — defined but inactive: visible border, no fill, muted dot */
 .task-collapse-leaf {
-  color: var(--color-text-faint);
   cursor: default;
-  font-size: 16px;
-  line-height: 1;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-offset);
+  color: var(--color-text-faint);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -1px;
 }
+
 /* Open state — teal, shows children are expanded */
 .task-collapse-open {
   background: var(--color-primary-highlight);
@@ -96,6 +101,7 @@
   background: var(--color-primary);
   color: #fff;
 }
+
 /* Closed state — muted surface, shows children are hidden */
 .task-collapse-closed {
   background: var(--color-surface-dynamic);
@@ -109,7 +115,7 @@
   border-color: var(--color-primary);
 }
 
-/* ── Drag handle ────────────────────────────────── */
+/* ── Drag handle ──────────────────────────────────────────────── */
 .task-drag-handle {
   font-size: 14px; color: var(--color-text-faint); cursor: grab;
   padding: 0 2px; flex-shrink: 0; line-height: 1.6;
@@ -118,7 +124,7 @@
 .task-item:hover .task-drag-handle { opacity: 1; }
 .task-drag-handle:active { cursor: grabbing; }
 
-/* ── Checkbox ────────────────────────────────────── */
+/* ── Checkbox ─────────────────────────────────────────────────────── */
 .task-check {
   flex-shrink: 0; width: 20px; height: 20px;
   border: 2px solid var(--color-border); border-radius: var(--radius-sm);
@@ -128,7 +134,7 @@
 .task-check:hover { border-color: var(--color-primary); }
 .task-item.done .task-check { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 
-/* ── Task body ──────────────────────────────────── */
+/* ── Task body ───────────────────────────────────────────────────── */
 .task-body { flex: 1; min-width: 0; }
 .task-main-row { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
 .task-text {
@@ -152,7 +158,7 @@
 }
 .task-expand-btn.visible { display: inline-block; }
 
-/* ── Notes ──────────────────────────────────────── */
+/* ── Notes ──────────────────────────────────────────────────────────── */
 .task-note {
   font-size: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-1);
   line-height: 1.5; white-space: pre-wrap;
@@ -162,18 +168,18 @@
 .task-note-input { width: 100%; margin-top: var(--space-2); font-size: var(--text-xs); resize: vertical; min-height: 48px; display: none; }
 .task-note-input.visible { display: block; }
 
-/* ── Subtask add row ────────────────────────────── */
+/* ── Subtask add row ──────────────────────────────────────────────── */
 .sub-add-row { gap: var(--space-2); margin-top: var(--space-2); display: none; }
 .sub-add-row.visible { display: flex; }
 
-/* ── Inline edit ─────────────────────────────────── */
+/* ── Inline edit ──────────────────────────────────────────────────── */
 .task-edit-input {
   font-size: var(--text-sm); width: 100%;
   background: var(--color-surface-2); border: 1px solid var(--color-primary);
   border-radius: var(--radius-md); padding: 2px var(--space-2);
 }
 
-/* ── Add task row ───────────────────────────────── */
+/* ── Add task row ──────────────────────────────────────────────────── */
 .add-task-row { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
 .add-task-row input { flex: 1; }
 .points-input { width: 70px !important; flex: none !important; }
