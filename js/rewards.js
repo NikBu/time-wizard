@@ -1,11 +1,11 @@
-// ── REWARD CABINET ──────────────────────────────────────────────────────────
+// ── REWARD CABINET ────────────────────────────────────────────────────────────
+// totalPts is declared and owned by checklist.js — do NOT redeclare it here.
 
-const REWARDS_KEY = 'tw_rewards';
-const HISTORY_KEY = 'tw_reward_history';
+const REWARDS_KEY  = 'tw_rewards';
+const HISTORY_KEY  = 'tw_reward_history';
 
-let rewards = [];
+let rewards       = [];
 let rewardHistory = [];
-let totalPts = 0;
 
 const REWARD_QUOTES = {
   redeem: [
@@ -39,7 +39,7 @@ const SEEDED_REWARDS = [
   { id: 'seed10', name: 'Day off',              emoji: '🌴', cost: 500, repeatable: false }
 ];
 
-// ── Persistence ────────────────────────────────────────────────────────────
+// ── Persistence ──────────────────────────────────────────────────────────────
 function rewardsSave() {
   try {
     localStorage.setItem(REWARDS_KEY, JSON.stringify(rewards));
@@ -59,27 +59,13 @@ function rewardsLoad() {
   }
 }
 
-// ── Points bridge ──────────────────────────────────────────────────────────
-function rewardsSetPoints(n) {
-  totalPts = Math.max(0, n);
-  rewardsUpdateHeader();
-  rewardsRender();
+// ── Points helpers (totalPts lives in checklist.js) ──────────────────────────
+function rewardsSpendPoints(amount) {
+  totalPts = Math.max(0, totalPts - amount);
+  if (typeof updateHeaderPts === 'function') updateHeaderPts();
 }
 
-function rewardsEarn(n) {
-  totalPts = Math.max(0, totalPts + n);
-  rewardsUpdateHeader();
-  rewardsRender();
-}
-
-function rewardsUpdateHeader() {
-  const el = document.getElementById('headerPoints');
-  if (el) el.textContent = `✶ ${totalPts} pts`;
-  const wisdom = document.getElementById('owlWisdom');
-  if (wisdom) wisdom.textContent = totalPts;
-}
-
-// ── Reward CRUD ────────────────────────────────────────────────────────────
+// ── Reward CRUD ───────────────────────────────────────────────────────────────
 function rewardDelete(id) {
   rewards = rewards.filter(r => r.id !== id);
   rewardsSave();
@@ -95,14 +81,13 @@ function rewardRedeem(id) {
     rewardsShakeCard(id);
     return;
   }
-  totalPts -= r.cost;
+  rewardsSpendPoints(r.cost);
   r.redeemedCount = (r.redeemedCount || 0) + 1;
   rewardHistory.unshift({
     rewardId: id, name: r.name, emoji: r.emoji, cost: r.cost, at: Date.now()
   });
   if (!r.repeatable) rewards = rewards.filter(x => x.id !== id);
   rewardsSave();
-  rewardsUpdateHeader();
   rewardsRender();
   if (typeof archNotify === 'function') archNotify('reward_redeem');
 }
@@ -114,7 +99,7 @@ function rewardsShakeCard(id) {
   setTimeout(() => el.classList.remove('reward-card--shake'), 500);
 }
 
-// ── Closest next reward hint ───────────────────────────────────────────────
+// ── Closest next reward hint ──────────────────────────────────────────────────
 function rewardsNextHint() {
   const affordable = rewards.filter(r => r.cost <= totalPts);
   if (affordable.length) return null;
@@ -123,7 +108,7 @@ function rewardsNextHint() {
   return { name: next.name, emoji: next.emoji, diff: next.cost - totalPts };
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────────────────────────
 function rewardsRender() {
   const list  = document.getElementById('rewardCardList');
   const hint  = document.getElementById('rewardNextHint');
@@ -225,7 +210,7 @@ function cabinetHistoryToggle() {
   }
 }
 
-// ── Boot ───────────────────────────────────────────────────────────────────
+// ── Boot ──────────────────────────────────────────────────────────────────────
 function rewardsInit() {
   if (typeof ARCH_QUOTES !== 'undefined') {
     ARCH_QUOTES.reward_redeem       = REWARD_QUOTES.redeem;
