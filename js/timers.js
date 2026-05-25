@@ -98,6 +98,11 @@ function createTimer(){
 function addPreset(min,sec,name,sound,mode){
   pushTimer({name,tot:min*60+sec,sound,rep:{mode,count:0,base:0,step:300}});
 }
+function addRandomPreset(){
+  const rMin=5*60, rMax=30*60;
+  const tot=Math.floor(rMin+Math.random()*(rMax-rMin));
+  pushTimer({name:'Random Session',tot,sound:'bell',rep:{mode:'random',rMin,rMax}});
+}
 function pushTimer(o){
   const id=tidx++;
   timers.push({id,name:o.name,tot:o.tot,orig:o.tot,rem:o.tot,sound:o.sound,rep:JSON.parse(JSON.stringify(o.rep)),running:false,done:false,reps:0,capToMax:true,lastTick:null});
