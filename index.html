@@ -14,7 +14,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300..900;1,300..900&family=DM+Sans:wght@300..700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-
 <link rel="stylesheet" href="./css/tokens.css">
 <link rel="stylesheet" href="./css/layout.css">
 <link rel="stylesheet" href="./css/components.css">
@@ -156,7 +155,7 @@
             ondragover="soundDragOver(event)" ondragleave="soundDragLeave(event)" ondrop="soundDrop(event)">
             <i data-lucide="upload" style="width:18px;height:18px;margin:0 auto var(--space-1);color:var(--color-text-faint);display:block;"></i>
             <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Drop files here or <span style="color:var(--color-primary);font-weight:600;">click to browse</span></div>
-            <div style="font-size:var(--text-xs);color:var(--color-text-faint);margin-top:2px;">MP3 · WAV · OGG  ·  multiple files OK</div>
+            <div style="font-size:var(--text-xs);color:var(--color-text-faint);margin-top:2px;">MP3 · WAV · OGG &nbsp;·&nbsp; multiple files OK</div>
           </div>
           <input type="file" id="customSoundUpload" accept=".mp3,.wav,.ogg,audio/*" multiple style="display:none;" onchange="handleCustomSoundUpload(this)">
           <div id="customSoundsList" style="margin-top:var(--space-2);display:flex;flex-direction:column;gap:var(--space-2);"></div>
@@ -189,7 +188,7 @@
 <section class="tab-panel" id="panel-companion">
 
   <!-- Enable toggle row -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);max-width:960px;margin-left:auto;margin-right:auto;">
+  <div class="companion-topbar">
     <div>
       <h2 class="card-title" style="margin-bottom:0;">Archibald</h2>
       <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Librarian-Wizard Owl ✦ Wisdom <span id="owlWisdom">0</span> pts</div>
@@ -200,110 +199,116 @@
     </label>
   </div>
 
-  <div id="archBody">
-    <!-- Two-column layout -->
-    <div class="arch-two-col">
+  <!-- Two-column layout -->
+  <div class="companion-layout" id="archBody">
 
-      <!-- LEFT: portrait + FAQ -->
-      <div class="arch-left">
+    <!-- LEFT: portrait + stats + FAQ -->
+    <div class="companion-left">
 
-        <!-- Portrait card -->
-        <div class="card" style="display:flex;flex-direction:column;align-items:center;gap:var(--space-3);padding:var(--space-4);margin-bottom:var(--space-3);">
-          <div style="position:relative;width:140px;height:140px;border-radius:var(--radius-xl);border:2px solid var(--color-border);overflow:hidden;cursor:pointer;box-shadow:var(--shadow-md);flex-shrink:0;" onclick="archFAQOpen()" title="Ask Archibald">
-            <img src="" alt="Archibald" id="companionImg" class="companion-img" width="140" height="140"
-                 style="width:100%;height:100%;object-fit:cover;display:block;transition:opacity .3s ease;">
-            <div class="companion-state-label" id="companionStateLabel">Idle</div>
+      <!-- Portrait card -->
+      <div class="card companion-portrait-card">
+        <div class="companion-portrait" onclick="archFAQOpen()" title="Ask Archibald">
+          <img src="" alt="Archibald" id="companionImg" class="companion-img" width="160" height="160">
+          <div class="companion-state-label" id="companionStateLabel">Idle</div>
+        </div>
+        <div class="companion-speech" id="companionSpeech">
+          "Ah, a new visitor. I am Archibald. Let us begin our work together, shall we?"
+        </div>
+        <!-- Stats -->
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+          <div class="stat-bar-group">
+            <div class="stat-bar-label"><span title="Rises with task completions">😊 Mood</span><span id="moodVal">70%</span></div>
+            <div class="stat-bar-track"><div class="stat-bar-fill mood" id="moodBar" style="width:70%"></div></div>
           </div>
-          <div class="companion-speech" id="companionSpeech" style="margin:0;width:100%;">
-            "Ah, a new visitor. I am Archibald. Let us begin our work together, shall we?"
+          <div class="stat-bar-group">
+            <div class="stat-bar-label"><span title="Rises while timers are running">🎯 Focus</span><span id="focusVal">50%</span></div>
+            <div class="stat-bar-track"><div class="stat-bar-fill focus" id="focusBar" style="width:50%"></div></div>
           </div>
-          <!-- Stats -->
-          <div style="width:100%;display:flex;flex-direction:column;gap:var(--space-2);">
-            <div class="stat-bar-group">
-              <div class="stat-bar-label"><span title="Rises with task completions">😊 Mood</span><span id="moodVal">70%</span></div>
-              <div class="stat-bar-track"><div class="stat-bar-fill mood" id="moodBar" style="width:70%"></div></div>
-            </div>
-            <div class="stat-bar-group">
-              <div class="stat-bar-label"><span title="Rises while timers are running">🎯 Focus</span><span id="focusVal">50%</span></div>
-              <div class="stat-bar-track"><div class="stat-bar-fill focus" id="focusBar" style="width:50%"></div></div>
-            </div>
-            <div class="stat-bar-group">
-              <div class="stat-bar-label"><span title="Drains during long sessions, restores on rest">⚡ Energy</span><span id="energyVal">80%</span></div>
-              <div class="stat-bar-track"><div class="stat-bar-fill energy" id="energyBar" style="width:80%"></div></div>
-            </div>
+          <div class="stat-bar-group">
+            <div class="stat-bar-label"><span title="Drains during long sessions, restores on rest">⚡ Energy</span><span id="energyVal">80%</span></div>
+            <div class="stat-bar-track"><div class="stat-bar-fill energy" id="energyBar" style="width:80%"></div></div>
           </div>
         </div>
+      </div>
 
-        <!-- FAQ card -->
-        <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
-            <div class="card-title" style="font-size:var(--text-base);margin-bottom:0;">📢 Ask Archibald</div>
-            <span style="font-size:var(--text-xs);color:var(--color-text-faint);">Click any question</span>
-          </div>
-          <div id="faqList" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
-          <div id="faqAnswer" style="display:none;margin-top:var(--space-3);padding:var(--space-3);background:var(--color-surface-offset);border-radius:var(--radius-lg);border-left:3px solid var(--color-primary);">
-            <div id="faqAnswerText" style="font-size:var(--text-sm);color:var(--color-text);font-style:italic;"></div>
-          </div>
+      <!-- FAQ card -->
+      <div class="card" style="margin-top:var(--space-3);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
+          <div class="card-title" style="font-size:var(--text-base);margin-bottom:0;">📢 Ask Archibald</div>
+          <span style="font-size:var(--text-xs);color:var(--color-text-faint);">Click any question</span>
         </div>
+        <div id="faqList" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
+        <div id="faqAnswer" style="display:none;margin-top:var(--space-3);padding:var(--space-3);background:var(--color-surface-offset);border-radius:var(--radius-lg);border-left:3px solid var(--color-primary);">
+          <div id="faqAnswerText" style="font-size:var(--text-sm);color:var(--color-text);font-style:italic;"></div>
+        </div>
+      </div>
 
-      </div><!-- /arch-left -->
+    </div><!-- /companion-left -->
 
-      <!-- RIGHT: Reward Cabinet -->
-      <div class="arch-right">
-        <div class="reward-cabinet">
+    <!-- RIGHT: Reward Cabinet -->
+    <div class="companion-right">
+      <div class="reward-cabinet">
 
-          <!-- Cabinet crown / header beam -->
-          <div class="rc-crown">
-            <span class="rc-crown-title">🏪 Reward Cabinet</span>
-            <div class="rc-crown-right">
-              <!-- History icon button -->
-              <div class="rc-history-wrap" id="rcHistoryWrap">
-                <button class="rc-history-btn" id="rcHistoryBtn"
-                  onclick="rewardHistoryToggle()" title="Redemption history"
-                  aria-label="Redemption history" aria-expanded="false">
-                  <i data-lucide="scroll" style="width:14px;height:14px;"></i>
-                </button>
-                <!-- History popover -->
-                <div class="rc-history-popover" id="rcHistoryPopover" aria-hidden="true">
-                  <div class="rc-history-popover-title">Redemption History</div>
-                  <div id="rewardHistoryList"><p class="reward-history-empty">No redemptions yet.</p></div>
-                </div>
+        <!-- Cabinet nameplate header -->
+        <div class="cabinet-nameplate">
+          <span class="cabinet-title">Reward Cabinet</span>
+          <!-- History icon pinned top-right -->
+          <div class="cabinet-history-anchor">
+            <button class="cabinet-history-btn" id="cabinetHistoryBtn"
+              onclick="cabinetHistoryToggle()" title="Redemption history" aria-expanded="false">
+              <i data-lucide="scroll" style="width:15px;height:15px;"></i>
+            </button>
+            <!-- History popup -->
+            <div class="cabinet-history-popup" id="cabinetHistoryPopup" style="display:none;">
+              <div class="cabinet-history-popup-header">Redemption History</div>
+              <div class="reward-history-list" id="rewardHistoryList">
+                <p class="reward-history-empty">No redemptions yet.</p>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Hint bar -->
-          <div class="rc-hint" id="rewardNextHint" style="display:none;"></div>
+        <!-- Next-reward hint -->
+        <div class="reward-next-hint" id="rewardNextHint" style="display:none;"></div>
 
-          <!-- Shelves -->
-          <div class="rc-shelves" id="rewardCardList"></div>
+        <!-- Cabinet shelves: each reward card sits on a shelf -->
+        <div class="cabinet-shelves" id="rewardCardList"></div>
 
-          <!-- Add-reward drawer -->
-          <div class="rc-drawer">
-            <div class="rc-drawer-label">✦ Add a reward</div>
-            <div class="rc-drawer-form">
-              <input type="text" id="rwEmoji" placeholder="🎁" maxlength="2" class="rc-input rc-input--emoji"
-                title="Emoji icon">
-              <input type="text" id="rwName" placeholder="Reward name…" class="rc-input rc-input--name"
-                onkeydown="if(event.key==='Enter')rewardFormSubmit()">
-              <input type="number" id="rwCost" placeholder="pts" min="1" max="9999" class="rc-input rc-input--cost"
-                onkeydown="if(event.key==='Enter')rewardFormSubmit()">
-              <button class="btn btn-primary btn-sm" onclick="rewardFormSubmit()" title="Add reward">
-                <i data-lucide="plus" style="width:12px;height:12px;"></i>
-              </button>
+        <!-- Add-reward form, sits below shelves as a drawer -->
+        <div class="cabinet-drawer">
+          <div class="cabinet-drawer-label">✦ Add a reward</div>
+          <div class="reward-form-row">
+            <div>
+              <label for="rwEmoji">Icon</label>
+              <input type="text" id="rwEmoji" placeholder="🎁" maxlength="2"
+                style="width:100%;text-align:center;font-size:1.1rem;padding:var(--space-1);">
             </div>
-            <label class="rc-repeat-label">
-              <input type="checkbox" id="rwRepeat" style="width:13px;height:13px;accent-color:var(--color-primary);">
-              Repeatable
-            </label>
+            <div>
+              <label for="rwName">Reward name</label>
+              <input type="text" id="rwName" placeholder="e.g. Watch an episode…"
+                style="width:100%;" onkeydown="if(event.key==='Enter')rewardFormSubmit()">
+            </div>
+            <div>
+              <label for="rwCost">Points</label>
+              <input type="number" id="rwCost" placeholder="50" min="1" max="9999"
+                style="width:100%;" onkeydown="if(event.key==='Enter')rewardFormSubmit()">
+            </div>
           </div>
+          <div class="reward-form-repeat">
+            <input type="checkbox" id="rwRepeat">
+            <label for="rwRepeat" style="margin:0;cursor:pointer;">Repeatable</label>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:var(--space-2);">
+            <button class="btn btn-primary btn-sm" onclick="rewardFormSubmit()">
+              <i data-lucide="plus" style="width:12px;height:12px;"></i> Add
+            </button>
+          </div>
+        </div>
 
-        </div><!-- /reward-cabinet -->
-      </div><!-- /arch-right -->
+      </div><!-- /reward-cabinet -->
+    </div><!-- /companion-right -->
 
-    </div><!-- /arch-two-col -->
-  </div><!-- /archBody -->
-
+  </div><!-- /companion-layout -->
 </section>
 
 <!-- THEMES PANEL -->
@@ -382,10 +387,26 @@
     <div class="card" style="background:var(--color-surface-offset);border-style:dashed;">
       <div style="font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint);margin-bottom:var(--space-3);">🔍 Find sounds online</div>
       <div style="display:flex;flex-direction:column;gap:var(--space-2);">
-        <div style="display:flex;align-items:flex-start;gap:var(--space-3);"><span style="font-size:15px;">🌐</span><div><a href="https://freesound.org" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">freesound.org</a><div style="font-size:var(--text-xs);color:var(--color-text-muted);">Huge Creative Commons library</div></div></div>
-        <div style="display:flex;align-items:flex-start;gap:var(--space-3);"><span style="font-size:15px;">🎵</span><div><a href="https://pixabay.com/music/" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">pixabay.com/music</a><div style="font-size:var(--text-xs);color:var(--color-text-muted);">Royalty-free, no attribution needed</div></div></div>
-        <div style="display:flex;align-items:flex-start;gap:var(--space-3);"><span style="font-size:15px;">🎹</span><div><a href="https://musicforprogramming.net" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">musicforprogramming.net</a><div style="font-size:var(--text-xs);color:var(--color-text-muted);">Curated focus music — downloadable MP3s</div></div></div>
-        <div style="display:flex;align-items:flex-start;gap:var(--space-3);"><span style="font-size:15px;">🤖</span><div><a href="https://suno.com" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">suno.com</a><div style="font-size:var(--text-xs);color:var(--color-text-muted);">AI-generated music — free tier personal use</div></div></div>
+        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
+          <span style="font-size:15px;">🌐</span>
+          <div><a href="https://freesound.org" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">freesound.org</a>
+          <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Huge Creative Commons library — search "rain loop", "brown noise", "forest ambience"</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
+          <span style="font-size:15px;">🎵</span>
+          <div><a href="https://pixabay.com/music/" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">pixabay.com/music</a>
+          <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Royalty-free, no attribution needed — good lofi & ambient section</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
+          <span style="font-size:15px;">🎹</span>
+          <div><a href="https://musicforprogramming.net" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">musicforprogramming.net</a>
+          <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Curated focus music — downloadable MP3s, free to use personally</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
+          <span style="font-size:15px;">🤖</span>
+          <div><a href="https://suno.com" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">suno.com</a>
+          <div style="font-size:var(--text-xs);color:var(--color-text-muted);">AI-generated music — free tier for personal use, Pro tier grants broader rights</div></div>
+        </div>
       </div>
     </div>
   </div>
@@ -436,10 +457,8 @@
 <!-- Floating music mini-player -->
 <div id="musicWidget" class="hidden-widget">
   <div class="mw-bars">
-    <div class="mw-bar" style="--i:0"></div>
-    <div class="mw-bar" style="--i:1"></div>
-    <div class="mw-bar" style="--i:2"></div>
-    <div class="mw-bar" style="--i:3"></div>
+    <div class="mw-bar" style="--i:0"></div><div class="mw-bar" style="--i:1"></div>
+    <div class="mw-bar" style="--i:2"></div><div class="mw-bar" style="--i:3"></div>
   </div>
   <span class="mw-name" id="mwName">—</span>
   <button class="btn btn-icon btn-ghost" style="padding:2px;" onclick="toggleMusic()" id="mwPlayBtn" title="Play/Pause">
