@@ -37,6 +37,11 @@ const SEEDED_REWARDS = [
   { id: 'seed10', name: 'Day off',              emoji: '🌴', cost: 500, repeatable: false }
 ];
 
+const REWARD_EMOJI_PRESETS = [
+  '☕','🍫','🚶','📱','📺','🎮','🍕','😴','📖','🌴',
+  '🎵','💪','🥳','🍿','🍺','🎨','🚢','💆','🚀','💎'
+];
+
 // ── Init (in-memory seed only) ──────────────────────────────────────────────
 function rewardsLoad() {
   rewards = SEEDED_REWARDS.map(r => ({ ...r, retired: false, redeemedCount: 0, createdAt: Date.now() }));
@@ -93,6 +98,80 @@ function rewardsShakeCard(id) {
   setTimeout(() => el.classList.remove('reward-card--shake'), 500);
 }
 
+// ── Create / Edit modal ─────────────────────────────────────────────────────
+let _rewardEditId = null; // null = create mode, string = edit mode
+
+function rewardOpenModal(id) {
+  _rewardEditId = id || null;
+  const r = id ? rewards.find(x => x.id === id) : null;
+
+  document.getElementById('rewardModalTitle').textContent = r ? 'Edit Reward' : 'New Reward';
+  document.getElementById('rewardModalName').value        = r ? r.name      : '';
+  document.getElementById('rewardModalCost').value        = r ? r.cost      : 50;
+  document.getElementById('rewardModalRepeatable').checked = r ? r.repeatable : true;
+
+  // Emoji picker: mark selected
+  const chosen = r ? r.emoji : REWARD_EMOJI_PRESETS[0];
+  document.getElementById('rewardModalEmojiCustom').value = chosen;
+  _rewardModalSyncEmoji(chosen);
+
+  document.getElementById('rewardModal').classList.remove('hidden');
+  document.getElementById('rewardModalName').focus();
+}
+
+function rewardCloseModal() {
+  document.getElementById('rewardModal').classList.add('hidden');
+  _rewardEditId = null;
+}
+
+function rewardSaveModal() {
+  const name       = document.getElementById('rewardModalName').value.trim();
+  const cost       = parseInt(document.getElementById('rewardModalCost').value, 10);
+  const repeatable = document.getElementById('rewardModalRepeatable').checked;
+  const emoji      = document.getElementById('rewardModalEmojiCustom').value.trim() || '🎁';
+
+  if (!name) {
+    document.getElementById('rewardModalName').classList.add('input--error');
+    setTimeout(() => document.getElementById('rewardModalName').classList.remove('input--error'), 600);
+    return;
+  }
+  if (!cost || cost < 1) {
+    document.getElementById('rewardModalCost').classList.add('input--error');
+    setTimeout(() => document.getElementById('rewardModalCost').classList.remove('input--error'), 600);
+    return;
+  }
+
+  if (_rewardEditId) {
+    // Edit existing
+    const r = rewards.find(x => x.id === _rewardEditId);
+    if (r) { r.name = name; r.cost = cost; r.repeatable = repeatable; r.emoji = emoji; }
+  } else {
+    // Create new
+    rewards.push({
+      id: 'r_' + Date.now(),
+      name, emoji, cost, repeatable,
+      retired: false,
+      redeemedCount: 0,
+      createdAt: Date.now()
+    });
+  }
+
+  rewardCloseModal();
+  rewardsRender();
+}
+
+// Keep emoji custom input and preset buttons in sync
+function _rewardModalSyncEmoji(value) {
+  document.getElementById('rewardModalEmojiCustom').value = value;
+  document.querySelectorAll('.reward-emoji-btn').forEach(btn => {
+    btn.classList.toggle('reward-emoji-btn--active', btn.dataset.emoji === value);
+  });
+}
+
+function rewardPickEmoji(emoji) {
+  _rewardModalSyncEmoji(emoji);
+}
+
 // ── Closest next reward hint ──────────────────────────────────────────────────
 function rewardsNextHint() {
   const active = rewards.filter(r => !r.retired);
@@ -132,7 +211,7 @@ function rewardsRender() {
   if (!sorted.length) {
     list.innerHTML = `<div class="reward-empty">
       <i data-lucide="gift" style="width:28px;height:28px;margin:0 auto var(--space-2);opacity:.3;"></i>
-      <p>No rewards in the cabinet.</p>
+      <p>No rewards yet. Add one!</p>
     </div>`;
     if (window.lucide) lucide.createIcons();
     return;
@@ -141,7 +220,7 @@ function rewardsRender() {
   list.innerHTML = sorted.map(r => {
     const isRetired = !!r.retired;
     const ready     = !isRetired && totalPts >= r.cost;
-    const repeatTag = (!isRetired && r.repeatable) ? `<span class="reward-tag">↺</span>` : '';
+    const repeatTag  = (!isRetired && r.repeatable)  ? `<span class="reward-tag">↺</span>` : '';
     const retiredTag = isRetired ? `<span class="reward-tag reward-tag--retired">once</span>` : '';
 
     if (isRetired) {
@@ -180,6 +259,10 @@ function rewardsRender() {
           onclick="rewardRedeem('${r.id}')" ${ready ? '' : 'disabled'}
           title="${ready ? 'Redeem' : `Need ${r.cost - totalPts} more pts`}">
           ${ready ? 'Redeem' : `−${r.cost - totalPts}`}
+        </button>
+        <button class="btn btn-sm btn-ghost reward-edit-btn"
+          onclick="rewardOpenModal('${r.id}')" title="Edit" aria-label="Edit ${r.name}">
+          <i data-lucide="pencil" style="width:12px;height:12px;"></i>
         </button>
         <button class="btn btn-sm btn-ghost reward-delete-btn"
           onclick="rewardDelete('${r.id}')" title="Delete permanently" aria-label="Delete ${r.name}">

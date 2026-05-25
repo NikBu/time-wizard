@@ -196,6 +196,23 @@
   letter-spacing: 0.03em;
 }
 
+/* ── Add reward row (below nameplate) ──────────────────────────────────── */
+.reward-add-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) var(--space-3) 0;
+}
+
+.reward-add-btn {
+  font-size: var(--text-xs) !important;
+  color: var(--color-text-muted);
+  gap: var(--space-1);
+}
+
+.reward-add-btn:hover {
+  color: var(--color-primary);
+}
+
 /* ── Shelf area (reward cards) ───────────────────────────────────────────── */
 .cabinet-shelves {
   padding: var(--space-3) var(--space-4);
@@ -348,6 +365,17 @@
   font-size: var(--text-xs) !important;
 }
 
+.reward-edit-btn {
+  color: var(--color-text-faint);
+  padding: var(--space-1) !important;
+  border-radius: var(--radius-sm);
+}
+
+.reward-edit-btn:hover {
+  color: var(--color-primary);
+  background: oklch(from var(--color-primary) l c h / 0.1);
+}
+
 .reward-delete-btn {
   color: var(--color-text-faint);
   padding: var(--space-1) !important;
@@ -384,6 +412,38 @@
 .reward-history-cost   { color: var(--color-error); font-weight: 600; white-space: nowrap; }
 .reward-history-date   { color: var(--color-text-faint); white-space: nowrap; }
 .reward-history-empty  { color: var(--color-text-faint); font-size: var(--text-xs); padding: var(--space-4); text-align: center; }
+
+/* ── Reward create/edit modal ────────────────────────────────────────────── */
+.reward-emoji-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-1);
+}
+
+.reward-emoji-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  border-radius: var(--radius-md);
+  border: 2px solid transparent;
+  background: var(--color-surface-dynamic);
+  cursor: pointer;
+  transition: background var(--trans), border-color var(--trans), transform var(--trans);
+}
+
+.reward-emoji-btn:hover {
+  background: var(--color-surface-offset);
+  transform: scale(1.1);
+}
+
+.reward-emoji-btn--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-highlight);
+}
 
 /* input error flash */
 .input--error {
