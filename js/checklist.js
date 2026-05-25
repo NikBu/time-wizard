@@ -13,27 +13,23 @@ function createList(){
   renderLists(); selectList(id); showToast(`"${name}" created!`);
 }
 
-// ── LIST RENAME (double-click) ────────────────────
+// ── RENAME LIST ───────────────────────────────────
 function startRenameList(id){
-  // Find the rendered element — it must exist at call time
-  const el=document.querySelector(`.list-item-btn[data-lid="${id}"]`);
-  if(!el || el.querySelector('input')) return; // already editing
   const list=lists.find(l=>l.id===id); if(!list) return;
-
-  const labelEl=el.querySelector('.list-label');
-  if(!labelEl) return;
+  const titleEl=document.getElementById('checklist-title-text');
+  if(!titleEl || titleEl.querySelector('input')) return;
 
   const inp=document.createElement('input');
-  inp.className='list-rename-input';
+  inp.style.cssText='font-family:var(--font-display);font-size:var(--text-lg);font-weight:700;background:var(--color-surface-2);border:1px solid var(--color-primary);border-radius:var(--radius-sm);padding:0 var(--space-2);color:var(--color-text);outline:none;width:100%;max-width:320px;';
   inp.value=list.name;
-  inp.style.cssText='flex:1;min-width:0;font-size:var(--text-sm);background:var(--color-surface-2);border:1px solid var(--color-primary);border-radius:var(--radius-sm);padding:1px var(--space-2);color:var(--color-text);outline:none;';
-  labelEl.replaceWith(inp);
+  titleEl.innerHTML='';
+  titleEl.appendChild(inp);
   inp.focus(); inp.select();
 
   const commit=()=>{
     const val=inp.value.trim();
     if(val) list.name=val;
-    renderLists();
+    renderChecklist(); renderLists();
   };
   inp.addEventListener('blur', commit);
   inp.addEventListener('keydown', e=>{
@@ -75,14 +71,15 @@ function renderLists(){
   if(!lists.length){ sb.innerHTML='<p style="font-size:var(--text-xs);color:var(--color-text-faint);padding:var(--space-2);">No lists yet.</p>'; return; }
   sb.innerHTML=lists.map(l=>{
     const done=l.tasks.filter(t=>!t.pid&&t.done).length, tot=l.tasks.filter(t=>!t.pid).length;
-    return `<div class="list-item-btn ${activeList===l.id?'active':''}" 
+    return `<div class="list-item-btn ${activeList===l.id?'active':''}"
       data-lid="${l.id}"
       draggable="true"
+      onclick="if(!event.target.closest('.list-actions'))selectList(${l.id})"
       ondragstart="_onListDragStart(event,${l.id})"
       ondragover="_onListDragOver(event,${l.id})"
       ondrop="_onListDrop(event,${l.id})"
       ondragend="_onListDragEnd()"
-      title="Double-click to rename \u00b7 Drag to reorder"
+      title="Drag to reorder"
       style="cursor:pointer;">
       <span class="list-label">${l.icon} ${l.name}</span>
       <span class="list-count">${done}/${tot}</span>
@@ -92,26 +89,6 @@ function renderLists(){
       </span>
     </div>`;
   }).join('');
-
-  // Attach click/dblclick via JS so we can distinguish them cleanly
-  document.querySelectorAll('.list-item-btn[data-lid]').forEach(el=>{
-    const id=parseInt(el.dataset.lid);
-    let clickTimer=null;
-    el.addEventListener('click', e=>{
-      // Ignore clicks that originated from the actions area
-      if(e.target.closest('.list-actions')) return;
-      // If this is part of a double-click sequence, cancel the single-click
-      clearTimeout(clickTimer);
-      if(e.detail===2){
-        // Double-click: rename
-        startRenameList(id);
-      } else {
-        // Single click: select (delay slightly so double-click can cancel it)
-        clickTimer=setTimeout(()=>selectList(id), 180);
-      }
-    });
-  });
-
   lucide.createIcons();
 }
 
@@ -125,7 +102,12 @@ function renderChecklist(){
   const dc=top.filter(t=>t.done).length, pct=top.length?Math.round(dc/top.length*100):0;
   main.innerHTML=`
     <div class="checklist-header">
-      <span class="checklist-title">${list.icon} ${list.name}</span>
+      <div class="flex-row" style="gap:var(--space-2);min-width:0;">
+        <span class="checklist-title" id="checklist-title-text">${list.icon} ${list.name}</span>
+        <button class="btn btn-icon btn-ghost" style="width:26px;height:26px;flex-shrink:0;" title="Rename list" onclick="startRenameList(${list.id})">
+          <i data-lucide="pencil" style="width:12px;height:12px;"></i>
+        </button>
+      </div>
       <div class="flex-row">
         <button class="btn btn-sm btn-ghost" onclick="clearDone()"><i data-lucide="check-check" style="width:12px;height:12px;"></i> Clear done</button>
         <button class="btn btn-sm btn-danger" onclick="deleteList(${list.id})"><i data-lucide="trash-2" style="width:12px;height:12px;"></i></button>
@@ -211,7 +193,7 @@ function _onTaskDrop(e,targetId){
   const list=lists.find(l=>l.id===activeList); if(!list) return;
   const src=list.tasks.find(t=>t.id===srcId); if(!src) return;
   const target=targetId!==null?list.tasks.find(t=>t.id===targetId):null;
-  if(target&&src.pid!==target.pid) return; // cross-level drops ignored
+  if(target&&src.pid!==target.pid) return;
   const sameLevelTasks=list.tasks.filter(t=>t.pid===src.pid);
   const fromIdx=sameLevelTasks.findIndex(t=>t.id===srcId);
   const toIdx=targetId!==null?sameLevelTasks.findIndex(t=>t.id===targetId):sameLevelTasks.length-1;
@@ -282,7 +264,7 @@ function editTask(id){
   const t=list.tasks.find(x=>x.id===id); if(!t) return;
   const span=document.getElementById('task-text-'+id); if(!span) return;
   const oldText=t.text;
-  span.outerHTML=`<input class="task-edit-input" id="task-edit-${id}" value="${oldText.replace(/"/g,'&quot;')}" onblur="saveEdit(${id})" onkeydown="if(event.key==='Enter')saveEdit(${id});if(event.key==='Escape'){this.value='${oldText.replace(/'/g,"\\'")}';}saveEdit(${id});">`;
+  span.outerHTML=`<input class="task-edit-input" id="task-edit-${id}" value="${oldText.replace(/"/g,'&quot;')}" onblur="saveEdit(${id})" onkeydown="if(event.key==='Enter')saveEdit(${id});if(event.key==='Escape'){this.value='${oldText.replace(/'/g,"\\'")}';saveEdit(${id});}">`;
   const inp=document.getElementById('task-edit-'+id); if(inp){ inp.focus(); inp.select(); }
 }
 function saveEdit(id){
@@ -326,7 +308,7 @@ function toggleTask(id){
   if(task.done){
     totalPts+=task.pts; updateHeaderPts();
     archNotify('task_done');
-    showToast(`✦ +${task.pts} pts! "${task.text}"`,'success');
+    showToast(`✦ +${task.pts} pts! "${task.text}",'success'`);
     list.tasks.filter(t=>t.pid===id&&!t.done).forEach(s=>{ s.done=true; totalPts+=s.pts; });
   } else {
     totalPts=Math.max(0,totalPts-task.pts); updateHeaderPts();
