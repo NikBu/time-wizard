@@ -8,29 +8,21 @@ const MAX_DEPTH = 2;
 let lists=[], lidx=1, tidxc=1, activeList=null, totalPts=0;
 let _dragSrcListId=null, _dragSrcTaskId=null;
 
-// ── HELPERS ──────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────
 function _getList(){ return lists.find(l=>l.id===activeList); }
 function _getTask(id){ const l=_getList(); return l&&l.tasks.find(t=>t.id===id); }
-// All descendants of a task (recursive)
 function _descendants(tasks, pid){
   const direct=tasks.filter(t=>t.pid===pid);
   return direct.flatMap(t=>[t,..._descendants(tasks,t.id)]);
 }
-// Children (direct only)
 function _children(tasks, pid){ return tasks.filter(t=>t.pid===pid); }
-// Rebuild depth for a task and all its descendants after a reparent
 function _reDepth(tasks, id, newDepth){
   const t=tasks.find(x=>x.id===id); if(!t) return;
   t.depth=newDepth;
   _children(tasks,id).forEach(c=>_reDepth(tasks,c.id,newDepth+1));
 }
-// Siblings at same level
-function _siblings(tasks, id){
-  const t=tasks.find(x=>x.id===id); if(!t) return [];
-  return tasks.filter(x=>x.pid===t.pid);
-}
 
-// ── LIST MANAGEMENT ──────────────────────────────
+// ── LIST MANAGEMENT ───────────────────────────────
 function openNewListModal(){ document.getElementById('newListModal').classList.remove('hidden'); document.getElementById('newListName').focus(); }
 function createList(){
   const name=document.getElementById('newListName').value.trim();
@@ -123,7 +115,7 @@ function renderChecklist(){
     <ul class="task-tree" id="taskTree"
       ondragover="_onTaskDragOver(event,null)" ondrop="_onTaskDrop(event,null)">${_renderNodes(list.tasks,null)}</ul>
     <div class="add-task-row mt-3">
-      <input type="text" id="newTaskInput" placeholder="Add a task… (Enter)" onkeydown="_onNewTaskKey(event)">
+      <input type="text" id="newTaskInput" placeholder="Add a task… (Enter)" onkeydown="if(event.key==='Enter')addTask()">
       <div class="num-wrap"><input type="number" class="points-input" id="newTaskPts" value="10" min="1" max="100" title="Points"><div class="num-spin"><button onclick="stepNum('newTaskPts',1)">▲</button><button onclick="stepNum('newTaskPts',-1)">▼</button></div></div>
       <button class="btn btn-primary" onclick="addTask()"><i data-lucide="plus" style="width:13px;height:13px;"></i></button>
     </div>`;
@@ -131,9 +123,7 @@ function renderChecklist(){
   _initExpandBtns();
 }
 
-function _onNewTaskKey(e){ if(e.key==='Enter') addTask(); }
-
-// ── RECURSIVE NODE RENDERER ────────────────────────
+// ── RECURSIVE NODE RENDERER ───────────────────────
 function _renderNodes(tasks, pid){
   return tasks.filter(t=>t.pid===pid).map(t=>{
     const children=tasks.filter(c=>c.pid===t.id);
@@ -161,9 +151,16 @@ function _renderNodes(tasks, pid){
         ${t.done?'<i data-lucide="check" style="width:11px;height:11px;"></i>':''}
       </div>
       <div class="task-body">
-        <div style="display:flex;align-items:baseline;gap:var(--space-2);flex-wrap:wrap;">
+        <div class="task-main-row">
           <span class="task-text" id="task-text-${t.id}">${t.text}</span>
           <span class="task-points">✦${t.pts}</span>
+          <div class="task-actions">
+            <button class="btn btn-icon btn-ghost btn-sm" title="Edit" onclick="editTask(${t.id})"><i data-lucide="pencil" style="width:11px;height:11px;"></i></button>
+            <button class="btn btn-icon btn-ghost btn-sm" title="Note" onclick="toggleNote(${t.id})"><i data-lucide="sticky-note" style="width:11px;height:11px;"></i></button>
+            <button class="btn btn-icon btn-ghost btn-sm" title="Copy" onclick="copyTask(${t.id})"><i data-lucide="copy" style="width:11px;height:11px;"></i></button>
+            ${t.depth>0?`<button class="btn btn-icon btn-ghost btn-sm" title="Promote (Shift+Tab)" onclick="dedentTask(${t.id})"><i data-lucide="arrow-left" style="width:11px;height:11px;"></i></button>`:''}
+            <button class="btn btn-icon btn-danger btn-sm" onclick="delTask(${t.id})"><i data-lucide="x" style="width:11px;height:11px;"></i></button>
+          </div>
         </div>
         <button class="task-expand-btn" id="task-expbtn-${t.id}" onclick="toggleTaskExpand(${t.id})">Show more</button>
         ${hasNote
@@ -182,84 +179,66 @@ function _renderNodes(tasks, pid){
           </div>
           <button class="btn btn-primary btn-sm" onclick="commitSub(${t.id})">Add</button>
           <button class="btn btn-ghost btn-sm" onclick="cancelSub(${t.id})">✕</button>
-        </div>`:''}
-      </div>
-      <div class="task-actions">
-        <button class="btn btn-icon btn-ghost btn-sm" title="Edit" onclick="editTask(${t.id})"><i data-lucide="pencil" style="width:11px;height:11px;"></i></button>
-        <button class="btn btn-icon btn-ghost btn-sm" title="Note" onclick="toggleNote(${t.id})"><i data-lucide="sticky-note" style="width:11px;height:11px;"></i></button>
-        <button class="btn btn-icon btn-ghost btn-sm" title="Copy" onclick="copyTask(${t.id})"><i data-lucide="copy" style="width:11px;height:11px;"></i></button>
-        ${canAddChild?`<button class="btn btn-icon btn-ghost btn-sm" title="Add child" onclick="showSubAdd(${t.id})"><i data-lucide="corner-down-right" style="width:11px;height:11px;"></i></button>`:''}
-        ${t.depth>0?`<button class="btn btn-icon btn-ghost btn-sm" title="Promote (Shift+Tab)" onclick="dedentTask(${t.id})"><i data-lucide="arrow-left" style="width:11px;height:11px;"></i></button>`:''}
-        <button class="btn btn-icon btn-danger btn-sm" onclick="delTask(${t.id})"><i data-lucide="x" style="width:11px;height:11px;"></i></button>
+        </div>
+        <button class="task-add-sub-btn" onclick="showSubAdd(${t.id})" title="Add subtask">
+          <i data-lucide="plus" style="width:10px;height:10px;"></i> subtask
+        </button>`:``}
       </div>
     </li>`;
   }).join('');
 }
 
-// ── COLLAPSE ───────────────────────────────────────
+// ── COLLAPSE ──────────────────────────────────────
 function toggleCollapse(id){
   const t=_getTask(id); if(!t) return;
   t.collapsed=!t.collapsed;
   renderChecklist();
 }
 
-// ── KEYBOARD NAV FOR SUB-INPUTS ────────────────────
-// Enter  → commit current subtask, open new sub-input below it (sibling)
-// Tab    → indent: if there's a task above at same level, make it a child of that task
-// Shift+Tab → dedent: promote this task up one level
+// ── KEYBOARD NAV FOR SUB-INPUTS ───────────────────
 function _onSubKey(e, pid){
   if(e.key==='Escape'){ e.preventDefault(); cancelSub(pid); return; }
   if(e.key==='Enter'){
     e.preventDefault();
     const inp=document.getElementById('sub-input-'+pid);
     if(!inp||!inp.value.trim()) return;
-    const newId=_commitSubReturningId(pid);
-    // Focus a new sibling input under the parent
-    if(newId!==null){
-      requestAnimationFrame(()=>{
-        showSubAdd(pid);
-        const ni=document.getElementById('sub-input-'+pid); if(ni) ni.focus();
-      });
-    }
+    _commitSubReturningId(pid);
+    renderChecklist(); renderLists();
+    requestAnimationFrame(()=>{
+      showSubAdd(pid);
+      const ni=document.getElementById('sub-input-'+pid); if(ni) ni.focus();
+    });
     return;
   }
   if(e.key==='Tab'){
     e.preventDefault();
+    const inp=document.getElementById('sub-input-'+pid);
     if(e.shiftKey){
-      // Dedent: promote the *parent* task one level up — but the input is empty here
-      // so we act on whatever text is typed first (if any), otherwise just dedent parent
-      const inp=document.getElementById('sub-input-'+pid);
       if(inp&&inp.value.trim()){
-        // commit as sibling of parent first, then dedent
         const newId=_commitSubReturningId(pid);
-        if(newId!==null) dedentTask(newId);
-      } else {
-        cancelSub(pid);
-      }
+        if(newId!==null){ renderChecklist(); renderLists(); dedentTask(newId); }
+      } else { cancelSub(pid); }
     } else {
-      // Indent: commit current text, then indent the new node
-      const inp=document.getElementById('sub-input-'+pid);
       if(!inp||!inp.value.trim()) return;
       const newId=_commitSubReturningId(pid);
-      if(newId!==null) indentTask(newId);
+      if(newId!==null){ renderChecklist(); renderLists(); indentTask(newId); }
     }
     return;
   }
 }
 
-// ── INDENT / DEDENT ──────────────────────────────
+// ── INDENT / DEDENT ───────────────────────────────
 function indentTask(id){
   const list=_getList(); if(!list) return;
   const t=list.tasks.find(x=>x.id===id); if(!t) return;
   if(t.depth>=MAX_DEPTH){ showToast('Max depth reached (3 levels).','error'); return; }
-  // Find the sibling immediately above this one
   const siblings=list.tasks.filter(x=>x.pid===t.pid);
   const idx=siblings.findIndex(x=>x.id===id);
   if(idx<1){ showToast('No task above to indent under.'); return; }
   const newParent=siblings[idx-1];
   t.pid=newParent.id;
   _reDepth(list.tasks, id, newParent.depth+1);
-  newParent.collapsed=false; // expand parent so new child is visible
+  newParent.collapsed=false;
   renderChecklist(); renderLists();
 }
 function dedentTask(id){
@@ -288,9 +267,10 @@ function showSubAdd(pid){
   document.querySelectorAll('.sub-add-row.visible').forEach(r=>r.classList.remove('visible'));
   if(!wasVisible){ row.classList.add('visible'); const inp=document.getElementById('sub-input-'+pid); if(inp) inp.focus(); }
 }
-function cancelSub(pid){ const row=document.getElementById('sub-add-row-'+pid); if(row) row.classList.remove('visible'); }
+function cancelSub(pid){
+  const row=document.getElementById('sub-add-row-'+pid); if(row) row.classList.remove('visible');
+}
 
-// Commits a sub-input and returns the new task id (or null if empty)
 function _commitSubReturningId(pid){
   const inp=document.getElementById('sub-input-'+pid); if(!inp) return null;
   const text=inp.value.trim(); if(!text) return null;
@@ -309,8 +289,8 @@ function commitSub(pid){
   if(id===null) return;
   renderChecklist(); renderLists();
   requestAnimationFrame(()=>{
-    const row=document.getElementById('sub-add-row-'+pid);
-    if(row){ row.classList.add('visible'); const ni=document.getElementById('sub-input-'+pid); if(ni) ni.focus(); }
+    showSubAdd(pid);
+    const ni=document.getElementById('sub-input-'+pid); if(ni) ni.focus();
   });
 }
 
@@ -322,7 +302,7 @@ function editTask(id){
   span.outerHTML=`<input class="task-edit-input" id="task-edit-${id}"
     value="${oldText.replace(/"/g,'&quot;')}"
     onblur="saveEdit(${id})"
-    onkeydown="if(event.key==='Enter')saveEdit(${id});if(event.key==='Escape'){this.value='${oldText.replace(/'/g,"\\'")}';}saveEdit(${id});">`;
+    onkeydown="if(event.key==='Enter')saveEdit(${id});if(event.key==='Escape'){this.value='${oldText.replace(/'/g,"\\'")}';saveEdit(${id});}">`;
   const inp=document.getElementById('task-edit-'+id); if(inp){ inp.focus(); inp.select(); }
 }
 function saveEdit(id){
@@ -348,9 +328,8 @@ function saveNote(id){
 function copyTask(id){
   const list=_getList(); if(!list) return;
   const t=list.tasks.find(x=>x.id===id); if(!t) return;
-  const idMap={};
   const cloneSubtree=(src, newPid, newDepth)=>{
-    const nid=tidxc++; idMap[src.id]=nid;
+    const nid=tidxc++;
     list.tasks.push({id:nid,text:src.id===id?src.text+' (copy)':src.text,pts:src.pts,done:false,pid:newPid,depth:newDepth,collapsed:false,note:src.note||''});
     _children(list.tasks,src.id).forEach(c=>cloneSubtree(c,nid,newDepth+1));
   };
@@ -384,7 +363,6 @@ function toggleTask(id){
 
 function clearDone(){
   const list=_getList(); if(!list) return;
-  // Remove done tasks and all their descendants
   const toRemove=new Set();
   list.tasks.filter(t=>t.done).forEach(t=>{
     toRemove.add(t.id);
@@ -398,7 +376,6 @@ function duplicateList(id){
   const orig=lists.find(l=>l.id===id); if(!orig) return;
   const newId=lidx++; const idMap={};
   const newTasks=[];
-  // Clone in BFS order so parents always exist before children
   const queue=[...orig.tasks.filter(t=>t.pid===null)];
   while(queue.length){
     const t=queue.shift();
@@ -442,7 +419,7 @@ function _onTaskDrop(e,targetId){
   const list=_getList(); if(!list) return;
   const src=list.tasks.find(t=>t.id===srcId); if(!src) return;
   const target=targetId!==null?list.tasks.find(t=>t.id===targetId):null;
-  if(target&&src.pid!==target.pid) return; // cross-level drops ignored
+  if(target&&src.pid!==target.pid) return;
   const sameLevelTasks=list.tasks.filter(t=>t.pid===src.pid);
   const fromIdx=sameLevelTasks.findIndex(t=>t.id===srcId);
   const toIdx=targetId!==null?sameLevelTasks.findIndex(t=>t.id===targetId):sameLevelTasks.length-1;
@@ -457,7 +434,7 @@ function _onTaskDragEnd(){
   _dragSrcTaskId=null;
 }
 
-// ── EXPAND / OVERFLOW BUTTONS ──────────────────────
+// ── EXPAND / OVERFLOW BUTTONS ─────────────────────
 function _checkOverflow(el){ return el&&el.scrollHeight>el.clientHeight+2; }
 function _initExpandBtns(){
   requestAnimationFrame(()=>{
@@ -481,7 +458,7 @@ function toggleNoteExpand(id){
   if(!el) return; el.classList.toggle('expanded'); if(btn) btn.textContent=el.classList.contains('expanded')?'Show less':'Show more';
 }
 
-// ── POINTS + HEADER ────────────────────────────────
+// ── POINTS + HEADER ───────────────────────────────
 function updateHeaderPts(){
   const hp=document.getElementById('headerPoints'); if(hp) hp.textContent=`✦ ${totalPts} pts`;
   const lvl=document.getElementById('owlLevel'); if(lvl) lvl.textContent=Math.floor(totalPts/100)+1;
