@@ -199,10 +199,10 @@
     </label>
   </div>
 
-  <!-- Two-column layout -->
+  <!-- Two-column layout: 2fr left (Arch+FAQ) | 3fr right (Cabinet) -->
   <div class="companion-layout" id="archBody">
 
-    <!-- LEFT: portrait + stats + FAQ -->
+    <!-- LEFT: portrait + FAQ -->
     <div class="companion-left">
 
       <!-- Portrait card -->
@@ -214,25 +214,10 @@
         <div class="companion-speech" id="companionSpeech">
           "Ah, a new visitor. I am Archibald. Let us begin our work together, shall we?"
         </div>
-        <!-- Stats -->
-        <div style="display:flex;flex-direction:column;gap:var(--space-2);">
-          <div class="stat-bar-group">
-            <div class="stat-bar-label"><span title="Rises with task completions">😊 Mood</span><span id="moodVal">70%</span></div>
-            <div class="stat-bar-track"><div class="stat-bar-fill mood" id="moodBar" style="width:70%"></div></div>
-          </div>
-          <div class="stat-bar-group">
-            <div class="stat-bar-label"><span title="Rises while timers are running">🎯 Focus</span><span id="focusVal">50%</span></div>
-            <div class="stat-bar-track"><div class="stat-bar-fill focus" id="focusBar" style="width:50%"></div></div>
-          </div>
-          <div class="stat-bar-group">
-            <div class="stat-bar-label"><span title="Drains during long sessions, restores on rest">⚡ Energy</span><span id="energyVal">80%</span></div>
-            <div class="stat-bar-track"><div class="stat-bar-fill energy" id="energyBar" style="width:80%"></div></div>
-          </div>
-        </div>
       </div>
 
       <!-- FAQ card -->
-      <div class="card" style="margin-top:var(--space-3);">
+      <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
           <div class="card-title" style="font-size:var(--text-base);margin-bottom:0;">📢 Ask Archibald</div>
           <span style="font-size:var(--text-xs);color:var(--color-text-faint);">Click any question</span>
@@ -252,13 +237,11 @@
         <!-- Cabinet nameplate header -->
         <div class="cabinet-nameplate">
           <span class="cabinet-title">Reward Cabinet</span>
-          <!-- History icon pinned top-right -->
           <div class="cabinet-history-anchor">
             <button class="cabinet-history-btn" id="cabinetHistoryBtn"
               onclick="cabinetHistoryToggle()" title="Redemption history" aria-expanded="false">
               <i data-lucide="scroll" style="width:15px;height:15px;"></i>
             </button>
-            <!-- History popup -->
             <div class="cabinet-history-popup" id="cabinetHistoryPopup" style="display:none;">
               <div class="cabinet-history-popup-header">Redemption History</div>
               <div class="reward-history-list" id="rewardHistoryList">
@@ -271,39 +254,8 @@
         <!-- Next-reward hint -->
         <div class="reward-next-hint" id="rewardNextHint" style="display:none;"></div>
 
-        <!-- Cabinet shelves: each reward card sits on a shelf -->
+        <!-- Cabinet shelves -->
         <div class="cabinet-shelves" id="rewardCardList"></div>
-
-        <!-- Add-reward form, sits below shelves as a drawer -->
-        <div class="cabinet-drawer">
-          <div class="cabinet-drawer-label">✦ Add a reward</div>
-          <div class="reward-form-row">
-            <div>
-              <label for="rwEmoji">Icon</label>
-              <input type="text" id="rwEmoji" placeholder="🎁" maxlength="2"
-                style="width:100%;text-align:center;font-size:1.1rem;padding:var(--space-1);">
-            </div>
-            <div>
-              <label for="rwName">Reward name</label>
-              <input type="text" id="rwName" placeholder="e.g. Watch an episode…"
-                style="width:100%;" onkeydown="if(event.key==='Enter')rewardFormSubmit()">
-            </div>
-            <div>
-              <label for="rwCost">Points</label>
-              <input type="number" id="rwCost" placeholder="50" min="1" max="9999"
-                style="width:100%;" onkeydown="if(event.key==='Enter')rewardFormSubmit()">
-            </div>
-          </div>
-          <div class="reward-form-repeat">
-            <input type="checkbox" id="rwRepeat">
-            <label for="rwRepeat" style="margin:0;cursor:pointer;">Repeatable</label>
-          </div>
-          <div style="display:flex;justify-content:flex-end;margin-top:var(--space-2);">
-            <button class="btn btn-primary btn-sm" onclick="rewardFormSubmit()">
-              <i data-lucide="plus" style="width:12px;height:12px;"></i> Add
-            </button>
-          </div>
-        </div>
 
       </div><!-- /reward-cabinet -->
     </div><!-- /companion-right -->

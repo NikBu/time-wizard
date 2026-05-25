@@ -15,11 +15,6 @@ const REWARD_QUOTES = {
     'Splendid choice. Rest is part of the work.',
     'Redemption noted. The archive approves.'
   ],
-  add: [
-    'A new reward entered into the registry.',
-    'Excellent. Motivation benefits from a clear destination.',
-    'Duly noted. Now go earn it.'
-  ],
   delete: [
     'Removed from the ledger, as requested.',
     'So it is stricken from the record.'
@@ -32,9 +27,16 @@ const REWARD_QUOTES = {
 };
 
 const SEEDED_REWARDS = [
-  { id: 'seed1', name: 'Coffee break', emoji: '☕', cost: 40, repeatable: true },
-  { id: 'seed2', name: 'Sweet snack',  emoji: '🍫', cost: 60, repeatable: true },
-  { id: 'seed3', name: '30 min gaming',emoji: '🎮', cost: 120, repeatable: false }
+  { id: 'seed01', name: 'Coffee break',        emoji: '☕', cost: 30,  repeatable: true  },
+  { id: 'seed02', name: 'Sweet snack',          emoji: '🍫', cost: 50,  repeatable: true  },
+  { id: 'seed03', name: 'Short walk',           emoji: '🚶', cost: 40,  repeatable: true  },
+  { id: 'seed04', name: 'Social media scroll',  emoji: '📱', cost: 60,  repeatable: true  },
+  { id: 'seed05', name: 'Watch an episode',     emoji: '📺', cost: 120, repeatable: true  },
+  { id: 'seed06', name: '30 min gaming',        emoji: '🎮', cost: 100, repeatable: true  },
+  { id: 'seed07', name: 'Order takeout',        emoji: '🍕', cost: 200, repeatable: true  },
+  { id: 'seed08', name: 'Nap time (20 min)',    emoji: '😴', cost: 80,  repeatable: true  },
+  { id: 'seed09', name: 'New book',             emoji: '📖', cost: 300, repeatable: false },
+  { id: 'seed10', name: 'Day off',              emoji: '🌴', cost: 500, repeatable: false }
 ];
 
 // ── Persistence ────────────────────────────────────────────────────────────
@@ -78,22 +80,6 @@ function rewardsUpdateHeader() {
 }
 
 // ── Reward CRUD ────────────────────────────────────────────────────────────
-function rewardAdd(name, emoji, cost, repeatable) {
-  if (!name.trim() || cost < 1) return;
-  rewards.push({
-    id: 'r' + Date.now(),
-    name: name.trim(),
-    emoji: emoji || '🎁',
-    cost: Math.round(cost),
-    repeatable: !!repeatable,
-    redeemedCount: 0,
-    createdAt: Date.now()
-  });
-  rewardsSave();
-  rewardsRender();
-  if (typeof archNotify === 'function') archNotify('reward_add');
-}
-
 function rewardDelete(id) {
   rewards = rewards.filter(r => r.id !== id);
   rewardsSave();
@@ -162,7 +148,7 @@ function rewardsRender() {
   if (!rewards.length) {
     list.innerHTML = `<div class="reward-empty">
       <i data-lucide="gift" style="width:28px;height:28px;margin:0 auto var(--space-2);opacity:.3;"></i>
-      <p>No rewards yet.<br>Add one below.</p>
+      <p>No rewards in the cabinet.</p>
     </div>`;
     if (window.lucide) lucide.createIcons();
     return;
@@ -217,22 +203,6 @@ function rewardsRender() {
   if (window.lucide) lucide.createIcons();
 }
 
-// ── Form helpers ───────────────────────────────────────────────────────────
-function rewardFormSubmit() {
-  const name       = (document.getElementById('rwName')?.value  || '').trim();
-  const emoji      = (document.getElementById('rwEmoji')?.value || '').trim() || '🎁';
-  const cost       = parseInt(document.getElementById('rwCost')?.value || '0', 10);
-  const repeatable = document.getElementById('rwRepeat')?.checked ?? false;
-  if (!name || cost < 1) {
-    const inp = document.getElementById('rwName');
-    if (inp) { inp.focus(); inp.classList.add('input--error'); setTimeout(() => inp.classList.remove('input--error'), 800); }
-    return;
-  }
-  rewardAdd(name, emoji, cost, repeatable);
-  ['rwName','rwEmoji','rwCost'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  const rep = document.getElementById('rwRepeat'); if (rep) rep.checked = false;
-}
-
 // History popup toggle
 function cabinetHistoryToggle() {
   const popup = document.getElementById('cabinetHistoryPopup');
@@ -241,7 +211,6 @@ function cabinetHistoryToggle() {
   const open = popup.style.display !== 'none';
   popup.style.display = open ? 'none' : 'block';
   if (btn) btn.setAttribute('aria-expanded', String(!open));
-  // Close on outside click
   if (!open) {
     setTimeout(() => {
       function outsideClick(e) {
@@ -259,10 +228,9 @@ function cabinetHistoryToggle() {
 // ── Boot ───────────────────────────────────────────────────────────────────
 function rewardsInit() {
   if (typeof ARCH_QUOTES !== 'undefined') {
-    ARCH_QUOTES.reward_redeem      = REWARD_QUOTES.redeem;
-    ARCH_QUOTES.reward_add         = REWARD_QUOTES.add;
-    ARCH_QUOTES.reward_delete      = REWARD_QUOTES.delete;
-    ARCH_QUOTES.reward_insufficient= REWARD_QUOTES.insufficient;
+    ARCH_QUOTES.reward_redeem       = REWARD_QUOTES.redeem;
+    ARCH_QUOTES.reward_delete       = REWARD_QUOTES.delete;
+    ARCH_QUOTES.reward_insufficient = REWARD_QUOTES.insufficient;
   }
   rewardsLoad();
   rewardsRender();
