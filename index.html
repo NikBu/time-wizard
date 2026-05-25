@@ -15,12 +15,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300..900;1,300..900&family=DM+Sans:wght@300..700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
-<!-- Design tokens -->
 <link rel="stylesheet" href="./css/tokens.css">
-<!-- Base layout + components -->
 <link rel="stylesheet" href="./css/layout.css">
 <link rel="stylesheet" href="./css/components.css">
-<!-- Feature styles -->
 <link rel="stylesheet" href="./css/timers.css">
 <link rel="stylesheet" href="./css/checklist.css">
 <link rel="stylesheet" href="./css/companion.css">
@@ -147,28 +144,19 @@
           <button class="btn btn-secondary" onclick="addPreset(30,0,'Stretch','chime','fixed')">🤸 Stretch — 30 min (repeat)</button>
           <button class="btn btn-secondary" onclick="addRandomPreset()">🎲 Random — 5 to 30 min</button>
         </div>
-
-      <!-- SOUND LIBRARY -->
       <div class="card" style="margin-top:var(--space-4);margin-bottom:var(--space-8);" id="soundLibraryCard">
         <div class="card-title" style="margin-bottom:var(--space-3);">Sound Library</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-4);" id="soundPreviewGrid">
-          <!-- filled by JS -->
-        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-4);" id="soundPreviewGrid"></div>
         <div style="border-top:1px solid var(--color-divider);padding-top:var(--space-3);">
           <span class="section-label">Upload Custom Sound</span>
-          <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-2);">
-            MP3, WAV, or OGG — played as timer alarm
-          </p>
-          <!-- Drop zone -->
+          <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-2);">MP3, WAV, or OGG — played as timer alarm</p>
           <div id="customSoundDropZone"
             style="border:2px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-3) var(--space-4);text-align:center;cursor:pointer;transition:border-color var(--trans),background var(--trans);margin-bottom:var(--space-2);"
             onclick="document.getElementById('customSoundUpload').click()"
-            ondragover="soundDragOver(event)"
-            ondragleave="soundDragLeave(event)"
-            ondrop="soundDrop(event)">
+            ondragover="soundDragOver(event)" ondragleave="soundDragLeave(event)" ondrop="soundDrop(event)">
             <i data-lucide="upload" style="width:18px;height:18px;margin:0 auto var(--space-1);color:var(--color-text-faint);display:block;"></i>
             <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Drop files here or <span style="color:var(--color-primary);font-weight:600;">click to browse</span></div>
-            <div style="font-size:var(--text-xs);color:var(--color-text-faint);margin-top:2px;">MP3 · WAV · OGG &nbsp;·&nbsp; multiple files OK</div>
+            <div style="font-size:var(--text-xs);color:var(--color-text-faint);margin-top:2px;">MP3 · WAV · OGG  ·  multiple files OK</div>
           </div>
           <input type="file" id="customSoundUpload" accept=".mp3,.wav,.ogg,audio/*" multiple style="display:none;" onchange="handleCustomSoundUpload(this)">
           <div id="customSoundsList" style="margin-top:var(--space-2);display:flex;flex-direction:column;gap:var(--space-2);"></div>
@@ -199,34 +187,38 @@
 
 <!-- COMPANION PANEL -->
 <section class="tab-panel" id="panel-companion">
-  <div style="max-width:700px;margin:0 auto;">
 
-    <!-- Header row with disable toggle -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
-      <div>
-        <h2 class="card-title" style="margin-bottom:0;">Archibald</h2>
-        <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Librarian-Wizard Owl ✦ Wisdom <span id="owlWisdom">0</span> pts</div>
-      </div>
-      <label style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-sm);color:var(--color-text-muted);cursor:pointer;">
-        <input type="checkbox" id="archEnabled" checked onchange="setArchEnabled(this.checked)" style="width:16px;height:16px;accent-color:var(--color-primary);">
-        Enable companion
-      </label>
+  <!-- Enable toggle row -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);max-width:960px;margin-left:auto;margin-right:auto;">
+    <div>
+      <h2 class="card-title" style="margin-bottom:0;">Archibald</h2>
+      <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Librarian-Wizard Owl ✦ Wisdom <span id="owlWisdom">0</span> pts</div>
     </div>
+    <label style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-sm);color:var(--color-text-muted);cursor:pointer;">
+      <input type="checkbox" id="archEnabled" checked onchange="setArchEnabled(this.checked)" style="width:16px;height:16px;accent-color:var(--color-primary);">
+      Enable companion
+    </label>
+  </div>
 
-    <div id="archBody">
-      <!-- Main card: portrait + speech -->
-      <div class="card" style="display:flex;gap:var(--space-5);align-items:flex-start;margin-bottom:var(--space-4);flex-wrap:wrap;">
-        <div style="position:relative;flex-shrink:0;width:160px;height:160px;border-radius:var(--radius-xl);border:2px solid var(--color-border);overflow:hidden;cursor:pointer;box-shadow:var(--shadow-md);" onclick="archFAQOpen()" title="Ask Archibald">
-          <img src="" alt="Archibald" id="companionImg" class="companion-img" width="160" height="160"
-               style="width:100%;height:100%;object-fit:cover;display:block;transition:opacity .3s ease;">
-          <div class="companion-state-label" id="companionStateLabel">Idle</div>
-        </div>
-        <div style="flex:1;min-width:0;">
-          <div class="companion-speech" id="companionSpeech" style="margin-bottom:var(--space-4);">
+  <div id="archBody">
+    <!-- Two-column layout -->
+    <div class="arch-two-col">
+
+      <!-- LEFT: portrait + FAQ -->
+      <div class="arch-left">
+
+        <!-- Portrait card -->
+        <div class="card" style="display:flex;flex-direction:column;align-items:center;gap:var(--space-3);padding:var(--space-4);margin-bottom:var(--space-3);">
+          <div style="position:relative;width:140px;height:140px;border-radius:var(--radius-xl);border:2px solid var(--color-border);overflow:hidden;cursor:pointer;box-shadow:var(--shadow-md);flex-shrink:0;" onclick="archFAQOpen()" title="Ask Archibald">
+            <img src="" alt="Archibald" id="companionImg" class="companion-img" width="140" height="140"
+                 style="width:100%;height:100%;object-fit:cover;display:block;transition:opacity .3s ease;">
+            <div class="companion-state-label" id="companionStateLabel">Idle</div>
+          </div>
+          <div class="companion-speech" id="companionSpeech" style="margin:0;width:100%;">
             "Ah, a new visitor. I am Archibald. Let us begin our work together, shall we?"
           </div>
           <!-- Stats -->
-          <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+          <div style="width:100%;display:flex;flex-direction:column;gap:var(--space-2);">
             <div class="stat-bar-group">
               <div class="stat-bar-label"><span title="Rises with task completions">😊 Mood</span><span id="moodVal">70%</span></div>
               <div class="stat-bar-track"><div class="stat-bar-fill mood" id="moodBar" style="width:70%"></div></div>
@@ -241,84 +233,77 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- FAQ section -->
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
-          <div class="card-title" style="font-size:var(--text-base);margin-bottom:0;">📢 Ask Archibald</div>
-          <span style="font-size:var(--text-xs);color:var(--color-text-faint);">Click any question</span>
-        </div>
-        <div id="faqList" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
-        <div id="faqAnswer" style="display:none;margin-top:var(--space-3);padding:var(--space-3);background:var(--color-surface-offset);border-radius:var(--radius-lg);border-left:3px solid var(--color-primary);">
-          <div id="faqAnswerText" style="font-size:var(--text-sm);color:var(--color-text);font-style:italic;"></div>
-        </div>
-      </div>
-
-      <!-- ── REWARD CABINET ──────────────────────────────────────────── -->
-      <div class="reward-cabinet card" style="margin-top:var(--space-4);">
-
-        <!-- Cabinet header -->
-        <div class="reward-cabinet-header">
-          <div class="reward-cabinet-title">
-            <span>🏪</span> Reward Cabinet
+        <!-- FAQ card -->
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
+            <div class="card-title" style="font-size:var(--text-base);margin-bottom:0;">📢 Ask Archibald</div>
+            <span style="font-size:var(--text-xs);color:var(--color-text-faint);">Click any question</span>
           </div>
-          <div id="headerPoints2" style="font-size:var(--text-xs);color:var(--color-text-muted);"></div>
+          <div id="faqList" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
+          <div id="faqAnswer" style="display:none;margin-top:var(--space-3);padding:var(--space-3);background:var(--color-surface-offset);border-radius:var(--radius-lg);border-left:3px solid var(--color-primary);">
+            <div id="faqAnswerText" style="font-size:var(--text-sm);color:var(--color-text);font-style:italic;"></div>
+          </div>
         </div>
 
-        <!-- Next-reward hint -->
-        <div class="reward-next-hint" id="rewardNextHint" style="display:none;"></div>
+      </div><!-- /arch-left -->
 
-        <!-- Reward cards -->
-        <div class="reward-card-list" id="rewardCardList"></div>
+      <!-- RIGHT: Reward Cabinet -->
+      <div class="arch-right">
+        <div class="reward-cabinet">
 
-        <!-- Add-reward form -->
-        <div class="reward-form">
-          <div class="reward-form-title">✦ Add a reward</div>
-          <div class="reward-form-row">
-            <div>
-              <label for="rwEmoji">Icon</label>
-              <input type="text" id="rwEmoji" placeholder="🎁" maxlength="2"
-                style="width:100%;text-align:center;font-size:1.1rem;padding:var(--space-1);">
-            </div>
-            <div>
-              <label for="rwName">Reward name</label>
-              <input type="text" id="rwName" placeholder="e.g. Watch an episode…"
-                style="width:100%;" onkeydown="if(event.key==='Enter')rewardFormSubmit()">
-            </div>
-            <div>
-              <label for="rwCost">Points</label>
-              <input type="number" id="rwCost" placeholder="50" min="1" max="9999"
-                style="width:100%;" onkeydown="if(event.key==='Enter')rewardFormSubmit()">
+          <!-- Cabinet crown / header beam -->
+          <div class="rc-crown">
+            <span class="rc-crown-title">🏪 Reward Cabinet</span>
+            <div class="rc-crown-right">
+              <!-- History icon button -->
+              <div class="rc-history-wrap" id="rcHistoryWrap">
+                <button class="rc-history-btn" id="rcHistoryBtn"
+                  onclick="rewardHistoryToggle()" title="Redemption history"
+                  aria-label="Redemption history" aria-expanded="false">
+                  <i data-lucide="scroll" style="width:14px;height:14px;"></i>
+                </button>
+                <!-- History popover -->
+                <div class="rc-history-popover" id="rcHistoryPopover" aria-hidden="true">
+                  <div class="rc-history-popover-title">Redemption History</div>
+                  <div id="rewardHistoryList"><p class="reward-history-empty">No redemptions yet.</p></div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="reward-form-repeat">
-            <input type="checkbox" id="rwRepeat">
-            <label for="rwRepeat" style="margin:0;cursor:pointer;">Repeatable (stays after redeeming)</label>
-          </div>
-          <div class="reward-form-actions">
-            <button class="btn btn-primary btn-sm" onclick="rewardFormSubmit()">
-              <i data-lucide="plus" style="width:12px;height:12px;"></i> Add reward
-            </button>
-          </div>
-        </div>
 
-        <!-- Redemption history (collapsible) -->
-        <div class="reward-history-widget">
-          <button class="reward-history-toggle" id="rewardHistoryToggleBtn"
-            onclick="rewardHistoryToggle()" aria-expanded="false">
-            <span>📜 Redemption history</span>
-            <i data-lucide="chevron-down" style="width:14px;height:14px;"></i>
-          </button>
-          <div class="reward-history-body" id="rewardHistoryBody">
-            <div class="reward-history-list" id="rewardHistoryList"></div>
+          <!-- Hint bar -->
+          <div class="rc-hint" id="rewardNextHint" style="display:none;"></div>
+
+          <!-- Shelves -->
+          <div class="rc-shelves" id="rewardCardList"></div>
+
+          <!-- Add-reward drawer -->
+          <div class="rc-drawer">
+            <div class="rc-drawer-label">✦ Add a reward</div>
+            <div class="rc-drawer-form">
+              <input type="text" id="rwEmoji" placeholder="🎁" maxlength="2" class="rc-input rc-input--emoji"
+                title="Emoji icon">
+              <input type="text" id="rwName" placeholder="Reward name…" class="rc-input rc-input--name"
+                onkeydown="if(event.key==='Enter')rewardFormSubmit()">
+              <input type="number" id="rwCost" placeholder="pts" min="1" max="9999" class="rc-input rc-input--cost"
+                onkeydown="if(event.key==='Enter')rewardFormSubmit()">
+              <button class="btn btn-primary btn-sm" onclick="rewardFormSubmit()" title="Add reward">
+                <i data-lucide="plus" style="width:12px;height:12px;"></i>
+              </button>
+            </div>
+            <label class="rc-repeat-label">
+              <input type="checkbox" id="rwRepeat" style="width:13px;height:13px;accent-color:var(--color-primary);">
+              Repeatable
+            </label>
           </div>
-        </div>
 
-      </div><!-- /reward-cabinet -->
-    </div><!-- /archBody -->
+        </div><!-- /reward-cabinet -->
+      </div><!-- /arch-right -->
 
-  </div>
+    </div><!-- /arch-two-col -->
+  </div><!-- /archBody -->
+
 </section>
 
 <!-- THEMES PANEL -->
@@ -333,8 +318,6 @@
   <div style="max-width:640px;">
     <h2 class="card-title" style="margin-bottom:var(--space-2);">Focus Music</h2>
     <p class="text-muted text-sm" style="margin-bottom:var(--space-5);">Plays looped ambient sound while any timer is running. Fades out when an alarm fires, then resumes.</p>
-
-    <!-- NOW PLAYING -->
     <div class="card" style="margin-bottom:var(--space-4);">
       <div style="display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap;">
         <div id="musicVisualizer" style="display:flex;align-items:flex-end;gap:3px;height:32px;flex-shrink:0;">
@@ -355,7 +338,6 @@
           </button>
         </div>
       </div>
-      <!-- Master volume -->
       <div style="margin-top:var(--space-4);display:flex;flex-direction:column;gap:var(--space-1);">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span class="section-label" style="margin-bottom:0;">Music volume</span>
@@ -364,8 +346,6 @@
         <input type="range" class="time-slider" id="musicVolSlider" min="0" max="100" value="60" oninput="setMusicVol(this.value)">
       </div>
     </div>
-
-    <!-- ALARM VOLUME -->
     <div class="card" style="margin-bottom:var(--space-4);">
       <div style="display:flex;flex-direction:column;gap:var(--space-1);">
         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -375,14 +355,10 @@
         <input type="range" class="time-slider" id="alarmVolSlider" min="0" max="100" value="80" oninput="setAlarmVol(this.value)">
       </div>
     </div>
-
-    <!-- BUILT-IN AMBIENTS -->
     <div class="card" style="margin-bottom:var(--space-4);">
       <div class="card-title" style="font-size:var(--text-base);margin-bottom:var(--space-3);">Built-in Ambients</div>
       <div id="ambientGrid" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
     </div>
-
-    <!-- CUSTOM MUSIC UPLOAD -->
     <div class="card" style="margin-bottom:var(--space-4);">
       <div class="card-title" style="font-size:var(--text-base);margin-bottom:var(--space-1);">Custom Track</div>
       <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);">Upload an MP3, WAV, or OGG. It will loop automatically.</p>
@@ -394,50 +370,22 @@
       </div>
       <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,audio/*" style="display:none;" onchange="handleMusicUpload(this)">
       <div id="customMusicList" style="margin-top:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2);"></div>
-      <!-- Progress bar for playing custom track -->
       <div id="customTrackProgress" style="display:none;margin-top:var(--space-3);">
         <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-1);">
-          <span id="ctpElapsed">0:00</span>
-          <span id="ctpTotal">—</span>
+          <span id="ctpElapsed">0:00</span><span id="ctpTotal">—</span>
         </div>
         <div style="height:3px;background:var(--color-surface-dynamic);border-radius:var(--radius-full);overflow:hidden;">
           <div id="ctpBar" style="height:100%;width:0%;background:var(--color-primary);border-radius:var(--radius-full);transition:width .5s linear;"></div>
         </div>
       </div>
     </div>
-
-    <!-- FIND SOUNDS HINT -->
     <div class="card" style="background:var(--color-surface-offset);border-style:dashed;">
       <div style="font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint);margin-bottom:var(--space-3);">🔍 Find sounds online</div>
       <div style="display:flex;flex-direction:column;gap:var(--space-2);">
-        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
-          <span style="font-size:15px;">🌐</span>
-          <div>
-            <a href="https://freesound.org" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">freesound.org</a>
-            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Huge Creative Commons library — search "rain loop", "brown noise", "forest ambience"</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
-          <span style="font-size:15px;">🎵</span>
-          <div>
-            <a href="https://pixabay.com/music/" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">pixabay.com/music</a>
-            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Royalty-free, no attribution needed — good lofi & ambient section</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
-          <span style="font-size:15px;">🎹</span>
-          <div>
-            <a href="https://musicforprogramming.net" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">musicforprogramming.net</a>
-            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Curated focus music — downloadable MP3s, free to use personally</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
-          <span style="font-size:15px;">🤖</span>
-          <div>
-            <a href="https://suno.com" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">suno.com</a>
-            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">AI-generated music — free tier for personal use, Pro tier grants broader rights</div>
-          </div>
-        </div>
+        <div style="display:flex;align-items:flex-start;gap:var(--space-3);"><span style="font-size:15px;">🌐</span><div><a href="https://freesound.org" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">freesound.org</a><div style="font-size:var(--text-xs);color:var(--color-text-muted);">Huge Creative Commons library</div></div></div>
+        <div style="display:flex;align-items:flex-start;gap:var(--space-3);"><span style="font-size:15px;">🎵</span><div><a href="https://pixabay.com/music/" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">pixabay.com/music</a><div style="font-size:var(--text-xs);color:var(--color-text-muted);">Royalty-free, no attribution needed</div></div></div>
+        <div style="display:flex;align-items:flex-start;gap:var(--space-3);"><span style="font-size:15px;">🎹</span><div><a href="https://musicforprogramming.net" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">musicforprogramming.net</a><div style="font-size:var(--text-xs);color:var(--color-text-muted);">Curated focus music — downloadable MP3s</div></div></div>
+        <div style="display:flex;align-items:flex-start;gap:var(--space-3);"><span style="font-size:15px;">🤖</span><div><a href="https://suno.com" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">suno.com</a><div style="font-size:var(--text-xs);color:var(--color-text-muted);">AI-generated music — free tier personal use</div></div></div>
       </div>
     </div>
   </div>
@@ -507,7 +455,6 @@
   </button>
 </div>
 
-<!-- JS modules loaded in dependency order -->
 <script src="./js/audio.js"></script>
 <script src="./js/ui.js"></script>
 <script src="./js/timers.js"></script>
