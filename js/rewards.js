@@ -1,8 +1,6 @@
 // ── REWARD CABINET ────────────────────────────────────────────────────────────
 // totalPts is declared and owned by checklist.js — do NOT redeclare it here.
-
-const REWARDS_KEY  = 'tw_rewards';
-const HISTORY_KEY  = 'tw_reward_history';
+// Data is intentionally in-memory only (no localStorage) until storage.js rework.
 
 let rewards       = [];
 let rewardHistory = [];
@@ -39,28 +37,10 @@ const SEEDED_REWARDS = [
   { id: 'seed10', name: 'Day off',              emoji: '🌴', cost: 500, repeatable: false }
 ];
 
-// ── Persistence ───────────────────────────────────────────────────────────────
-function rewardsSave() {
-  try {
-    localStorage.setItem(REWARDS_KEY, JSON.stringify(rewards));
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(rewardHistory));
-  } catch(e) {}
-}
-
+// ── Init (in-memory seed only) ──────────────────────────────────────────────
 function rewardsLoad() {
-  try {
-    const r = localStorage.getItem(REWARDS_KEY);
-    const h = localStorage.getItem(HISTORY_KEY);
-    if (r) rewards = JSON.parse(r);
-    if (h) rewardHistory = JSON.parse(h);
-  } catch(e) {}
-  // Seed defaults on first run; preserve existing retired state
-  if (!rewards.length) {
-    rewards = SEEDED_REWARDS.map(r => ({ ...r, retired: false, redeemedCount: 0, createdAt: Date.now() }));
-  } else {
-    // Back-fill `retired` flag for saves that pre-date this field
-    rewards.forEach(r => { if (r.retired === undefined) r.retired = false; });
-  }
+  rewards = SEEDED_REWARDS.map(r => ({ ...r, retired: false, redeemedCount: 0, createdAt: Date.now() }));
+  rewardHistory = [];
 }
 
 // ── Points helpers (totalPts lives in checklist.js) ───────────────────────────
@@ -72,26 +52,21 @@ function rewardsSpendPoints(amount) {
 // ── Reward CRUD ───────────────────────────────────────────────────────────────
 function rewardDelete(id) {
   rewards = rewards.filter(r => r.id !== id);
-  rewardsSave();
   rewardsRender();
   if (typeof archNotify === 'function') archNotify('reward_delete');
 }
 
-/** Retire a one-time reward instead of deleting it. */
 function rewardRetire(id) {
   const r = rewards.find(x => x.id === id);
   if (!r) return;
   r.retired = true;
-  rewardsSave();
   rewardsRender();
 }
 
-/** Reactivate a retired reward. */
 function rewardReactivate(id) {
   const r = rewards.find(x => x.id === id);
   if (!r) return;
   r.retired = false;
-  rewardsSave();
   rewardsRender();
 }
 
@@ -105,12 +80,8 @@ function rewardRedeem(id) {
   }
   rewardsSpendPoints(r.cost);
   r.redeemedCount = (r.redeemedCount || 0) + 1;
-  rewardHistory.unshift({
-    rewardId: id, name: r.name, emoji: r.emoji, cost: r.cost, at: Date.now()
-  });
-  // Non-repeatable rewards retire rather than disappear
+  rewardHistory.unshift({ rewardId: id, name: r.name, emoji: r.emoji, cost: r.cost, at: Date.now() });
   if (!r.repeatable) rewardRetire(id);
-  rewardsSave();
   rewardsRender();
   if (typeof archNotify === 'function') archNotify('reward_redeem');
 }
@@ -139,7 +110,7 @@ function rewardsRender() {
   const hList = document.getElementById('rewardHistoryList');
   if (!list) return;
 
-  // Hint bar (only considers active rewards)
+  // Hint bar
   if (hint) {
     const h = rewardsNextHint();
     if (h) {
@@ -153,7 +124,7 @@ function rewardsRender() {
     }
   }
 
-  // Partition: active first, retired appended at bottom
+  // Active first, retired appended at bottom
   const active  = rewards.filter(r => !r.retired).sort((a, b) => a.cost - b.cost);
   const retired = rewards.filter(r =>  r.retired).sort((a, b) => a.cost - b.cost);
   const sorted  = [...active, ...retired];
@@ -170,11 +141,10 @@ function rewardsRender() {
   list.innerHTML = sorted.map(r => {
     const isRetired = !!r.retired;
     const ready     = !isRetired && totalPts >= r.cost;
-    const repeatTag = r.repeatable ? `<span class="reward-tag">↺</span>` : '';
+    const repeatTag = (!isRetired && r.repeatable) ? `<span class="reward-tag">↺</span>` : '';
     const retiredTag = isRetired ? `<span class="reward-tag reward-tag--retired">once</span>` : '';
 
     if (isRetired) {
-      // ── Retired card ──────────────────────────────────────────────────────
       return `<div class="reward-card reward-card--retired" data-id="${r.id}">
         <div class="reward-card-emoji" style="opacity:.45;">${r.emoji}</div>
         <div class="reward-card-body">
@@ -196,7 +166,6 @@ function rewardsRender() {
       </div>`;
     }
 
-    // ── Active card ──────────────────────────────────────────────────────────
     return `<div class="reward-card ${ready ? 'reward-card--ready' : 'reward-card--locked'}" data-id="${r.id}">
       <div class="reward-card-emoji">${r.emoji}</div>
       <div class="reward-card-body">
@@ -220,7 +189,7 @@ function rewardsRender() {
     </div>`;
   }).join('');
 
-  // History list (inside popup)
+  // History list
   if (hList) {
     if (!rewardHistory.length) {
       hList.innerHTML = `<p class="reward-history-empty">No redemptions yet.</p>`;
