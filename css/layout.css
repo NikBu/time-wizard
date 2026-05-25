@@ -53,3 +53,10 @@
 .htd-pinned{background:var(--color-primary-highlight);}
 .htd-empty{padding:var(--space-2);font-size:var(--text-xs);color:var(--color-text-faint);text-align:center;}
 .htd-playbtn{flex-shrink:0;}
+
+/* HEADER TIMER DOT GRID */
+.htb-dots{display:inline-grid;grid-template-columns:repeat(3,6px);gap:2px;vertical-align:middle;margin-right:2px;}
+.htb-dot{width:6px;height:6px;border-radius:50%;}
+.htb-dot-active{background:var(--color-success);box-shadow:0 0 4px oklch(from var(--color-success) l c h / 0.55);}
+.htb-dot-idle{background:var(--color-border);}
+.htb-dot-empty{background:transparent;}

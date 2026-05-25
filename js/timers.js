@@ -142,12 +142,9 @@ function tickAll(){
       slider.value = t.rem;
       updateSliderFill(slider, t.rem, t.tot);
     }
-    // patch open dropdown row time in-place
-    const drop = document.getElementById('headerTimerDrop');
-    if (drop && drop.classList.contains('htd-open')) {
-      const rowTime = document.getElementById('htdTime_'+t.id);
-      if (rowTime) rowTime.textContent = fmt(remInt);
-    }
+    // always patch dropdown rows, open or not — fixes stale times on re-open
+    const rowTime = document.getElementById('htdTime_'+t.id);
+    if (rowTime) rowTime.textContent = fmt(remInt);
   });
   updateHeaderTimer();
 }
@@ -412,10 +409,9 @@ function getCurrentTimer(){
   return timers.length?timers[0]:null;
 }
 
-// Build a 3×3 dot grid: up to 9 slots, green=running, dim=idle, empty=no timer
+// Build a 3x3 dot grid: up to 9 slots, green=running, dim=idle, empty=no timer
 function buildDotGrid(){
   const total = Math.min(timers.length, 9);
-  // sort: running first, then idle
   const sorted = [
     ...timers.filter(t=>t.running),
     ...timers.filter(t=>!t.running)
@@ -426,7 +422,7 @@ function buildDotGrid(){
       ? '<span class="htb-dot htb-dot-active"></span>'
       : '<span class="htb-dot htb-dot-idle"></span>';
   });
-  return `<span class="htb-dots">${dots.join('')}</span>`;
+  return dots.join('');
 }
 
 function updateHeaderTimer(){
