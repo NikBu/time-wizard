@@ -39,7 +39,7 @@ const SEEDED_REWARDS = [
   { id: 'seed10', name: 'Day off',              emoji: '🌴', cost: 500, repeatable: false }
 ];
 
-// ── Persistence ──────────────────────────────────────────────────────────────
+// ── Persistence ───────────────────────────────────────────────────────────────
 function rewardsSave() {
   try {
     localStorage.setItem(REWARDS_KEY, JSON.stringify(rewards));
@@ -54,12 +54,16 @@ function rewardsLoad() {
     if (r) rewards = JSON.parse(r);
     if (h) rewardHistory = JSON.parse(h);
   } catch(e) {}
+  // Seed defaults on first run; preserve existing retired state
   if (!rewards.length) {
-    rewards = SEEDED_REWARDS.map(r => ({ ...r, redeemedCount: 0, createdAt: Date.now() }));
+    rewards = SEEDED_REWARDS.map(r => ({ ...r, retired: false, redeemedCount: 0, createdAt: Date.now() }));
+  } else {
+    // Back-fill `retired` flag for saves that pre-date this field
+    rewards.forEach(r => { if (r.retired === undefined) r.retired = false; });
   }
 }
 
-// ── Points helpers (totalPts lives in checklist.js) ──────────────────────────
+// ── Points helpers (totalPts lives in checklist.js) ───────────────────────────
 function rewardsSpendPoints(amount) {
   totalPts = Math.max(0, totalPts - amount);
   if (typeof updateHeaderPts === 'function') updateHeaderPts();
@@ -73,9 +77,27 @@ function rewardDelete(id) {
   if (typeof archNotify === 'function') archNotify('reward_delete');
 }
 
-function rewardRedeem(id) {
+/** Retire a one-time reward instead of deleting it. */
+function rewardRetire(id) {
   const r = rewards.find(x => x.id === id);
   if (!r) return;
+  r.retired = true;
+  rewardsSave();
+  rewardsRender();
+}
+
+/** Reactivate a retired reward. */
+function rewardReactivate(id) {
+  const r = rewards.find(x => x.id === id);
+  if (!r) return;
+  r.retired = false;
+  rewardsSave();
+  rewardsRender();
+}
+
+function rewardRedeem(id) {
+  const r = rewards.find(x => x.id === id);
+  if (!r || r.retired) return;
   if (totalPts < r.cost) {
     if (typeof archNotify === 'function') archNotify('reward_insufficient');
     rewardsShakeCard(id);
@@ -86,7 +108,8 @@ function rewardRedeem(id) {
   rewardHistory.unshift({
     rewardId: id, name: r.name, emoji: r.emoji, cost: r.cost, at: Date.now()
   });
-  if (!r.repeatable) rewards = rewards.filter(x => x.id !== id);
+  // Non-repeatable rewards retire rather than disappear
+  if (!r.repeatable) rewardRetire(id);
   rewardsSave();
   rewardsRender();
   if (typeof archNotify === 'function') archNotify('reward_redeem');
@@ -101,10 +124,11 @@ function rewardsShakeCard(id) {
 
 // ── Closest next reward hint ──────────────────────────────────────────────────
 function rewardsNextHint() {
-  const affordable = rewards.filter(r => r.cost <= totalPts);
+  const active = rewards.filter(r => !r.retired);
+  const affordable = active.filter(r => r.cost <= totalPts);
   if (affordable.length) return null;
-  if (!rewards.length) return null;
-  const next = [...rewards].sort((a, b) => a.cost - b.cost)[0];
+  if (!active.length) return null;
+  const next = [...active].sort((a, b) => a.cost - b.cost)[0];
   return { name: next.name, emoji: next.emoji, diff: next.cost - totalPts };
 }
 
@@ -115,13 +139,13 @@ function rewardsRender() {
   const hList = document.getElementById('rewardHistoryList');
   if (!list) return;
 
-  // Hint bar
+  // Hint bar (only considers active rewards)
   if (hint) {
     const h = rewardsNextHint();
     if (h) {
       hint.innerHTML = `<span>${h.emoji}</span> Nearest: <strong>${h.name}</strong> — <span class="pts-accent">${h.diff} pts to go</span>`;
       hint.style.display = 'flex';
-    } else if (rewards.length) {
+    } else if (rewards.some(r => !r.retired)) {
       hint.innerHTML = `<span>✨</span> You can redeem a reward right now!`;
       hint.style.display = 'flex';
     } else {
@@ -129,8 +153,12 @@ function rewardsRender() {
     }
   }
 
-  // Shelf cards
-  if (!rewards.length) {
+  // Partition: active first, retired appended at bottom
+  const active  = rewards.filter(r => !r.retired).sort((a, b) => a.cost - b.cost);
+  const retired = rewards.filter(r =>  r.retired).sort((a, b) => a.cost - b.cost);
+  const sorted  = [...active, ...retired];
+
+  if (!sorted.length) {
     list.innerHTML = `<div class="reward-empty">
       <i data-lucide="gift" style="width:28px;height:28px;margin:0 auto var(--space-2);opacity:.3;"></i>
       <p>No rewards in the cabinet.</p>
@@ -139,10 +167,36 @@ function rewardsRender() {
     return;
   }
 
-  const sorted = [...rewards].sort((a, b) => a.cost - b.cost);
   list.innerHTML = sorted.map(r => {
-    const ready = totalPts >= r.cost;
+    const isRetired = !!r.retired;
+    const ready     = !isRetired && totalPts >= r.cost;
     const repeatTag = r.repeatable ? `<span class="reward-tag">↺</span>` : '';
+    const retiredTag = isRetired ? `<span class="reward-tag reward-tag--retired">once</span>` : '';
+
+    if (isRetired) {
+      // ── Retired card ──────────────────────────────────────────────────────
+      return `<div class="reward-card reward-card--retired" data-id="${r.id}">
+        <div class="reward-card-emoji" style="opacity:.45;">${r.emoji}</div>
+        <div class="reward-card-body">
+          <div class="reward-card-name reward-card-name--retired">${r.name}</div>
+          <div class="reward-card-meta">
+            <span class="reward-cost-badge reward-cost-badge--retired">${r.cost} pts</span>
+            ${retiredTag}
+          </div>
+        </div>
+        <div class="reward-card-actions">
+          <button class="btn btn-sm btn-ghost" onclick="rewardReactivate('${r.id}')" title="Reactivate">
+            <i data-lucide="rotate-ccw" style="width:12px;height:12px;"></i> Restore
+          </button>
+          <button class="btn btn-sm btn-ghost reward-delete-btn"
+            onclick="rewardDelete('${r.id}')" title="Delete permanently" aria-label="Delete ${r.name}">
+            <i data-lucide="x" style="width:12px;height:12px;"></i>
+          </button>
+        </div>
+      </div>`;
+    }
+
+    // ── Active card ──────────────────────────────────────────────────────────
     return `<div class="reward-card ${ready ? 'reward-card--ready' : 'reward-card--locked'}" data-id="${r.id}">
       <div class="reward-card-emoji">${r.emoji}</div>
       <div class="reward-card-body">
@@ -159,7 +213,7 @@ function rewardsRender() {
           ${ready ? 'Redeem' : `−${r.cost - totalPts}`}
         </button>
         <button class="btn btn-sm btn-ghost reward-delete-btn"
-          onclick="rewardDelete('${r.id}')" title="Remove" aria-label="Remove ${r.name}">
+          onclick="rewardDelete('${r.id}')" title="Delete permanently" aria-label="Delete ${r.name}">
           <i data-lucide="x" style="width:12px;height:12px;"></i>
         </button>
       </div>

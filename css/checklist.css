@@ -1,185 +1,40 @@
-/* ── CHECKLIST ─────────────────────────────────────────── */
-
-.checklist-layout { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-5); }
-@media (max-width: 700px) { .checklist-layout { grid-template-columns: 1fr; } }
-
-/* ── Sidebar ──────────────────────────────────────────────────────────── */
-.lists-sidebar { display: flex; flex-direction: column; gap: var(--space-2); }
-.list-item-btn {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
-  width: 100%; text-align: left; font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  transition: background var(--trans), color var(--trans);
-  user-select: none;
-}
-.list-item-btn:hover { background: var(--color-surface-offset); color: var(--color-text); }
-.list-item-btn.active { background: var(--color-primary-highlight); color: var(--color-primary); font-weight: 600; }
-.list-item-btn.active .list-count { background: var(--color-primary); color: #fff; }
-.list-item-btn.drag-over { outline: 2px dashed var(--color-primary); outline-offset: -2px; }
-.list-item-btn.dragging  { opacity: 0.45; }
-.list-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.list-count {
-  font-size: var(--text-xs); background: var(--color-surface-dynamic);
-  border-radius: var(--radius-full); padding: 1px 6px;
-  color: var(--color-text-muted); white-space: nowrap; flex-shrink: 0;
-}
-.list-actions { display: none; gap: var(--space-1); align-items: center; }
-.list-item-btn:hover .list-actions,
-.list-item-btn.active .list-actions { display: flex; }
-
-/* ── Main panel header ─────────────────────────────────────────────── */
-.checklist-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
-.checklist-title { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; }
-
-/* ── Progress bar ────────────────────────────────────────────────── */
-.checklist-progress-bar { height: 4px; background: var(--color-surface-dynamic); border-radius: var(--radius-full); margin-bottom: var(--space-4); overflow: hidden; }
-.checklist-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-accent), var(--color-success));
-  border-radius: var(--radius-full);
-  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* ── Stats row ─────────────────────────────────────────────────────── */
-.checklist-stats { display: flex; gap: var(--space-4); margin-bottom: var(--space-4); flex-wrap: wrap; }
-.stat-pill { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-xs); color: var(--color-text-muted); }
-.stat-pill strong { color: var(--color-text); font-weight: 600; }
-
-/* ── Task tree ─────────────────────────────────────────────────────── */
-.task-tree { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
-.task-tree--nested { margin-top: var(--space-2); }
-
-.task-item {
-  display: flex; align-items: flex-start; gap: var(--space-2);
-  padding: var(--space-3); background: var(--color-surface);
-  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
-  transition: background var(--trans);
-}
-.task-item.done .task-text { text-decoration: line-through; color: var(--color-text-faint); opacity: 0.7; }
-.task-item.depth-1 { background: var(--color-surface-offset); border-color: var(--color-divider); }
-.task-item.depth-2 { background: var(--color-surface-dynamic); border-color: var(--color-divider); border-style: dashed; }
-.task-item.drag-over { outline: 2px dashed var(--color-primary); outline-offset: -2px; }
-.task-item.dragging  { opacity: 0.4; }
-
-/* ── Collapse button ───────────────────────────────────────────────
-   Three states: leaf (dot, inert), open (▼, clickable), closed (▶, clickable)
-   All three are always visible. depth-2 nodes get nothing. */
-.task-collapse-btn {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
+/* ── REWARD CABINET: title ───────────────────────────────────────────────── */
+.reward-cabinet-title {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
-  font-size: 10px;
-  line-height: 1;
-  margin-top: 1px;
-  transition: background var(--trans), color var(--trans), border-color var(--trans);
-}
-
-/* Leaf state — defined but inactive: visible border, no fill, muted dot */
-.task-collapse-leaf {
-  cursor: default;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-offset);
-  color: var(--color-text-faint);
-  font-size: 14px;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  font-family: var(--font-display, var(--font-body, sans-serif));
+  font-size: var(--text-lg);
   font-weight: 700;
-  letter-spacing: -1px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  border-bottom: 2px solid var(--color-primary);
+  margin-bottom: var(--space-3);
+}
+.reward-cabinet-title .cabinet-icon {
+  font-size: 1.2em;
+  line-height: 1;
 }
 
-/* Open state — teal, shows children are expanded */
-.task-collapse-open {
-  background: var(--color-primary-highlight);
-  color: var(--color-primary);
-  cursor: pointer;
-  border: 1px solid var(--color-primary);
+/* ── REWARD CARDS ────────────────────────────────────────────────────────── */
+.reward-card--retired {
+  opacity: 0.55;
+  background: var(--color-surface-offset);
+  border: 1px dashed var(--color-border);
 }
-.task-collapse-open:hover {
-  background: var(--color-primary);
-  color: #fff;
-}
-
-/* Closed state — muted surface, shows children are hidden */
-.task-collapse-closed {
-  background: var(--color-surface-dynamic);
+.reward-card-name--retired {
+  text-decoration: line-through;
   color: var(--color-text-muted);
-  cursor: pointer;
-  border: 1px solid var(--color-border);
 }
-.task-collapse-closed:hover {
-  background: var(--color-primary-highlight);
-  color: var(--color-primary);
-  border-color: var(--color-primary);
+.reward-cost-badge--retired {
+  text-decoration: line-through;
+  opacity: 0.6;
 }
-
-/* ── Drag handle ──────────────────────────────────────────────── */
-.task-drag-handle {
-  font-size: 14px; color: var(--color-text-faint); cursor: grab;
-  padding: 0 2px; flex-shrink: 0; line-height: 1.6;
-  opacity: 0; transition: opacity var(--trans);
+.reward-tag--retired {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  font-style: italic;
 }
-.task-item:hover .task-drag-handle { opacity: 1; }
-.task-drag-handle:active { cursor: grabbing; }
-
-/* ── Checkbox ─────────────────────────────────────────────────────── */
-.task-check {
-  flex-shrink: 0; width: 20px; height: 20px;
-  border: 2px solid var(--color-border); border-radius: var(--radius-sm);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all var(--trans); margin-top: 1px;
-}
-.task-check:hover { border-color: var(--color-primary); }
-.task-item.done .task-check { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
-
-/* ── Task body ───────────────────────────────────────────────────── */
-.task-body { flex: 1; min-width: 0; }
-.task-main-row { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
-.task-text {
-  font-size: var(--text-sm); line-height: 1.5;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-}
-.task-text.expanded { display: block; overflow: visible; }
-.task-points {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-size: var(--text-xs); color: var(--color-gold); font-weight: 600;
-  white-space: nowrap; flex-shrink: 0;
-}
-.task-actions {
-  display: flex; gap: var(--space-1);
-  opacity: 0; transition: opacity var(--trans); flex-shrink: 0; margin-left: auto;
-}
-.task-item:hover .task-actions { opacity: 1; }
-.task-expand-btn {
-  font-size: var(--text-xs); color: var(--color-primary);
-  background: none; border: none; cursor: pointer; padding: 2px 0; margin-top: 2px; display: none;
-}
-.task-expand-btn.visible { display: inline-block; }
-
-/* ── Notes ──────────────────────────────────────────────────────────── */
-.task-note {
-  font-size: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-1);
-  line-height: 1.5; white-space: pre-wrap;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-}
-.task-note.expanded { display: block; overflow: visible; }
-.task-note-input { width: 100%; margin-top: var(--space-2); font-size: var(--text-xs); resize: vertical; min-height: 48px; display: none; }
-.task-note-input.visible { display: block; }
-
-/* ── Subtask add row ──────────────────────────────────────────────── */
-.sub-add-row { gap: var(--space-2); margin-top: var(--space-2); display: none; }
-.sub-add-row.visible { display: flex; }
-
-/* ── Inline edit ──────────────────────────────────────────────────── */
-.task-edit-input {
-  font-size: var(--text-sm); width: 100%;
-  background: var(--color-surface-2); border: 1px solid var(--color-primary);
-  border-radius: var(--radius-md); padding: 2px var(--space-2);
-}
-
-/* ── Add task row ──────────────────────────────────────────────────── */
-.add-task-row { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
-.add-task-row input { flex: 1; }
-.points-input { width: 70px !important; flex: none !important; }

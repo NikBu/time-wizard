@@ -364,12 +364,17 @@ function toggleTask(id){
   if(task.done){
     const desc=_descendants(list.tasks,id).filter(t=>!t.done);
     desc.forEach(t=>{ t.done=true; totalPts+=t.pts; });
-    totalPts+=task.pts; updateHeaderPts();
+    totalPts+=task.pts;
+    updateHeaderPts();
+    // ── keep the reward shop in sync whenever points change ──
+    if(typeof rewardsRender==='function') rewardsRender();
     archNotify('task_done');
     showToast(`✦ +${task.pts} pts! "${task.text}"`, 'success');
   } else {
     _descendants(list.tasks,id).forEach(t=>{ if(t.done){ t.done=false; totalPts=Math.max(0,totalPts-t.pts); } });
-    totalPts=Math.max(0,totalPts-task.pts); updateHeaderPts();
+    totalPts=Math.max(0,totalPts-task.pts);
+    updateHeaderPts();
+    if(typeof rewardsRender==='function') rewardsRender();
   }
   renderChecklist(); renderLists();
 }
