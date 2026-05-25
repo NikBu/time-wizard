@@ -33,3 +33,30 @@
 .badge{display:inline-flex;align-items:center;gap:4px;padding:2px var(--space-2);border-radius:var(--radius-full);font-size:var(--text-xs);background:var(--color-surface-offset);color:var(--color-text-muted);}
 .badge.accent{background:var(--color-accent-highlight);color:var(--color-accent);}
 .badge.gold{background:var(--color-primary-highlight);color:var(--color-primary);}
+
+/* HEADER CURRENT TIMER BADGE */
+.header-timer{position:relative;margin-right:var(--space-2);}
+.header-timer-badge{cursor:pointer;max-width:260px;gap:var(--space-2);white-space:nowrap;}
+.header-timer-badge.htb-hidden{display:none;}
+.header-timer-badge .htb-label{font-variant-numeric:tabular-nums;font-weight:600;}
+.header-timer-badge .htb-name{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.header-timer-badge.htb-running{background:var(--color-primary-highlight);color:var(--color-primary);}
+.header-timer-dropdown{position:absolute;right:0;top:calc(100% + 4px);width:280px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:var(--space-2);opacity:0;pointer-events:none;transform:translateY(-4px);transition:opacity var(--trans),transform var(--trans);}
+.header-timer.htd-open .header-timer-dropdown{opacity:1;pointer-events:auto;transform:translateY(0);}
+.htd-list{display:flex;flex-direction:column;gap:var(--space-1);max-height:260px;overflow:auto;}
+.htd-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);cursor:pointer;}
+.htd-row:hover{background:var(--color-surface-offset);}
+.htd-row-info{display:flex;align-items:center;gap:var(--space-2);flex:1;min-width:0;}
+.htd-row-name{font-size:var(--text-xs);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.htd-row-time{font-size:var(--text-xs);font-variant-numeric:tabular-nums;color:var(--color-text);}
+.htd-row-time.htd-running{color:var(--color-primary);}
+.htd-pinned{background:var(--color-primary-highlight);}
+.htd-empty{padding:var(--space-2);font-size:var(--text-xs);color:var(--color-text-faint);text-align:center;}
+.htd-playbtn{flex-shrink:0;}
+
+/* HEADER TIMER DOT GRID */
+.htb-dots{display:inline-grid;grid-template-columns:repeat(3,6px);gap:2px;vertical-align:middle;margin-right:2px;}
+.htb-dot{width:6px;height:6px;border-radius:50%;}
+.htb-dot-active{background:var(--color-success);box-shadow:0 0 4px oklch(from var(--color-success) l c h / 0.55);}
+.htb-dot-idle{background:var(--color-border);}
+.htb-dot-empty{background:transparent;}
