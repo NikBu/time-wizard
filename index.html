@@ -407,39 +407,67 @@
 
 <!-- Modal: Reward Create / Edit -->
 <div class="modal-backdrop hidden" id="rewardModal">
-  <div class="modal" style="max-width:400px;">
-    <div class="modal-title" id="rewardModalTitle">New Reward</div>
+  <div class="modal reward-modal" style="max-width:420px;">
 
+    <!-- Tinted header banner -->
+    <div class="reward-modal-header">
+      <span class="reward-modal-preview" id="rewardModalPreview">🎁</span>
+      <div>
+        <div class="reward-modal-title" id="rewardModalTitle">New Reward</div>
+        <div class="reward-modal-subtitle">Define what you'll treat yourself to</div>
+      </div>
+    </div>
+
+    <!-- Name -->
     <div class="form-group">
       <label for="rewardModalName">Name</label>
-      <input type="text" id="rewardModalName" placeholder="e.g. Coffee break..." style="width:100%;" maxlength="60"
+      <input type="text" id="rewardModalName" placeholder="e.g. Coffee break…" style="width:100%;" maxlength="60"
         onkeydown="if(event.key==='Enter') rewardSaveModal()">
     </div>
 
+    <!-- Emoji picker -->
     <div class="form-group">
       <label>Emoji</label>
-      <div class="reward-emoji-grid" id="rewardEmojiGrid"></div>
-      <input type="text" id="rewardModalEmojiCustom" placeholder="Or type any emoji"
-        style="width:100%;margin-top:var(--space-2);"
-        oninput="_rewardModalSyncEmoji(this.value)" maxlength="4">
+      <div class="reward-emoji-panel">
+        <div class="reward-emoji-grid" id="rewardEmojiGrid"></div>
+        <div class="reward-emoji-custom-row">
+          <span class="reward-emoji-custom-label">Custom</span>
+          <input type="text" id="rewardModalEmojiCustom" placeholder="type any emoji"
+            class="reward-emoji-custom-input"
+            oninput="_rewardModalSyncEmoji(this.value)" maxlength="4">
+        </div>
+      </div>
     </div>
 
+    <!-- Cost -->
     <div class="form-group">
-      <label for="rewardModalCost">Cost (pts)</label>
-      <input type="number" id="rewardModalCost" min="1" max="9999" value="50" style="width:100%;">
+      <label for="rewardModalCost">Cost</label>
+      <div class="reward-input-with-suffix">
+        <input type="number" id="rewardModalCost" min="1" max="9999" value="50">
+        <span class="reward-input-suffix">pts</span>
+      </div>
     </div>
 
-    <div class="form-group" style="display:flex;align-items:center;gap:var(--space-3);">
-      <input type="checkbox" id="rewardModalRepeatable" checked
-        style="width:16px;height:16px;accent-color:var(--color-primary);flex-shrink:0;">
-      <label for="rewardModalRepeatable" style="margin:0;cursor:pointer;">
-        Repeatable <span style="font-size:var(--text-xs);color:var(--color-text-muted);">(can be redeemed multiple times)</span>
+    <!-- Repeatable toggle row -->
+    <div class="reward-option-row">
+      <div class="reward-option-icon">
+        <i data-lucide="repeat" style="width:15px;height:15px;"></i>
+      </div>
+      <div class="reward-option-body">
+        <div class="reward-option-label">Repeatable</div>
+        <div class="reward-option-desc">Can be redeemed multiple times</div>
+      </div>
+      <label class="reward-option-toggle" aria-label="Repeatable">
+        <input type="checkbox" id="rewardModalRepeatable" checked>
+        <span class="reward-toggle-track"><span class="reward-toggle-thumb"></span></span>
       </label>
     </div>
 
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="rewardCloseModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="rewardSaveModal()">Save</button>
+      <button class="btn btn-primary" onclick="rewardSaveModal()">
+        <i data-lucide="check" style="width:13px;height:13px;"></i> Save
+      </button>
     </div>
   </div>
 </div>

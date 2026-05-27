@@ -26,3 +26,17 @@
 ::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
 ::-webkit-scrollbar-corner { background: var(--color-surface-offset); }
 * { scrollbar-width: thin; scrollbar-color: var(--color-border) var(--color-surface-offset); }
+
+/* INPUT ERROR — generic form validation flash, used across modals */
+.input--error {
+  border-color: var(--color-error) !important;
+  animation: input-error-shake 0.4s ease;
+}
+
+@keyframes input-error-shake {
+  0%,100%  { transform: translateX(0); }
+  20%      { transform: translateX(-5px); }
+  40%      { transform: translateX(5px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
