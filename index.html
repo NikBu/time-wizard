@@ -389,7 +389,7 @@
 <div class="modal-backdrop hidden" id="newListModal">
   <div class="modal">
     <div class="modal-title">New List</div>
-    <div class="form-group"><label for="newListName">Name</label><input type="text" id="newListName" placeholder="e.g. Work Tasks..." style="width:100%"></div>
+    <div class="form-group"><label for="newListName">Name</label><input type="text" id="newListName" placeholder="e.g. Work Tasks..." style="width:100%" onkeydown="if(event.key==='Enter')createList()"></div>
     <div class="form-group mt-3"><label for="newListIcon">Icon</label>
       <select id="newListIcon" style="width:100%">
         <option value="📋">📋 General</option><option value="💼">💼 Work</option>
