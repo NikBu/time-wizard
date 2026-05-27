@@ -110,7 +110,7 @@ function rewardOpenModal(id) {
   document.getElementById('rewardModalCost').value        = r ? r.cost      : 50;
   document.getElementById('rewardModalRepeatable').checked = r ? r.repeatable : true;
 
-  // Emoji picker: mark selected
+  // Emoji picker: mark selected and update header preview
   const chosen = r ? r.emoji : REWARD_EMOJI_PRESETS[0];
   document.getElementById('rewardModalEmojiCustom').value = chosen;
   _rewardModalSyncEmoji(chosen);
@@ -160,9 +160,13 @@ function rewardSaveModal() {
   rewardsRender();
 }
 
-// Keep emoji custom input and preset buttons in sync
+// Keep emoji custom input, preset buttons, and header preview in sync
 function _rewardModalSyncEmoji(value) {
   document.getElementById('rewardModalEmojiCustom').value = value;
+  // Update the live header preview
+  const preview = document.getElementById('rewardModalPreview');
+  if (preview && value.trim()) preview.textContent = value.trim();
+  // Highlight the active preset button
   document.querySelectorAll('.reward-emoji-btn').forEach(btn => {
     btn.classList.toggle('reward-emoji-btn--active', btn.dataset.emoji === value);
   });
