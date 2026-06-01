@@ -199,10 +199,10 @@
     </label>
   </div>
 
-  <!-- Two-column layout: 2fr left (Arch+FAQ) | 3fr right (Cabinet) -->
+  <!-- Two-column layout: 2fr left (Arch+QA) | 3fr right (Cabinet) -->
   <div class="companion-layout" id="archBody">
 
-    <!-- LEFT: portrait + FAQ -->
+    <!-- LEFT: portrait + QA -->
     <div class="companion-left">
 
       <!-- Portrait card -->
@@ -216,15 +216,30 @@
         </div>
       </div>
 
-      <!-- FAQ card -->
+      <!-- QA card -->
       <div class="card">
+        <!-- Header row -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
           <div class="card-title" style="font-size:var(--text-base);margin-bottom:0;">📢 Ask Archibald</div>
           <span style="font-size:var(--text-xs);color:var(--color-text-faint);">Click any question</span>
         </div>
-        <div id="faqList" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
-        <div id="faqAnswer" style="display:none;margin-top:var(--space-3);padding:var(--space-3);background:var(--color-surface-offset);border-radius:var(--radius-lg);border-left:3px solid var(--color-primary);">
-          <div id="faqAnswerText" style="font-size:var(--text-sm);color:var(--color-text);font-style:italic;"></div>
+
+        <!-- Segmented control -->
+        <div class="qa-seg" role="tablist" aria-label="Question categories">
+          <button class="qa-seg-btn qa-seg-btn--active" role="tab" data-tab="guide"
+            onclick="renderQA('guide')" aria-selected="true">🧭 Guide</button>
+          <button class="qa-seg-btn" role="tab" data-tab="trivia"
+            onclick="renderQA('trivia')" aria-selected="false">💡 Trivia</button>
+          <button class="qa-seg-btn" role="tab" data-tab="cheer"
+            onclick="renderQA('cheer')" aria-selected="false">✨ Cheer Up</button>
+        </div>
+
+        <!-- Chip grid -->
+        <div class="qa-chip-grid" id="qaChipGrid"></div>
+
+        <!-- Answer panel -->
+        <div id="qaAnswer" style="display:none;margin-top:var(--space-3);padding:var(--space-3);background:var(--color-surface-offset);border-radius:var(--radius-lg);border-left:3px solid var(--color-primary);">
+          <div id="qaAnswerText" style="font-size:var(--text-sm);color:var(--color-text);font-style:italic;"></div>
         </div>
       </div>
 
