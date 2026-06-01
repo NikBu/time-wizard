@@ -202,6 +202,9 @@ function archEvent(key){
 }
 function archGreet(){ archSpeak(rand(ARCH_QUOTES.greet)); archSetMode('idle'); }
 
+// Alias for callers that use the old name
+const archNotify = archEvent;
+
 // ── QA ────────────────────────────────────────────────────────
 function renderQA(tab) {
   _archQATab = tab;
@@ -231,7 +234,11 @@ function archQAAnswer(tab, i) {
   const item = (ARCH_QA[tab] || [])[i];
   if (!item) return;
 
-  // Update answer panel
+  // Update speech bubble above QA list — no popup
+  const box = document.getElementById('companionSpeech');
+  if (box) { box.style.opacity = 0.15; setTimeout(() => { box.textContent = item.a; box.style.opacity = 1; }, 150); }
+
+  // Update answer panel below QA list
   const ans = document.getElementById('qaAnswer');
   const txt = document.getElementById('qaAnswerText');
   if (ans && txt) {
@@ -244,7 +251,7 @@ function archQAAnswer(tab, i) {
   const chips = document.querySelectorAll('#qaChipGrid .qa-chip');
   if (chips[i]) chips[i].classList.add('qa-chip--active');
 
-  // Mood logic by category — no speech bubble for deliberate QA lookups
+  // Mood logic by category — no popup for deliberate QA lookups
   if (tab === 'cheer') {
     arch.mood = Math.min(100, arch.mood + 5);
     archSetMode('excited');
@@ -266,7 +273,7 @@ function archRandomQA() {
   archQAAnswer(_archQATab, i);
 }
 
-// ── PASSIVE BEHAVIOUR ──────────────────────────────────────────
+// ── PASSIVE BEHAVIOUR ────────────────────────────────────────────────────────
 setInterval(()=>{
   if(!arch.enabled) return;
   arch.energy = Math.max(0, arch.energy - 1);
@@ -285,7 +292,7 @@ function updateArchStats(){
   fill(el('archEnergyBar'),arch.energy);
 }
 
-// ── EVENTS ────────────────────────────────────────────────────────
+// ── EVENTS ────────────────────────────────────────────────────────────────────
 function archOnTaskDone(){
   arch.xp += 10; arch.mood = Math.min(100, arch.mood+10);
   archSetMode('excited');
