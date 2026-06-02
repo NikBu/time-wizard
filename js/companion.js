@@ -42,6 +42,11 @@ const ARCH_QUOTES = {
     'Do not confuse stillness with failure. Even owls pause.',
     'If the day feels tangled, choose the smallest next step.'
   ],
+  judging:[
+    'You have been rather quiet. The list does not complete itself.',
+    'I have been watching the clock. Have you?',
+    'Stillness is fine. Prolonged stillness is another matter entirely.'
+  ],
   export:[
     'A wise wizard keeps backups.',
     'Excellent precaution. Even enchanted ledgers deserve copies.'
@@ -179,6 +184,40 @@ let _archQATab = 'guide'; // active tab
 const arch = { enabled:true, xp:0, mood:70, focus:50, energy:80, mode:'idle' };
 let _archFloatTimer = null;
 
+// ── AFK / JUDGING STATE ─────────────────────────────────────────────────────
+// Archibald enters "judging" after 10 min of no meaningful user actions.
+// He returns to "idle" after 3 subsequent actions.
+const AFK_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
+const AFK_RESET_ACTIONS = 3;              // actions needed to leave judging
+
+let _lastActionTime = Date.now();
+let _isJudging = false;
+let _actionsAfterJudge = 0;
+
+// Call this on every meaningful user action (task add/done, timer add/done, pet, QA)
+function archBumpActivity() {
+  _lastActionTime = Date.now();
+  if (_isJudging) {
+    _actionsAfterJudge++;
+    if (_actionsAfterJudge >= AFK_RESET_ACTIONS) {
+      _isJudging = false;
+      _actionsAfterJudge = 0;
+      archSetMode('idle');
+    }
+  }
+}
+
+// Checked every 60s — enters judging once if threshold is exceeded
+setInterval(() => {
+  if (!arch.enabled || _isJudging) return;
+  if (Date.now() - _lastActionTime >= AFK_THRESHOLD_MS) {
+    _isJudging = true;
+    _actionsAfterJudge = 0;
+    archSetMode('judging');
+    archSpeak(rand(ARCH_QUOTES.judging), false); // speech block only, no float
+  }
+}, 60 * 1000);
+
 function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function archSetMode(mode){
   arch.mode=mode;
@@ -205,27 +244,19 @@ function archGreet(){ archSpeak(rand(ARCH_QUOTES.greet)); archSetMode('idle'); }
 // Alias for callers that use the old name
 const archNotify = archEvent;
 
-// ── QA ────────────────────────────────────────────────────────
+// ── QA ──────────────────────────────────────────────────────────
 function renderQA(tab) {
   _archQATab = tab;
-
-  // Update segmented control
   document.querySelectorAll('.qa-seg-btn').forEach(b => {
     b.classList.toggle('qa-seg-btn--active', b.dataset.tab === tab);
   });
-
-  // Clear active chip from previous tab
   document.querySelectorAll('.qa-chip').forEach(c => c.classList.remove('qa-chip--active'));
-
-  // Render chip grid
   const grid = document.getElementById('qaChipGrid');
   const items = ARCH_QA[tab] || [];
   if (!grid) return;
   grid.innerHTML = items.map((item, i) =>
     `<button class="qa-chip" onclick="archQAAnswer('${tab}',${i})">${item.q}</button>`
   ).join('');
-
-  // Hide answer panel when switching tabs
   const ans = document.getElementById('qaAnswer');
   if (ans) ans.style.display = 'none';
 }
@@ -234,11 +265,11 @@ function archQAAnswer(tab, i) {
   const item = (ARCH_QA[tab] || [])[i];
   if (!item) return;
 
-  // Update speech bubble above QA list — no popup
+  archBumpActivity();
+
   const box = document.getElementById('companionSpeech');
   if (box) { box.style.opacity = 0.15; setTimeout(() => { box.textContent = item.a; box.style.opacity = 1; }, 150); }
 
-  // Update answer panel below QA list
   const ans = document.getElementById('qaAnswer');
   const txt = document.getElementById('qaAnswerText');
   if (ans && txt) {
@@ -246,35 +277,26 @@ function archQAAnswer(tab, i) {
     ans.style.display = 'block';
   }
 
-  // Mark active chip
   document.querySelectorAll('.qa-chip').forEach(c => c.classList.remove('qa-chip--active'));
   const chips = document.querySelectorAll('#qaChipGrid .qa-chip');
   if (chips[i]) chips[i].classList.add('qa-chip--active');
 
-  // Mood logic by category — no popup for deliberate QA lookups
+  // guide + trivia → excited; cheer → magic
   if (tab === 'cheer') {
     arch.mood = Math.min(100, arch.mood + 5);
-    archSetMode('excited');
-  } else if (tab === 'trivia') {
     archSetMode('magic');
   } else {
-    archSetMode('judging');
+    archSetMode('excited');
   }
 
   clearTimeout(window._archModeBack);
   window._archModeBack = setTimeout(() => archSetMode('idle'), 3200);
 
-  // If the speech block is clipping the answer, guide the user down to the
-  // full answer panel with a smooth scroll + a brief highlight pulse.
-  // We wait one frame so the answer panel has been rendered and measured.
   requestAnimationFrame(() => {
     if (!box || !ans) return;
-    const isClipped = box.scrollHeight > box.clientHeight + 4; // 4px tolerance
+    const isClipped = box.scrollHeight > box.clientHeight + 4;
     if (!isClipped) return;
-
     ans.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-    // Pulse the answer panel border to draw the eye
     ans.style.transition = 'box-shadow 0.2s ease';
     ans.style.boxShadow = '0 0 0 3px oklch(from var(--color-primary) l c h / 0.45)';
     setTimeout(() => { ans.style.boxShadow = ''; }, 900);
@@ -294,10 +316,10 @@ setInterval(()=>{
   if(!arch.enabled) return;
   arch.energy = Math.max(0, arch.energy - 1);
   arch.mood   = Math.max(0, arch.mood   - 0.5);
-  if(arch.energy < 20 && arch.mode !== 'sleepy') archSetMode('sleepy');
+  if(arch.energy < 20 && arch.mode !== 'sleepy' && !_isJudging) archSetMode('sleepy');
   else if(arch.energy > 50 && arch.mode === 'sleepy') archSetMode('idle');
   updateArchStats();
-  if(Math.random() < 0.25) archSpeak(rand(ARCH_QUOTES.idle));
+  if(Math.random() < 0.25 && !_isJudging) archSpeak(rand(ARCH_QUOTES.idle));
 }, 15000);
 
 function updateArchStats(){
@@ -310,6 +332,7 @@ function updateArchStats(){
 
 // ── EVENTS ────────────────────────────────────────────────────────────────────
 function archOnTaskDone(){
+  archBumpActivity();
   arch.xp += 10; arch.mood = Math.min(100, arch.mood+10);
   archSetMode('excited');
   archEvent('task_done');
@@ -317,10 +340,12 @@ function archOnTaskDone(){
   window._archModeBack = setTimeout(()=>archSetMode('idle'),3000);
 }
 function archOnTaskAdd(){
+  archBumpActivity();
   arch.focus = Math.min(100, arch.focus+5);
   archEvent('task_add');
 }
 function archOnTimerDone(){
+  archBumpActivity();
   arch.xp += 20; arch.energy = Math.max(0, arch.energy-10);
   archSetMode('excited');
   archEvent('timer_done');
@@ -328,15 +353,17 @@ function archOnTimerDone(){
   window._archModeBack = setTimeout(()=>archSetMode('idle'),3000);
 }
 function archOnTimerAdd(){
+  archBumpActivity();
   arch.focus = Math.min(100, arch.focus+3);
   archEvent('timer_add');
 }
 function archOnPet(){
+  archBumpActivity();
   arch.mood = Math.min(100, arch.mood+15);
   archSetMode('excited');
   archEvent('pet');
   clearTimeout(window._archModeBack);
   window._archModeBack = setTimeout(()=>archSetMode('idle'),2500);
 }
-function archOnExport(){ archEvent('export'); }
-function archOnImport(){ archEvent('import'); }
+function archOnExport(){ archBumpActivity(); archEvent('export'); }
+function archOnImport(){ archBumpActivity(); archEvent('import'); }
