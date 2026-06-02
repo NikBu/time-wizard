@@ -1,5 +1,8 @@
-// ── CHECKLISTS ────────────────────────────────────
-// Task shape: { id, text, pts, done, pid, depth, collapsed, note }
+// ── CHECKLISTS ─────────────────────────────────────────────────
+// Task shape: { id, text, pts, done, pid, depth, collapsed, note, repeat, repeatCount, repeatGoal }
+// repeat: bool — if true, checkbox becomes a + counter instead of a done toggle
+// repeatCount: number of times the + has been pressed this session
+// repeatGoal: if > 0, marks done when count reaches goal; 0 = no auto-complete
 // depth: 0 = top-level, 1 = subtask, 2 = sub-subtask (max, no children)
 // pid: parent task id, or null for top-level
 // collapsed: if true, children are hidden in the renderer
@@ -8,7 +11,7 @@ const MAX_DEPTH = 2;
 let lists=[], lidx=1, tidxc=1, activeList=null, totalPts=0;
 let _dragSrcListId=null, _dragSrcTaskId=null;
 
-// ── HELPERS ──────────────────────────────────────
+// ── HELPERS ──────────────────────────────────────────────────
 function _getList(){ return lists.find(l=>l.id===activeList); }
 function _getTask(id){ const l=_getList(); return l&&l.tasks.find(t=>t.id===id); }
 function _descendants(tasks, pid){
@@ -22,7 +25,7 @@ function _reDepth(tasks, id, newDepth){
   _children(tasks,id).forEach(c=>_reDepth(tasks,c.id,newDepth+1));
 }
 
-// ── LIST MANAGEMENT ──────────────────────────────
+// ── LIST MANAGEMENT ────────────────────────────────────────────────
 function openNewListModal(){ document.getElementById('newListModal').classList.remove('hidden'); document.getElementById('newListName').focus(); }
 function createList(){
   const name=document.getElementById('newListName').value.trim();
@@ -34,7 +37,7 @@ function createList(){
   renderLists(); selectList(id); showToast(`"${name}" created!`);
 }
 
-// ── RENAME LIST ──────────────────────────────────
+// ── RENAME LIST ──────────────────────────────────────────────────
 function startRenameList(id){
   const list=lists.find(l=>l.id===id); if(!list) return;
   const titleEl=document.getElementById('checklist-title-text');
@@ -48,7 +51,7 @@ function startRenameList(id){
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();inp.blur();} if(e.key==='Escape'){inp.value=list.name;inp.blur();} e.stopPropagation(); });
 }
 
-// ── LIST DRAG-REORDER ────────────────────────────
+// ── LIST DRAG-REORDER ───────────────────────────────────────────────
 function _onListDragStart(e,id){ _dragSrcListId=id; e.dataTransfer.effectAllowed='move'; e.currentTarget.classList.add('dragging'); }
 function _onListDragOver(e,id){ e.preventDefault(); if(_dragSrcListId===id) return; e.dataTransfer.dropEffect='move'; document.querySelectorAll('.list-item-btn').forEach(el=>el.classList.remove('drag-over')); e.currentTarget.classList.add('drag-over'); }
 function _onListDrop(e,id){
@@ -85,7 +88,7 @@ function renderLists(){
 
 function selectList(id){ activeList=id; renderLists(); renderChecklist(); }
 
-// ── RENDER CHECKLIST ─────────────────────────────
+// ── RENDER CHECKLIST ───────────────────────────────────────────────
 function renderChecklist(){
   const main=document.getElementById('checklistMain'), list=_getList();
   if(!list) return;
@@ -123,29 +126,24 @@ function renderChecklist(){
   _initExpandBtns();
 }
 
-// ── RECURSIVE NODE RENDERER ───────────────────────
+// ── RECURSIVE NODE RENDERER ───────────────────────────────────────────────
 function _renderNodes(tasks, pid){
   return tasks.filter(t=>t.pid===pid).map(t=>{
     const children=tasks.filter(c=>c.pid===t.id);
     const hasChildren=children.length>0;
     const isCollapsed=!!t.collapsed;
     const hasNote=t.note&&t.note.trim();
-    // depth-2 tasks cannot have children, so no collapse btn or add-child
     const canHaveChildren=t.depth<MAX_DEPTH;
     const depthClass=t.depth===0?'':t.depth===1?'depth-1':'depth-2';
 
-    // Collapse button: 3 states
-    // depth-2 nodes get no button at all (they can never have children)
+    // Collapse button: 3 states; depth-2 nodes get nothing
     let collapseBtn='';
     if(canHaveChildren){
       if(!hasChildren){
-        // State 1: leaf — visible but inert dot indicator
         collapseBtn=`<span class="task-collapse-btn task-collapse-leaf" title="No subtasks yet">·</span>`;
       } else if(isCollapsed){
-        // State 2: has children, collapsed
         collapseBtn=`<button class="task-collapse-btn task-collapse-closed" onclick="toggleCollapse(${t.id})" title="Expand subtasks">▶</button>`;
       } else {
-        // State 3: has children, expanded
         collapseBtn=`<button class="task-collapse-btn task-collapse-open" onclick="toggleCollapse(${t.id})" title="Collapse subtasks">▼</button>`;
       }
     }
@@ -154,17 +152,28 @@ function _renderNodes(tasks, pid){
       ? `<ul class="task-tree task-tree--nested" ondragover="_onTaskDragOver(event,${t.id})" ondrop="_onTaskDrop(event,${t.id})">${_renderNodes(tasks,t.id)}</ul>`
       : '';
 
+    // ── Repeat vs normal check widget ────────────────────────────────
+    const isRepeat = !!t.repeat;
+    const rCount   = t.repeatCount || 0;
+    const rGoal    = t.repeatGoal  || 0;
+    const goalMet  = isRepeat && rGoal > 0 && rCount >= rGoal;
+    let checkWidget;
+    if (isRepeat) {
+      const label = rGoal > 0 ? `${rCount}/${rGoal}` : `+${rCount}`;
+      checkWidget = `<button class="task-repeat-btn${goalMet?' goal-met':''}" onclick="incrementRepeat(${t.id})" title="${goalMet?'Goal reached — click to reset':'Click to count one repetition'}">${label}</button>`;
+    } else {
+      checkWidget = `<div class="task-check" onclick="toggleTask(${t.id})" role="checkbox" aria-checked="${t.done}">${t.done?'<i data-lucide="check" style="width:11px;height:11px;"></i>':''}</div>`;
+    }
+
     return `<li class="task-item ${t.done?'done':''} ${depthClass}" id="task-li-${t.id}"
         draggable="true"
         ondragstart="_onTaskDragStart(event,${t.id})"
         ondragover="_onTaskDragOver(event,${t.id})"
         ondrop="_onTaskDrop(event,${t.id})"
         ondragend="_onTaskDragEnd()">
-      <span class="task-drag-handle" title="Drag to reorder">⠿</span>
+      <span class="task-drag-handle" title="Drag to reorder">⠷</span>
       ${collapseBtn}
-      <div class="task-check" onclick="toggleTask(${t.id})" role="checkbox" aria-checked="${t.done}">
-        ${t.done?'<i data-lucide="check" style="width:11px;height:11px;"></i>':''}
-      </div>
+      ${checkWidget}
       <div class="task-body">
         <div class="task-main-row">
           <span class="task-text" id="task-text-${t.id}">${t.text}</span>
@@ -173,6 +182,11 @@ function _renderNodes(tasks, pid){
             <button class="btn btn-icon btn-ghost btn-sm" title="Edit" onclick="editTask(${t.id})"><i data-lucide="pencil" style="width:11px;height:11px;"></i></button>
             <button class="btn btn-icon btn-ghost btn-sm" title="Note" onclick="toggleNote(${t.id})"><i data-lucide="sticky-note" style="width:11px;height:11px;"></i></button>
             <button class="btn btn-icon btn-ghost btn-sm" title="Copy" onclick="copyTask(${t.id})"><i data-lucide="copy" style="width:11px;height:11px;"></i></button>
+            <button class="btn btn-icon btn-ghost btn-sm ${isRepeat?'text-primary':''}"
+              title="${isRepeat?'Repeatable (click to disable)':'Make repeatable'}"
+              onclick="toggleRepeat(${t.id})">
+              <i data-lucide="repeat" style="width:11px;height:11px;${isRepeat?'color:var(--color-primary);':''}"></i>
+            </button>
             ${canHaveChildren
               ? `<button class="btn btn-icon btn-ghost btn-sm" title="Add subtask" onclick="showSubAdd(${t.id})"><i data-lucide="corner-down-right" style="width:11px;height:11px;"></i></button>`
               : ''}
@@ -201,14 +215,80 @@ function _renderNodes(tasks, pid){
   }).join('');
 }
 
-// ── COLLAPSE ─────────────────────────────────────
+// ── COLLAPSE ─────────────────────────────────────────────────────────────────
 function toggleCollapse(id){
   const t=_getTask(id); if(!t) return;
   t.collapsed=!t.collapsed;
   renderChecklist();
 }
 
-// ── KEYBOARD NAV FOR SUB-INPUTS ──────────────────
+// ── REPEAT TASK ─────────────────────────────────────────────────────────────
+function toggleRepeat(id){
+  const list=_getList(); if(!list) return;
+  const t=list.tasks.find(x=>x.id===id); if(!t) return;
+  if(!t.repeat){
+    // Enable repeat: ask for a goal (0 = no auto-complete)
+    const raw = prompt(
+      'Set a repeat goal (how many times = done)?\nLeave blank or enter 0 for no auto-complete.',
+      ''
+    );
+    if(raw === null) return; // cancelled
+    const goal = parseInt(raw) || 0;
+    t.repeat = true;
+    t.repeatCount = 0;
+    t.repeatGoal  = Math.max(0, goal);
+    t.done = false; // un-complete if it was done
+  } else {
+    // Disable repeat: restore to normal checkbox
+    t.repeat = false;
+    t.repeatCount = 0;
+    t.repeatGoal  = 0;
+  }
+  renderChecklist();
+}
+
+function incrementRepeat(id){
+  const list=_getList(); if(!list) return;
+  const t=list.tasks.find(x=>x.id===id); if(!t||!t.repeat) return;
+
+  const goalMet = t.repeatGoal > 0 && (t.repeatCount||0) >= t.repeatGoal;
+  if(goalMet){
+    // Goal already met — reset counter (start a new cycle)
+    t.repeatCount = 0;
+    t.done = false;
+    renderChecklist();
+    return;
+  }
+
+  t.repeatCount = (t.repeatCount || 0) + 1;
+
+  // Bump animation
+  requestAnimationFrame(()=>{
+    const btn = document.querySelector(`#task-li-${id} .task-repeat-btn`);
+    if(btn){ btn.classList.remove('bump'); void btn.offsetWidth; btn.classList.add('bump'); }
+  });
+
+  // Check if goal just met
+  if(t.repeatGoal > 0 && t.repeatCount >= t.repeatGoal){
+    t.done = true;
+    totalPts += t.pts;
+    updateHeaderPts();
+    if(typeof rewardsRender==='function') rewardsRender();
+    archNotify('task_done');
+    showToast(`✦ +${t.pts} pts! "${t.text}" — goal reached!`, 'success');
+  } else {
+    // Award a fraction of pts per rep when a goal is set, or nothing when freeform
+    if(t.repeatGoal > 0){
+      const frac = Math.floor(t.pts / t.repeatGoal);
+      if(frac > 0){ totalPts += frac; updateHeaderPts(); if(typeof rewardsRender==='function') rewardsRender(); }
+    }
+    showToast(`↻ ${t.text}: ${t.repeatCount}${t.repeatGoal>0?' / '+t.repeatGoal:''} reps`);
+  }
+
+  renderChecklist(); renderLists();
+}
+
+// ── KEYBOARD NAV FOR SUB-INPUTS ──────────────────────────────────────────────
 function _onSubKey(e, pid){
   if(e.key==='Escape'){ e.preventDefault(); cancelSub(pid); return; }
   if(e.key==='Enter'){
@@ -240,7 +320,7 @@ function _onSubKey(e, pid){
   }
 }
 
-// ── INDENT / DEDENT ─────────────────────────────
+// ── INDENT / DEDENT ───────────────────────────────────────────────────────────
 function indentTask(id){
   const list=_getList(); if(!list) return;
   const t=list.tasks.find(x=>x.id===id); if(!t) return;
@@ -264,12 +344,12 @@ function dedentTask(id){
   renderChecklist(); renderLists();
 }
 
-// ── TASK CRUD ────────────────────────────────────
+// ── TASK CRUD ──────────────────────────────────────────────────────────────────
 function addTask(){
   const list=_getList(); if(!list) return;
   const inp=document.getElementById('newTaskInput'), text=inp.value.trim(); if(!text) return;
   const pts=Math.max(1,parseInt(document.getElementById('newTaskPts').value)||10);
-  list.tasks.push({id:tidxc++,text,pts,done:false,pid:null,depth:0,collapsed:false,note:''});
+  list.tasks.push({id:tidxc++,text,pts,done:false,pid:null,depth:0,collapsed:false,note:'',repeat:false,repeatCount:0,repeatGoal:0});
   inp.value=''; renderChecklist(); renderLists();
   requestAnimationFrame(()=>{ const ni=document.getElementById('newTaskInput'); if(ni) ni.focus(); });
 }
@@ -293,7 +373,7 @@ function _commitSubReturningId(pid){
   const parent=list.tasks.find(t=>t.id===pid);
   const newDepth=parent?parent.depth+1:0;
   const newId=tidxc++;
-  list.tasks.push({id:newId,text,pts,done:false,pid,depth:newDepth,collapsed:false,note:''});
+  list.tasks.push({id:newId,text,pts,done:false,pid,depth:newDepth,collapsed:false,note:'',repeat:false,repeatCount:0,repeatGoal:0});
   inp.value='';
   return newId;
 }
@@ -343,7 +423,7 @@ function copyTask(id){
   const t=list.tasks.find(x=>x.id===id); if(!t) return;
   const cloneSubtree=(src, newPid, newDepth)=>{
     const nid=tidxc++;
-    list.tasks.push({id:nid,text:src.id===id?src.text+' (copy)':src.text,pts:src.pts,done:false,pid:newPid,depth:newDepth,collapsed:false,note:src.note||''});
+    list.tasks.push({id:nid,text:src.id===id?src.text+' (copy)':src.text,pts:src.pts,done:false,pid:newPid,depth:newDepth,collapsed:false,note:src.note||'',repeat:src.repeat||false,repeatCount:0,repeatGoal:src.repeatGoal||0});
     _children(list.tasks,src.id).forEach(c=>cloneSubtree(c,nid,newDepth+1));
   };
   cloneSubtree(t,t.pid,t.depth);
@@ -366,7 +446,6 @@ function toggleTask(id){
     desc.forEach(t=>{ t.done=true; totalPts+=t.pts; });
     totalPts+=task.pts;
     updateHeaderPts();
-    // ── keep the reward shop in sync whenever points change ──
     if(typeof rewardsRender==='function') rewardsRender();
     archNotify('task_done');
     showToast(`✦ +${task.pts} pts! "${task.text}"`, 'success');
@@ -398,7 +477,7 @@ function duplicateList(id){
   while(queue.length){
     const t=queue.shift();
     const nid=tidxc++; idMap[t.id]=nid;
-    newTasks.push({...t,id:nid,pid:t.pid!==null?idMap[t.pid]:null,done:false,collapsed:false});
+    newTasks.push({...t,id:nid,pid:t.pid!==null?idMap[t.pid]:null,done:false,collapsed:false,repeatCount:0});
     orig.tasks.filter(c=>c.pid===t.id).forEach(c=>queue.push(c));
   }
   lists.push({id:newId,name:orig.name+' (copy)',icon:orig.icon,tasks:newTasks});
@@ -417,7 +496,7 @@ function deleteList(id){
   });
 }
 
-// ── TASK DRAG-REORDER ────────────────────────────
+// ── TASK DRAG-REORDER ───────────────────────────────────────────────────────────
 function _onTaskDragStart(e,id){
   _dragSrcTaskId=id; e.stopPropagation(); e.dataTransfer.effectAllowed='move';
   e.currentTarget.classList.add('dragging');
@@ -452,7 +531,7 @@ function _onTaskDragEnd(){
   _dragSrcTaskId=null;
 }
 
-// ── EXPAND / OVERFLOW BUTTONS ────────────────────
+// ── EXPAND / OVERFLOW BUTTONS ─────────────────────────────────────────────────
 function _checkOverflow(el){ return el&&el.scrollHeight>el.clientHeight+2; }
 function _initExpandBtns(){
   requestAnimationFrame(()=>{
@@ -476,7 +555,7 @@ function toggleNoteExpand(id){
   if(!el) return; el.classList.toggle('expanded'); if(btn) btn.textContent=el.classList.contains('expanded')?'Show less':'Show more';
 }
 
-// ── POINTS + HEADER ──────────────────────────────
+// ── POINTS + HEADER ────────────────────────────────────────────────────────────
 function updateHeaderPts(){
   const hp=document.getElementById('headerPoints'); if(hp) hp.textContent=`✦ ${totalPts} pts`;
   const lvl=document.getElementById('owlLevel'); if(lvl) lvl.textContent=Math.floor(totalPts/100)+1;
