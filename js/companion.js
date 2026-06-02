@@ -42,11 +42,6 @@ const ARCH_QUOTES = {
     'Do not confuse stillness with failure. Even owls pause.',
     'If the day feels tangled, choose the smallest next step.'
   ],
-  judging:[
-    'You have been rather quiet. The list does not complete itself.',
-    'I have been watching the clock. Have you?',
-    'Stillness is fine. Prolonged stillness is another matter entirely.'
-  ],
   export:[
     'A wise wizard keeps backups.',
     'Excellent precaution. Even enchanted ledgers deserve copies.'
@@ -181,68 +176,82 @@ const ARCH_QA = {
 
 let _archQATab = 'guide'; // active tab
 
-const arch = { enabled:true, xp:0, mood:70, focus:50, energy:80, mode:'idle' };
+const arch = { enabled: true, xp: 0, mood: 70, focus: 50, energy: 80, mode: 'idle' };
 let _archFloatTimer = null;
 
-// ── AFK / JUDGING STATE ─────────────────────────────────────────────────────
-// Archibald enters "judging" after 10 min of no meaningful user actions.
-// He returns to "idle" after 3 subsequent actions.
-const AFK_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
-const AFK_RESET_ACTIONS = 3;              // actions needed to leave judging
+// ── SLEEPY TRIGGER CHECK ────────────────────────────────────────────────────
+// Three independent conditions — any one is sufficient.
+// 1. Low energy (< 20)
+// 2. Morning hours 4–8 AM on the user's local clock
+// 3. Companion is disabled (arch.enabled === false)
+//
+// Returns true if Archibald should be in sleepy state.
+function archShouldBeSleepy() {
+  if (!arch.enabled) return true;
+  if (arch.energy < 20) return true;
+  const h = new Date().getHours();
+  if (h >= 4 && h < 8) return true;
+  return false;
+}
 
-let _lastActionTime = Date.now();
-let _isJudging = false;
-let _actionsAfterJudge = 0;
-
-// Call this on every meaningful user action (task add/done, timer add/done, pet, QA)
-function archBumpActivity() {
-  _lastActionTime = Date.now();
-  if (_isJudging) {
-    _actionsAfterJudge++;
-    if (_actionsAfterJudge >= AFK_RESET_ACTIONS) {
-      _isJudging = false;
-      _actionsAfterJudge = 0;
-      archSetMode('idle');
-    }
+// Call after any state-relevant change to apply sleepy or restore idle.
+function archCheckSleepy() {
+  if (archShouldBeSleepy()) {
+    if (arch.mode !== 'sleepy') archSetMode('sleepy');
+  } else {
+    if (arch.mode === 'sleepy') archSetMode('idle');
   }
 }
 
-// Checked every 60s — enters judging once if threshold is exceeded
-setInterval(() => {
-  if (!arch.enabled || _isJudging) return;
-  if (Date.now() - _lastActionTime >= AFK_THRESHOLD_MS) {
-    _isJudging = true;
-    _actionsAfterJudge = 0;
-    archSetMode('judging');
-    archSpeak(rand(ARCH_QUOTES.judging), false); // speech block only, no float
-  }
-}, 60 * 1000);
+function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-function archSetMode(mode){
-  arch.mode=mode;
-  const img=document.getElementById('companionImg'); if(img) img.src = OWL[mode] || OWL.idle;
-  const lbl=document.getElementById('companionStateLabel'); if(lbl) lbl.textContent = mode[0].toUpperCase()+mode.slice(1);
+function archSetMode(mode) {
+  arch.mode = mode;
+  const img = document.getElementById('companionImg');
+  if (img) img.src = OWL[mode] || OWL.idle;
+  const lbl = document.getElementById('companionStateLabel');
+  if (lbl) lbl.textContent = mode[0].toUpperCase() + mode.slice(1);
 }
-function archSpeak(text, floatToo=true){
-  const box=document.getElementById('companionSpeech');
-  if(box){ box.style.opacity=.15; setTimeout(()=>{ box.textContent=text; box.style.opacity=1; },150); }
-  if(!floatToo) return;
-  const fp=document.getElementById('archFloat');
-  if(fp){
+
+function archSpeak(text, floatToo = true) {
+  const box = document.getElementById('companionSpeech');
+  if (box) { box.style.opacity = .15; setTimeout(() => { box.textContent = text; box.style.opacity = 1; }, 150); }
+  // Suppress floating popup when disabled or sleepy
+  if (!floatToo || !arch.enabled) return;
+  const fp = document.getElementById('archFloat');
+  if (fp) {
     clearTimeout(_archFloatTimer);
-    fp.textContent=text; fp.classList.add('visible');
-    _archFloatTimer=setTimeout(()=>fp.classList.remove('visible'),4000);
+    fp.textContent = text; fp.classList.add('visible');
+    _archFloatTimer = setTimeout(() => fp.classList.remove('visible'), 4000);
   }
 }
-function archEvent(key){
-  const lines=ARCH_QUOTES[key]; if(!lines) return;
+
+function archEvent(key) {
+  const lines = ARCH_QUOTES[key]; if (!lines) return;
   archSpeak(rand(lines));
 }
-function archGreet(){ archSpeak(rand(ARCH_QUOTES.greet)); archSetMode('idle'); }
+
+function archGreet() { archSpeak(rand(ARCH_QUOTES.greet)); archSetMode('idle'); }
 
 // Alias for callers that use the old name
 const archNotify = archEvent;
+
+// ── ENABLE / DISABLE ────────────────────────────────────────────────────────
+// Called by the "Enable companion" checkbox in the UI.
+function setArchEnabled(enabled) {
+  arch.enabled = enabled;
+  const left = document.querySelector('.companion-left');
+  if (enabled) {
+    if (left) left.classList.remove('companion-left--disabled');
+    archCheckSleepy(); // may stay idle if energy/time are fine
+  } else {
+    archSetMode('sleepy');
+    if (left) left.classList.add('companion-left--disabled');
+    // Dismiss any visible float popup immediately
+    const fp = document.getElementById('archFloat');
+    if (fp) { clearTimeout(_archFloatTimer); fp.classList.remove('visible'); }
+  }
+}
 
 // ── QA ──────────────────────────────────────────────────────────
 function renderQA(tab) {
@@ -264,8 +273,6 @@ function renderQA(tab) {
 function archQAAnswer(tab, i) {
   const item = (ARCH_QA[tab] || [])[i];
   if (!item) return;
-
-  archBumpActivity();
 
   const box = document.getElementById('companionSpeech');
   if (box) { box.style.opacity = 0.15; setTimeout(() => { box.textContent = item.a; box.style.opacity = 1; }, 150); }
@@ -290,7 +297,9 @@ function archQAAnswer(tab, i) {
   }
 
   clearTimeout(window._archModeBack);
-  window._archModeBack = setTimeout(() => archSetMode('idle'), 3200);
+  window._archModeBack = setTimeout(() => {
+    archCheckSleepy(); // respect sleepy conditions when returning to base
+  }, 3200);
 
   requestAnimationFrame(() => {
     if (!box || !ans) return;
@@ -312,58 +321,62 @@ function archRandomQA() {
 }
 
 // ── PASSIVE BEHAVIOUR ────────────────────────────────────────────────────────
-setInterval(()=>{
-  if(!arch.enabled) return;
+// Runs every 15 s. Drains energy/mood, checks sleepy conditions, and
+// occasionally emits an idle quote if Archibald is awake.
+setInterval(() => {
+  if (!arch.enabled) return;
   arch.energy = Math.max(0, arch.energy - 1);
   arch.mood   = Math.max(0, arch.mood   - 0.5);
-  if(arch.energy < 20 && arch.mode !== 'sleepy' && !_isJudging) archSetMode('sleepy');
-  else if(arch.energy > 50 && arch.mode === 'sleepy') archSetMode('idle');
   updateArchStats();
-  if(Math.random() < 0.25 && !_isJudging) archSpeak(rand(ARCH_QUOTES.idle));
+  archCheckSleepy();
+  if (arch.mode === 'idle' && Math.random() < 0.25) {
+    archSpeak(rand(ARCH_QUOTES.idle));
+  }
 }, 15000);
 
-function updateArchStats(){
-  const el = id => document.getElementById(id);
-  const fill = (bar, val) => { if(bar) bar.style.width = Math.max(0,Math.min(100,val))+'%'; };
-  fill(el('archMoodBar'),  arch.mood);
-  fill(el('archFocusBar'), arch.focus);
-  fill(el('archEnergyBar'),arch.energy);
+function updateArchStats() {
+  const el  = id => document.getElementById(id);
+  const fill = (bar, val) => { if (bar) bar.style.width = Math.max(0, Math.min(100, val)) + '%'; };
+  fill(el('archMoodBar'),   arch.mood);
+  fill(el('archFocusBar'),  arch.focus);
+  fill(el('archEnergyBar'), arch.energy);
 }
 
 // ── EVENTS ────────────────────────────────────────────────────────────────────
-function archOnTaskDone(){
-  archBumpActivity();
-  arch.xp += 10; arch.mood = Math.min(100, arch.mood+10);
+function archOnTaskDone() {
+  arch.xp += 10; arch.mood = Math.min(100, arch.mood + 10);
   archSetMode('excited');
   archEvent('task_done');
   clearTimeout(window._archModeBack);
-  window._archModeBack = setTimeout(()=>archSetMode('idle'),3000);
+  window._archModeBack = setTimeout(() => archCheckSleepy(), 3000);
 }
-function archOnTaskAdd(){
-  archBumpActivity();
-  arch.focus = Math.min(100, arch.focus+5);
+function archOnTaskAdd() {
+  arch.focus = Math.min(100, arch.focus + 5);
   archEvent('task_add');
 }
-function archOnTimerDone(){
-  archBumpActivity();
-  arch.xp += 20; arch.energy = Math.max(0, arch.energy-10);
+function archOnTimerDone() {
+  // Alarm fires restore energy (+25) — Archibald perks up at the bell
+  arch.xp += 20;
+  arch.energy = Math.min(100, arch.energy + 25);
   archSetMode('excited');
   archEvent('timer_done');
+  updateArchStats();
   clearTimeout(window._archModeBack);
-  window._archModeBack = setTimeout(()=>archSetMode('idle'),3000);
+  window._archModeBack = setTimeout(() => archCheckSleepy(), 3000);
 }
-function archOnTimerAdd(){
-  archBumpActivity();
-  arch.focus = Math.min(100, arch.focus+3);
+function archOnTimerAdd() {
+  arch.focus = Math.min(100, arch.focus + 3);
   archEvent('timer_add');
 }
-function archOnPet(){
-  archBumpActivity();
-  arch.mood = Math.min(100, arch.mood+15);
+function archOnPet() {
+  // Petting restores energy (+40) — the most direct way to wake him up
+  arch.mood   = Math.min(100, arch.mood + 15);
+  arch.energy = Math.min(100, arch.energy + 40);
   archSetMode('excited');
   archEvent('pet');
+  updateArchStats();
   clearTimeout(window._archModeBack);
-  window._archModeBack = setTimeout(()=>archSetMode('idle'),2500);
+  window._archModeBack = setTimeout(() => archCheckSleepy(), 2500);
 }
-function archOnExport(){ archBumpActivity(); archEvent('export'); }
-function archOnImport(){ archBumpActivity(); archEvent('import'); }
+function archOnExport() { archEvent('export'); }
+function archOnImport() { archEvent('import'); }
