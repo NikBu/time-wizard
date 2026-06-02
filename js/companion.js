@@ -50,7 +50,22 @@ const ARCH_QUOTES = {
   idle: [
     'Silence is useful; it lets intention speak louder.',
     'Do not confuse stillness with failure. Even owls pause.',
-    'If the day feels tangled, choose the smallest next step.'
+    'If the day feels tangled, choose the smallest next step.',
+    'A list unstarted is still a list. The ink is already half the work.',
+    'Owls are patient creatures. The task will still be there once you have gathered yourself.',
+    'Every grand endeavour began as a single item on someone\'s list.',
+    'The hardest part of any task is the moment before it begins.',
+    'You are further along than you were yesterday. That counts for something.',
+    'A small completion is still a completion. Do not dismiss it.',
+    'The owl observes without judgement. For now.',
+    'Busyness and progress are not the same creature. I have seen both.',
+    'Rest is not idleness. It is maintenance. Schedule it accordingly.',
+    'One task at a time. The list will wait; it has no other appointments.',
+    'Precision is a form of kindness — to your future self, who will not have to redo the work.',
+    'If you do not know where to begin, begin with what you already know how to do.',
+    'The clock does not pause for hesitation. Neither should you, ideally.',
+    'Even the owl returns to the same perch. Routine is not monotony; it is reliability.',
+    'Check something off. Anything. Momentum is a biological need, not merely a metaphor.'
   ],
   export: [
     'A wise wizard keeps backups.',
@@ -159,21 +174,26 @@ function archSpeak(text, floatToo = true) {
       // After render, check if it overflows the fixed 120px block
       requestAnimationFrame(() => {
         if (box.scrollHeight > box.clientHeight + 2) {
-          // Build a clickable arrow that scrolls to qaAnswer
+          // Build a clickable arrow with generous padding for easy clicking
           const arrow = document.createElement('button');
-          arrow.textContent = ' ↓';
+          arrow.textContent = '↓';
           arrow.title = 'Read full answer below';
           arrow.style.cssText = [
-            'display:inline',
+            'display:inline-flex',
+            'align-items:center',
+            'justify-content:center',
             'background:none',
             'border:none',
-            'padding:0',
-            'margin-left:2px',
-            'font-size:inherit',
+            'padding:2px 6px',
+            'margin-left:3px',
+            'font-size:1em',
             'cursor:pointer',
             'color:var(--color-primary)',
             'line-height:inherit',
-            'vertical-align:baseline'
+            'vertical-align:baseline',
+            'min-width:24px',
+            'min-height:24px',
+            'border-radius:4px'
           ].join(';');
           arrow.addEventListener('click', () => {
             const ans = document.getElementById('qaAnswer');
