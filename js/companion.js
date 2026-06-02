@@ -1,4 +1,4 @@
-// ── ARCHIBALD COMPANION ─────────────────────────────────────────────────────
+// ── ARCHIBALD COMPANION ────────────────────────────────────────────────────
 const OWL = {
   idle:    './assets/idle.png',
   excited: './assets/excited.png',
@@ -59,6 +59,21 @@ const ARCH_QUOTES = {
   import: [
     'The archive has been restored.',
     'Memories returned to their shelves.'
+  ],
+  music_on: [
+    'Ah. The soundscape awakens. Focus, now.',
+    'A wise choice. Let the noise carry the restless parts of your mind.',
+    'Music engaged. The work may begin in earnest.'
+  ],
+  music_off: [
+    'Silence restored. Some thoughts only arrive in quiet.',
+    'The ambient fades. What remains is your own mind.',
+    'Paused. Even focus has its intervals.'
+  ],
+  theme_change: [
+    'A new aesthetic for the workspace. I approve.',
+    'The colours shift. The work, however, remains the same.',
+    'Redecorated. Now — back to the lists.'
   ]
 };
 
@@ -133,14 +148,44 @@ function archSetMode(mode) {
 }
 
 // ── SPEAK ──────────────────────────────────────────────────────────────────
-// Updates both the in-panel speech block and the floating popup.
-// floatToo=false skips the popup (used for silent mode-change feedback).
 function archSpeak(text, floatToo = true) {
-  // In-panel speech block
   const box = document.getElementById('companionSpeech');
   if (box) {
     box.style.opacity = 0.15;
-    setTimeout(() => { box.textContent = text; box.style.opacity = 1; }, 150);
+    setTimeout(() => {
+      // Set plain text
+      box.textContent = text;
+
+      // After render, check if it overflows the fixed 120px block
+      requestAnimationFrame(() => {
+        if (box.scrollHeight > box.clientHeight + 2) {
+          // Build a clickable arrow that scrolls to qaAnswer
+          const arrow = document.createElement('button');
+          arrow.textContent = ' ↓';
+          arrow.title = 'Read full answer below';
+          arrow.style.cssText = [
+            'display:inline',
+            'background:none',
+            'border:none',
+            'padding:0',
+            'margin-left:2px',
+            'font-size:inherit',
+            'cursor:pointer',
+            'color:var(--color-primary)',
+            'line-height:inherit',
+            'vertical-align:baseline'
+          ].join(';');
+          arrow.addEventListener('click', () => {
+            const ans = document.getElementById('qaAnswer');
+            if (ans && ans.style.display !== 'none') {
+              ans.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+          });
+          box.appendChild(arrow);
+        }
+        box.style.opacity = 1;
+      });
+    }, 150);
   }
 
   // Floating popup — suppressed when companion is disabled
@@ -152,7 +197,6 @@ function archSpeak(text, floatToo = true) {
 
   if (!popup || !bubble) return;
 
-  // Sync popup image to current mode
   if (popImg) popImg.src = OWL[arch.mode] || OWL.idle;
 
   clearTimeout(_archFloatTimer);
@@ -181,18 +225,14 @@ function setArchEnabled(enabled) {
 
   if (enabled) {
     if (left) left.classList.remove('companion-left--disabled');
-    // Speak enable quote before checkSleepy so arch.enabled=true allows float
     archSpeak(rand(ARCH_QUOTES.enable));
     archCheckSleepy();
   } else {
     archSetMode('sleepy');
     if (left) left.classList.add('companion-left--disabled');
-    // Speak disable quote (floatToo=false: popup is blocked anyway when disabled,
-    // but we still want the speech block to update before pointer-events go away)
     const box = document.getElementById('companionSpeech');
     const text = rand(ARCH_QUOTES.disable);
     if (box) { box.style.opacity = 0.15; setTimeout(() => { box.textContent = text; box.style.opacity = 1; }, 150); }
-    // Dismiss any visible popup
     const popup = document.getElementById('archPopup');
     if (popup) { clearTimeout(_archFloatTimer); popup.classList.remove('visible'); }
   }
@@ -219,9 +259,10 @@ function archQAAnswer(tab, i) {
   const item = (ARCH_QA[tab] || [])[i];
   if (!item) return;
 
-  const box = document.getElementById('companionSpeech');
-  if (box) { box.style.opacity = 0.15; setTimeout(() => { box.textContent = item.a; box.style.opacity = 1; }, 150); }
+  // Update speech block (archSpeak handles the overflow arrow)
+  archSpeak(item.a, false);
 
+  // Always show full answer in the qaAnswer panel below the chip list
   const ans = document.getElementById('qaAnswer');
   const txt = document.getElementById('qaAnswerText');
   if (ans && txt) {
@@ -242,16 +283,6 @@ function archQAAnswer(tab, i) {
 
   clearTimeout(window._archModeBack);
   window._archModeBack = setTimeout(() => archCheckSleepy(), 3200);
-
-  requestAnimationFrame(() => {
-    if (!box || !ans) return;
-    const isClipped = box.scrollHeight > box.clientHeight + 4;
-    if (!isClipped) return;
-    ans.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    ans.style.transition = 'box-shadow 0.2s ease';
-    ans.style.boxShadow = '0 0 0 3px oklch(from var(--color-primary) l c h / 0.45)';
-    setTimeout(() => { ans.style.boxShadow = ''; }, 900);
-  });
 }
 
 function archRandomQA() {
@@ -317,3 +348,6 @@ function archOnPet() {
 }
 function archOnExport() { archEvent('export'); }
 function archOnImport() { archEvent('import'); }
+function archOnMusicOn()  { archEvent('music_on');  }
+function archOnMusicOff() { archEvent('music_off'); }
+function archOnThemeChange() { archEvent('theme_change'); }

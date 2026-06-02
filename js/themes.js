@@ -1,4 +1,4 @@
-// ── THEMES ────────────────────────────────────────
+// ── THEMES ───────────────────────────────────────────────────
 const THEMES = [
   { id:'parchment', name:'Old Parchment', emoji:'📜',
     preview:{bg:'#f5efdf',surface:'#faf6ee',accent:'#8b6914',b1:'#8b6914',b2:'#c8a84b'},
@@ -36,7 +36,13 @@ function applyThemeVars(){
   Object.entries(vars).forEach(([k,v]) => document.documentElement.style.setProperty(k,v));
 }
 
-function setTheme(id){ activeThemeId = id; applyThemeVars(); renderThemes(); showToast('Theme applied!'); }
+function setTheme(id){
+  activeThemeId = id;
+  applyThemeVars();
+  renderThemes();
+  showToast('Theme applied!');
+  if(typeof archOnThemeChange === 'function') archOnThemeChange();
+}
 
 // Keep selectTheme as alias used by storage.js applyImportedState
 function selectTheme(id){ setTheme(id); }

@@ -3,7 +3,7 @@ const AMBIENTS = [
   { id:'brown_noise',  emoji:'🌊', name:'Deep Waterfall',   desc:'Brown noise — deep low-frequency rumble, like standing near a waterfall at dusk.' },
   { id:'pink_noise',   emoji:'🌧️', name:'Rain Veil',        desc:'Pink noise — soft rainfall hiss, smoother and gentler than white noise.' },
   { id:'library_hum',  emoji:'📚', name:'Library Hum',      desc:'Warm filtered noise + subtle tonal bed, like an old library ventilation and distant lamps.' },
-  { id:'forest_night', emoji:'🦉', name:'Forest Night',     desc:'Crickets, wind, distant owls — nocturnal woodland atmosphere.' },
+  { id:'forest_night', emoji:'🦩', name:'Forest Night',     desc:'Crickets, wind, distant owls — nocturnal woodland atmosphere.' },
   { id:'cafe_murmur',  emoji:'☕', name:'Café Murmur',      desc:'Muffled room tone, distant clinks, low conversation-like ambience.' },
   { id:'fireplace',    emoji:'🔥', name:'Fireplace',        desc:'Soft crackle, ember pops, warm low-end glow.' },
   { id:'ocean_waves',  emoji:'🌙', name:'Moonlit Shore',    desc:'Slow looping waves with a quiet, meditative rhythm.' },
@@ -36,6 +36,7 @@ function startMusic(){
     updateMusicStatus();
     updateMusicWidget();
     monitorCustomTrack();
+    if(typeof archOnMusicOn === 'function') archOnMusicOn();
     return;
   }
   actx();
@@ -45,6 +46,7 @@ function startMusic(){
   setViz(true);
   updateMusicStatus();
   updateMusicWidget();
+  if(typeof archOnMusicOn === 'function') archOnMusicOn();
 }
 function pauseMusic(){
   musicOn=false;
@@ -55,6 +57,7 @@ function pauseMusic(){
   updateMusicStatus();
   updateMusicWidget();
   stopMonitorCustomTrack();
+  if(typeof archOnMusicOff === 'function') archOnMusicOff();
 }
 function stopMusic(){
   musicOn=false;
@@ -65,6 +68,7 @@ function stopMusic(){
   updateMusicStatus();
   updateMusicWidget();
   stopMonitorCustomTrack();
+  if(typeof archOnMusicOff === 'function') archOnMusicOff();
 }
 function updateMusicStatus(){
   const np=document.getElementById('musicNowPlaying');
@@ -174,7 +178,7 @@ function stopMonitorCustomTrack(){
 }
 function fmtClock(sec){ sec=Math.floor(sec||0); const m=Math.floor(sec/60), s=sec%60; return `${m}:${String(s).padStart(2,'0')}`; }
 
-// ── AMBIENT GENERATORS ────────────────────────────
+// ── AMBIENT GENERATORS ─────────────────
 function createAmbient(id){
   const ctx=actx(), out=musicDest();
   const nodes=[];
@@ -219,13 +223,12 @@ playSound = function(type){
   if(mg){ mg.gain.setTargetAtTime(_musicVol, ctx.currentTime + 1.2, 0.25); }
 };
 
-// If any timer starts and music is selected, auto-play; if all timers stop, keep current state (manual control only)
 document.addEventListener('click', e => {
   const btn = e.target.closest('#musicPlayBtn,#mwPlayBtn');
   if(btn && actx().state==='suspended') actx().resume();
 });
 
-// ── INIT MUSIC UI ─────────────────────────────────
+// ── INIT MUSIC UI ─────────────────
 function initMusicUI(){
   renderAmbientGrid();
   renderCustomMusicList();
