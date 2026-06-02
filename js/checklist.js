@@ -136,7 +136,6 @@ function _renderNodes(tasks, pid){
     const canHaveChildren=t.depth<MAX_DEPTH;
     const depthClass=t.depth===0?'':t.depth===1?'depth-1':'depth-2';
 
-    // Collapse button: 3 states; depth-2 nodes get nothing
     let collapseBtn='';
     if(canHaveChildren){
       if(!hasChildren){
@@ -152,7 +151,6 @@ function _renderNodes(tasks, pid){
       ? `<ul class="task-tree task-tree--nested" ondragover="_onTaskDragOver(event,${t.id})" ondrop="_onTaskDrop(event,${t.id})">${_renderNodes(tasks,t.id)}</ul>`
       : '';
 
-    // ── Repeat vs normal check widget ────────────────────────────────
     const isRepeat = !!t.repeat;
     const rCount   = t.repeatCount || 0;
     const rGoal    = t.repeatGoal  || 0;
@@ -182,9 +180,7 @@ function _renderNodes(tasks, pid){
             <button class="btn btn-icon btn-ghost btn-sm" title="Edit" onclick="editTask(${t.id})"><i data-lucide="pencil" style="width:11px;height:11px;"></i></button>
             <button class="btn btn-icon btn-ghost btn-sm" title="Note" onclick="toggleNote(${t.id})"><i data-lucide="sticky-note" style="width:11px;height:11px;"></i></button>
             <button class="btn btn-icon btn-ghost btn-sm" title="Copy" onclick="copyTask(${t.id})"><i data-lucide="copy" style="width:11px;height:11px;"></i></button>
-            <button class="btn btn-icon btn-ghost btn-sm ${isRepeat?'text-primary':''}"
-              title="${isRepeat?'Repeatable (click to disable)':'Make repeatable'}"
-              onclick="toggleRepeat(${t.id})">
+            <button class="btn btn-icon btn-ghost btn-sm ${isRepeat?'text-primary':''}" title="${isRepeat?'Repeatable (click to disable)':'Make repeatable'}" onclick="toggleRepeat(${t.id})">
               <i data-lucide="repeat" style="width:11px;height:11px;${isRepeat?'color:var(--color-primary);':''}"></i>
             </button>
             ${canHaveChildren
@@ -222,29 +218,78 @@ function toggleCollapse(id){
   renderChecklist();
 }
 
+// ── REPEAT GOAL MODAL ────────────────────────────────────────────────────────
+// A lightweight in-page modal that avoids prompt() for cross-device compatibility.
+let _repeatGoalPendingId = null;
+
+function _ensureRepeatGoalModal(){
+  if(document.getElementById('repeatGoalModal')) return;
+  const el = document.createElement('div');
+  el.id = 'repeatGoalModal';
+  el.className = 'repeat-goal-modal-overlay hidden';
+  el.innerHTML = `
+    <div class="repeat-goal-modal" role="dialog" aria-modal="true" aria-labelledby="rgmTitle">
+      <h3 id="rgmTitle">Set repeat goal</h3>
+      <p>How many repetitions = task complete?<br>Leave blank or set 0 for unlimited (no auto-complete).</p>
+      <input type="number" id="rgmInput" min="0" placeholder="e.g. 10" />
+      <div class="repeat-goal-modal-actions">
+        <button class="btn btn-ghost" onclick="_cancelRepeatGoalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="_confirmRepeatGoalModal()">Confirm</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  // Close on backdrop click
+  el.addEventListener('click', e => { if(e.target === el) _cancelRepeatGoalModal(); });
+  // Confirm on Enter
+  document.getElementById('rgmInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter') _confirmRepeatGoalModal();
+    if(e.key === 'Escape') _cancelRepeatGoalModal();
+  });
+}
+
+function _openRepeatGoalModal(taskId){
+  _ensureRepeatGoalModal();
+  _repeatGoalPendingId = taskId;
+  const overlay = document.getElementById('repeatGoalModal');
+  const inp = document.getElementById('rgmInput');
+  inp.value = '';
+  overlay.classList.remove('hidden');
+  requestAnimationFrame(() => inp.focus());
+}
+
+function _cancelRepeatGoalModal(){
+  document.getElementById('repeatGoalModal').classList.add('hidden');
+  _repeatGoalPendingId = null;
+}
+
+function _confirmRepeatGoalModal(){
+  const id = _repeatGoalPendingId;
+  document.getElementById('repeatGoalModal').classList.add('hidden');
+  _repeatGoalPendingId = null;
+  if(id === null) return;
+  const raw = document.getElementById('rgmInput').value;
+  const goal = Math.max(0, parseInt(raw) || 0);
+  const list = _getList(); if(!list) return;
+  const t = list.tasks.find(x => x.id === id); if(!t) return;
+  t.repeat = true;
+  t.repeatCount = 0;
+  t.repeatGoal  = goal;
+  t.done = false;
+  renderChecklist();
+}
+
 // ── REPEAT TASK ─────────────────────────────────────────────────────────────
 function toggleRepeat(id){
   const list=_getList(); if(!list) return;
   const t=list.tasks.find(x=>x.id===id); if(!t) return;
   if(!t.repeat){
-    // Enable repeat: ask for a goal (0 = no auto-complete)
-    const raw = prompt(
-      'Set a repeat goal (how many times = done)?\nLeave blank or enter 0 for no auto-complete.',
-      ''
-    );
-    if(raw === null) return; // cancelled
-    const goal = parseInt(raw) || 0;
-    t.repeat = true;
-    t.repeatCount = 0;
-    t.repeatGoal  = Math.max(0, goal);
-    t.done = false; // un-complete if it was done
+    _openRepeatGoalModal(id);
   } else {
-    // Disable repeat: restore to normal checkbox
     t.repeat = false;
     t.repeatCount = 0;
     t.repeatGoal  = 0;
+    renderChecklist();
   }
-  renderChecklist();
 }
 
 function incrementRepeat(id){
@@ -253,14 +298,15 @@ function incrementRepeat(id){
 
   const goalMet = t.repeatGoal > 0 && (t.repeatCount||0) >= t.repeatGoal;
   if(goalMet){
-    // Goal already met — reset counter (start a new cycle)
+    // Reset for a new cycle
     t.repeatCount = 0;
     t.done = false;
     renderChecklist();
     return;
   }
 
-  t.repeatCount = (t.repeatCount || 0) + 1;
+  const prevCount = t.repeatCount || 0;
+  t.repeatCount = prevCount + 1;
 
   // Bump animation
   requestAnimationFrame(()=>{
@@ -268,21 +314,39 @@ function incrementRepeat(id){
     if(btn){ btn.classList.remove('bump'); void btn.offsetWidth; btn.classList.add('bump'); }
   });
 
-  // Check if goal just met
-  if(t.repeatGoal > 0 && t.repeatCount >= t.repeatGoal){
-    t.done = true;
+  if(t.repeatGoal > 0){
+    // ── Limited repeats ──────────────────────────────────────────────────────
+    // Award points using floor-difference so that:
+    //   • every increment gives either floor(pts/goal) or ceil(pts/goal) pts
+    //   • the sum over a full cycle equals exactly pts
+    //   • on the final rep the remaining pts are awarded (making total = pts)
+    //   • result over one full cycle = pts, over two full cycles = 2×pts ✓
+    const pts   = t.pts;
+    const goal  = t.repeatGoal;
+    const after  = Math.floor(pts * t.repeatCount / goal);
+    const before = Math.floor(pts * prevCount      / goal);
+    const award  = after - before;  // always >= 0, sums to pts over full cycle
+
+    if(award > 0){
+      totalPts += award;
+      updateHeaderPts();
+      if(typeof rewardsRender==='function') rewardsRender();
+    }
+
+    if(t.repeatCount >= goal){
+      t.done = true;
+      archNotify('task_done');
+      showToast(`✦ +${award} pts! "${t.text}" — goal reached!`, 'success');
+    } else {
+      showToast(`↻ ${t.text}: ${t.repeatCount} / ${goal} reps${award>0?' (+'+award+' pts)':''}`);
+    }
+  } else {
+    // ── Unlimited repeats ────────────────────────────────────────────────────
+    // Award full pts on every rep (no auto-complete, purely additive)
     totalPts += t.pts;
     updateHeaderPts();
     if(typeof rewardsRender==='function') rewardsRender();
-    archNotify('task_done');
-    showToast(`✦ +${t.pts} pts! "${t.text}" — goal reached!`, 'success');
-  } else {
-    // Award a fraction of pts per rep when a goal is set, or nothing when freeform
-    if(t.repeatGoal > 0){
-      const frac = Math.floor(t.pts / t.repeatGoal);
-      if(frac > 0){ totalPts += frac; updateHeaderPts(); if(typeof rewardsRender==='function') rewardsRender(); }
-    }
-    showToast(`↻ ${t.text}: ${t.repeatCount}${t.repeatGoal>0?' / '+t.repeatGoal:''} reps`);
+    showToast(`↻ ${t.text}: ${t.repeatCount} reps (+${t.pts} pts)`);
   }
 
   renderChecklist(); renderLists();

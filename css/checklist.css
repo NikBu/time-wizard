@@ -52,7 +52,6 @@
 
 .task-item {
   display: flex;
-  /* Centre-align short single-line tasks; multi-line tasks naturally push things down */
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3);
@@ -67,9 +66,7 @@
 .task-item.drag-over { outline: 2px dashed var(--color-primary); outline-offset: -2px; }
 .task-item.dragging  { opacity: 0.4; }
 
-/* ── Collapse button ───────────────────────────────────────────────────────
-   Three states: leaf (dot, inert), open (▼, clickable), closed (▶, clickable)
-   All three are always visible. depth-2 nodes get nothing. */
+/* ── Collapse button ─────────────────────────────────────────────────────── */
 .task-collapse-btn {
   flex-shrink: 0;
   align-self: flex-start;
@@ -81,11 +78,10 @@
   border-radius: var(--radius-sm);
   font-size: 10px;
   line-height: 1;
-  margin-top: 1px;
+  margin-top: 5px;
   transition: background var(--trans), color var(--trans), border-color var(--trans);
 }
 
-/* Leaf state — defined but inactive: visible border, no fill, muted dot */
 .task-collapse-leaf {
   cursor: default;
   border: 1px solid var(--color-border);
@@ -96,7 +92,6 @@
   letter-spacing: -1px;
 }
 
-/* Open state — teal, shows children are expanded */
 .task-collapse-open {
   background: var(--color-primary-highlight);
   color: var(--color-primary);
@@ -108,7 +103,6 @@
   color: #fff;
 }
 
-/* Closed state — muted surface, shows children are hidden */
 .task-collapse-closed {
   background: var(--color-surface-dynamic);
   color: var(--color-text-muted);
@@ -125,13 +119,13 @@
 .task-drag-handle {
   font-size: 14px; color: var(--color-text-faint); cursor: grab;
   padding: 0 2px; flex-shrink: 0; line-height: 1;
-  align-self: flex-start; margin-top: 2px;
+  align-self: flex-start; margin-top: 5px;
   opacity: 0; transition: opacity var(--trans);
 }
 .task-item:hover .task-drag-handle { opacity: 1; }
 .task-drag-handle:active { cursor: grabbing; }
 
-/* ── Checkbox ─────────────────────────────────────────────────────────────────────── */
+/* ── Checkbox ──────────────────────────────────────────────────────────── */
 .task-check {
   flex-shrink: 0;
   width: 20px;
@@ -143,10 +137,8 @@
   justify-content: center;
   cursor: pointer;
   transition: all var(--trans);
-  /* Align with the first line of text: task-body is flex-start aligned
-     and text has line-height 1.5 * ~14px ≈ 21px, so the box sits flush */
   align-self: flex-start;
-  margin-top: 1px;
+  margin-top: 5px;
 }
 .task-check:hover { border-color: var(--color-primary); }
 .task-item.done .task-check { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
@@ -155,7 +147,7 @@
 .task-repeat-btn {
   flex-shrink: 0;
   align-self: flex-start;
-  margin-top: 1px;
+  margin-top: 5px;
   min-width: 32px;
   height: 20px;
   padding: 0 var(--space-1);
@@ -177,28 +169,52 @@
   background: var(--color-primary);
   color: #fff;
 }
-/* Flash animation when counter increments */
 @keyframes repeat-bump {
   0%   { transform: scale(1); }
   40%  { transform: scale(1.25); }
   100% { transform: scale(1); }
 }
 .task-repeat-btn.bump { animation: repeat-bump 0.25s ease-out; }
-/* When the goal is met, style like a completed checkbox */
 .task-repeat-btn.goal-met {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: #fff;
 }
 
+/* ── Repeat goal modal ───────────────────────────────────────────────────── */
+.repeat-goal-modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: oklch(0.1 0 0 / 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-4);
+}
+.repeat-goal-modal-overlay.hidden { display: none; }
+.repeat-goal-modal {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  width: 100%; max-width: 360px;
+  box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column; gap: var(--space-4);
+}
+.repeat-goal-modal h3 { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; margin: 0; }
+.repeat-goal-modal p  { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0; }
+.repeat-goal-modal input[type="number"] {
+  width: 100%; font-size: var(--text-base);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.repeat-goal-modal input[type="number"]:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.repeat-goal-modal-actions { display: flex; gap: var(--space-2); justify-content: flex-end; }
+
 /* ── Task body ─────────────────────────────────────────────────────────────────────── */
 .task-body { flex: 1; min-width: 0; }
 .task-main-row {
   display: flex;
-  /* Use center instead of baseline — baseline on a flex row with icons/buttons
-     causes the text to sit ~2px above the checkbox. Center keeps everything
-     on the same optical axis for single-line tasks while still looking fine
-     on multi-line ones (the controls just float to the top-center of the row). */
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
