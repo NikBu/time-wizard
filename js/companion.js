@@ -1,10 +1,10 @@
-// ── ARCHIBALD COMPANION ────────────────────────────────────────────────────────
+// ── ARCHIBALD COMPANION ─────────────────────────────────────────────────────
 const OWL = {
-  idle:'https://user-gen-media-assets.s3.amazonaws.com/seedream_images/d728ba27-b057-453a-8ab6-e5ea7a6e0025.png',
-  excited:'https://user-gen-media-assets.s3.amazonaws.com/seedream_images/8e1c0322-475c-4e86-b2aa-e065f656ff6d.png',
-  sleepy:'https://user-gen-media-assets.s3.amazonaws.com/seedream_images/cff91656-52f5-487d-8ad5-dde4cd311612.png',
-  magic:'https://user-gen-media-assets.s3.amazonaws.com/seedream_images/31df42f0-a7b3-496a-b2fd-0f385409cfdb.png',
-  judging:'https://user-gen-media-assets.s3.amazonaws.com/seedream_images/8e9f5b80-3532-4a9a-b163-3ed770d0e592.png'
+  idle:    './assets/idle.png',
+  excited: './assets/excited.png',
+  sleepy:  './assets/sleepy.png',
+  magic:   './assets/magic.png',
+  judging: './assets/judging.png'
 };
 const ARCH_QUOTES = {
   greet:[
@@ -52,7 +52,7 @@ const ARCH_QUOTES = {
   ]
 };
 
-// ── QA DATABASE ────────────────────────────────────────────────────────────────
+// ── QA DATABASE ────────────────────────────────────────────────
 const ARCH_QA = {
   guide: [
     {
@@ -205,7 +205,7 @@ function archGreet(){ archSpeak(rand(ARCH_QUOTES.greet)); archSetMode('idle'); }
 // Alias for callers that use the old name
 const archNotify = archEvent;
 
-// ── QA ────────────────────────────────────────────────────────────────────────
+// ── QA ────────────────────────────────────────────────────────
 function renderQA(tab) {
   _archQATab = tab;
 
@@ -289,7 +289,7 @@ function archRandomQA() {
   archQAAnswer(_archQATab, i);
 }
 
-// ── PASSIVE BEHAVIOUR ──────────────────────────────────────────────────────────────────────
+// ── PASSIVE BEHAVIOUR ────────────────────────────────────────────────────────
 setInterval(()=>{
   if(!arch.enabled) return;
   arch.energy = Math.max(0, arch.energy - 1);
@@ -308,7 +308,7 @@ function updateArchStats(){
   fill(el('archEnergyBar'),arch.energy);
 }
 
-// ── EVENTS ───────────────────────────────────────────────────────────────────────────────
+// ── EVENTS ────────────────────────────────────────────────────────────────────
 function archOnTaskDone(){
   arch.xp += 10; arch.mood = Math.min(100, arch.mood+10);
   archSetMode('excited');
