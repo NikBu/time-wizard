@@ -1,4 +1,4 @@
-// ── ARCHIBALD COMPANION ─────────────────────────────────
+// ── ARCHIBALD COMPANION ────────────────────────────────────────────────────────
 const OWL = {
   idle:'https://user-gen-media-assets.s3.amazonaws.com/seedream_images/d728ba27-b057-453a-8ab6-e5ea7a6e0025.png',
   excited:'https://user-gen-media-assets.s3.amazonaws.com/seedream_images/8e1c0322-475c-4e86-b2aa-e065f656ff6d.png',
@@ -52,7 +52,7 @@ const ARCH_QUOTES = {
   ]
 };
 
-// ── QA DATABASE ────────────────────────────────────────────────
+// ── QA DATABASE ────────────────────────────────────────────────────────────────
 const ARCH_QA = {
   guide: [
     {
@@ -205,7 +205,7 @@ function archGreet(){ archSpeak(rand(ARCH_QUOTES.greet)); archSetMode('idle'); }
 // Alias for callers that use the old name
 const archNotify = archEvent;
 
-// ── QA ────────────────────────────────────────────────────────
+// ── QA ────────────────────────────────────────────────────────────────────────
 function renderQA(tab) {
   _archQATab = tab;
 
@@ -263,6 +263,22 @@ function archQAAnswer(tab, i) {
 
   clearTimeout(window._archModeBack);
   window._archModeBack = setTimeout(() => archSetMode('idle'), 3200);
+
+  // If the speech block is clipping the answer, guide the user down to the
+  // full answer panel with a smooth scroll + a brief highlight pulse.
+  // We wait one frame so the answer panel has been rendered and measured.
+  requestAnimationFrame(() => {
+    if (!box || !ans) return;
+    const isClipped = box.scrollHeight > box.clientHeight + 4; // 4px tolerance
+    if (!isClipped) return;
+
+    ans.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // Pulse the answer panel border to draw the eye
+    ans.style.transition = 'box-shadow 0.2s ease';
+    ans.style.boxShadow = '0 0 0 3px oklch(from var(--color-primary) l c h / 0.45)';
+    setTimeout(() => { ans.style.boxShadow = ''; }, 900);
+  });
 }
 
 // Random question from current tab (triggered by portrait click)
@@ -273,7 +289,7 @@ function archRandomQA() {
   archQAAnswer(_archQATab, i);
 }
 
-// ── PASSIVE BEHAVIOUR ────────────────────────────────────────────────────────
+// ── PASSIVE BEHAVIOUR ──────────────────────────────────────────────────────────────────────
 setInterval(()=>{
   if(!arch.enabled) return;
   arch.energy = Math.max(0, arch.energy - 1);
@@ -292,7 +308,7 @@ function updateArchStats(){
   fill(el('archEnergyBar'),arch.energy);
 }
 
-// ── EVENTS ────────────────────────────────────────────────────────────────────
+// ── EVENTS ───────────────────────────────────────────────────────────────────────────────
 function archOnTaskDone(){
   arch.xp += 10; arch.mood = Math.min(100, arch.mood+10);
   archSetMode('excited');
