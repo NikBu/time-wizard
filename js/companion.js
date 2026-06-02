@@ -7,46 +7,56 @@ const OWL = {
   judging: './assets/judging.png'
 };
 const ARCH_QUOTES = {
-  greet:[
-    'Ah, another page in the grand ledger of your day.',
-    'Welcome back, apprentice of order.',
-    'The clock is wound, the lists await, and I am at your service.'
+  greet: [
+    'Ah, another page in the grand ledger of your day. I am ready when you are.',
+    'Welcome back, apprentice of order. The lists await, and I am at your service.',
+    'The clock is wound, and I am awake. Let us see what today demands of you.'
   ],
-  timer_add:[
+  enable: [
+    'Ah. You have called upon me again. Very well — I am watching.',
+    'Restored to duty. The ledger remains open.',
+    'Good. I was beginning to worry you had forgotten me.'
+  ],
+  disable: [
+    'I shall rest, then. Do try not to let the lists grow too long in my absence.',
+    'Very well. I will be here when you need me.',
+    'Dormant, but not gone. Carry on.'
+  ],
+  timer_add: [
     'A timer set is a promise made visible.',
     'Excellent. A measured step toward mastery.',
     'Time, once named, becomes easier to tame.'
   ],
-  timer_done:[
+  timer_done: [
     'Splendid! Another interval conquered.',
     'The bell tolls for progress, not for doom.',
     'Well done. Even small victories gild the day.'
   ],
-  task_add:[
+  task_add: [
     'A task written is a thought relieved of duty.',
     'Into the ledger it goes.',
     'Good. A wandering idea now has a perch.'
   ],
-  task_done:[
+  task_done: [
     'Marked complete — a satisfying little spell.',
     'Another burden reduced to a neat line of ink.',
     'The list grows shorter. How elegant.'
   ],
-  pet:[
+  pet: [
     'Hoot! Encouragement accepted.',
     'Your kindness is noted in the archives.',
     'A fine pat. Morale rises.'
   ],
-  idle:[
+  idle: [
     'Silence is useful; it lets intention speak louder.',
     'Do not confuse stillness with failure. Even owls pause.',
     'If the day feels tangled, choose the smallest next step.'
   ],
-  export:[
+  export: [
     'A wise wizard keeps backups.',
     'Excellent precaution. Even enchanted ledgers deserve copies.'
   ],
-  import:[
+  import: [
     'The archive has been restored.',
     'Memories returned to their shelves.'
   ]
@@ -55,137 +65,47 @@ const ARCH_QUOTES = {
 // ── QA DATABASE ────────────────────────────────────────────────
 const ARCH_QA = {
   guide: [
-    {
-      q: 'How do I add a subtask?',
-      a: 'Indent a task by pressing Tab while typing in the input field below any existing task. Three levels are permitted — though I advise restraint beyond two.'
-    },
-    {
-      q: 'How do I earn points?',
-      a: 'Complete tasks. Each carries a point value visible beside it. Those points flow into your Reward Cabinet to be spent on treats you have defined for yourself.'
-    },
-    {
-      q: 'How do repeating timers work?',
-      a: 'When creating a timer, change the Repeat Mode dropdown from Once to your preference — fixed intervals, Fibonacci, decreasing periods, even a random range. The clock obeys many masters.'
-    },
-    {
-      q: 'What is the Reward Cabinet?',
-      a: 'A shop of your own design. Add rewards with a name, emoji, and point cost. When your balance covers the price, redeem it. Archibald approves of earned indulgences.'
-    },
-    {
-      q: 'How do I reorder tasks?',
-      a: 'Drag them. Grip the handle on the left of any task row and place it where it belongs. The list will remember.'
-    },
-    {
-      q: 'How do I collapse a group?',
-      a: 'Click the small triangle beside any parent task. A filled triangle means the children are hidden; an open one means they are visible. The dot indicates a leaf — no children to collapse.'
-    },
-    {
-      q: 'How do I add a custom sound?',
-      a: 'Go to the Music tab and scroll to the Sound Library. You may upload an MP3, WAV, or OGG file. It will then appear as an alarm option when creating any timer.'
-    },
-    {
-      q: 'How do I use a Pomodoro preset?',
-      a: 'Open the Timers tab and look for the Quick Presets card on the right. The 25-minute Pomodoro is the first option. One click and it is added to your active timers.'
-    },
-    {
-      q: 'Can I duplicate a list?',
-      a: 'Yes. Open the list menu in the sidebar — the three dots beside any list name — and select Duplicate. The copy will include all tasks and subtasks intact.'
-    },
-    {
-      q: 'How do I add a note to a task?',
-      a: 'Expand the task options and look for the Notes field. It accepts freeform text and can be shown or hidden per task without affecting the task name itself.'
-    }
+    { q: 'How do I add a subtask?', a: 'Indent a task by pressing Tab while typing in the input field below any existing task. Three levels are permitted — though I advise restraint beyond two.' },
+    { q: 'How do I earn points?', a: 'Complete tasks. Each carries a point value visible beside it. Those points flow into your Reward Cabinet to be spent on treats you have defined for yourself.' },
+    { q: 'How do repeating timers work?', a: 'When creating a timer, change the Repeat Mode dropdown from Once to your preference — fixed intervals, Fibonacci, decreasing periods, even a random range. The clock obeys many masters.' },
+    { q: 'What is the Reward Cabinet?', a: 'A shop of your own design. Add rewards with a name, emoji, and point cost. When your balance covers the price, redeem it. Archibald approves of earned indulgences.' },
+    { q: 'How do I reorder tasks?', a: 'Drag them. Grip the handle on the left of any task row and place it where it belongs. The list will remember.' },
+    { q: 'How do I collapse a group?', a: 'Click the small triangle beside any parent task. A filled triangle means the children are hidden; an open one means they are visible. The dot indicates a leaf — no children to collapse.' },
+    { q: 'How do I add a custom sound?', a: 'Go to the Music tab and scroll to the Sound Library. You may upload an MP3, WAV, or OGG file. It will then appear as an alarm option when creating any timer.' },
+    { q: 'How do I use a Pomodoro preset?', a: 'Open the Timers tab and look for the Quick Presets card on the right. The 25-minute Pomodoro is the first option. One click and it is added to your active timers.' },
+    { q: 'Can I duplicate a list?', a: 'Yes. Open the list menu in the sidebar — the three dots beside any list name — and select Duplicate. The copy will include all tasks and subtasks intact.' },
+    { q: 'How do I add a note to a task?', a: 'Expand the task options and look for the Notes field. It accepts freeform text and can be shown or hidden per task without affecting the task name itself.' }
   ],
   trivia: [
-    {
-      q: 'Windows emoji shortcut?',
-      a: 'Press Win + . (the period key) on Windows 10 or 11 to summon the system emoji picker at any text cursor — quite useful for naming your rewards with proper flair.'
-    },
-    {
-      q: 'What are colored sounds?',
-      a: 'Sounds are named like light: white noise contains all frequencies equally. Brown noise sits lower and rougher — many find it masks distractions without the harshness of white. Pink noise lives between the two, falling off gently with frequency. Each colour suits a different mind.'
-    },
-    {
-      q: 'Why does 25 minutes work?',
-      a: 'Francesco Cirillo noticed that committing to an uninterrupted 25-minute block made starting feel far less daunting. The boundary is the trick, not the specific number. The tomato-shaped kitchen timer was merely a prop.'
-    },
-    {
-      q: 'Does music help you focus?',
-      a: 'Instrumental music with a stable rhythm tends to sustain attention without hijacking language processing. Lyrics compete directly with reading and writing — the brain cannot serve two verbal streams at once. Stick to ambient, classical, or lofi.'
-    },
-    {
-      q: 'What is task-switching cost?',
-      a: 'Every time you abandon one task for another, your brain spends roughly 20 minutes reclaiming its previous depth of focus. Interruptions are expensive on the cognitive ledger. Batching similar tasks into a single block reduces the toll considerably.'
-    },
-    {
-      q: 'What is the Zeigarnik effect?',
-      a: 'Bluma Zeigarnik observed that incomplete tasks occupy working memory far more than completed ones. Writing a task down — even without doing it — can partially close that loop and quieten the background hum of unfinished business.'
-    },
-    {
-      q: 'Why does a to-do list help?',
-      a: 'The act of externalising a task — moving it from mind to paper — reduces the cognitive load of remembering it. The brain stops rehearsing the item and can redirect that energy elsewhere. Lists are offloaded memory.'
-    },
-    {
-      q: 'What is deep work?',
-      a: 'Cal Newport defined deep work as cognitively demanding tasks performed in a state of distraction-free concentration. Even 90 minutes of genuine deep work per day is reported to outproduce a full day of fragmented, shallow effort.'
-    },
-    {
-      q: 'How long is a focus span?',
-      a: 'Research suggests sustained attention begins to degrade after roughly 45–90 minutes without a break. Shorter bursts — 25 to 50 minutes — followed by brief rests allow the prefrontal cortex to recover and maintain performance across a full day.'
-    },
-    {
-      q: 'Does caffeine really help?',
-      a: 'Caffeine blocks adenosine receptors, which delays the sensation of fatigue rather than eliminating it. The debt accumulates and arrives later. Timed well — about 90 minutes after waking — it is genuinely useful. Timed poorly, it disrupts sleep and compounds fatigue the following day.'
-    }
+    { q: 'Windows emoji shortcut?', a: 'Press Win + . (the period key) on Windows 10 or 11 to summon the system emoji picker at any text cursor — quite useful for naming your rewards with proper flair.' },
+    { q: 'What are colored sounds?', a: 'Sounds are named like light: white noise contains all frequencies equally. Brown noise sits lower and rougher — many find it masks distractions without the harshness of white. Pink noise lives between the two, falling off gently with frequency. Each colour suits a different mind.' },
+    { q: 'Why does 25 minutes work?', a: 'Francesco Cirillo noticed that committing to an uninterrupted 25-minute block made starting feel far less daunting. The boundary is the trick, not the specific number. The tomato-shaped kitchen timer was merely a prop.' },
+    { q: 'Does music help you focus?', a: 'Instrumental music with a stable rhythm tends to sustain attention without hijacking language processing. Lyrics compete directly with reading and writing — the brain cannot serve two verbal streams at once. Stick to ambient, classical, or lofi.' },
+    { q: 'What is task-switching cost?', a: 'Every time you abandon one task for another, your brain spends roughly 20 minutes reclaiming its previous depth of focus. Interruptions are expensive on the cognitive ledger. Batching similar tasks into a single block reduces the toll considerably.' },
+    { q: 'What is the Zeigarnik effect?', a: 'Bluma Zeigarnik observed that incomplete tasks occupy working memory far more than completed ones. Writing a task down — even without doing it — can partially close that loop and quieten the background hum of unfinished business.' },
+    { q: 'Why does a to-do list help?', a: 'The act of externalising a task — moving it from mind to paper — reduces the cognitive load of remembering it. The brain stops rehearsing the item and can redirect that energy elsewhere. Lists are offloaded memory.' },
+    { q: 'What is deep work?', a: 'Cal Newport defined deep work as cognitively demanding tasks performed in a state of distraction-free concentration. Even 90 minutes of genuine deep work per day is reported to outproduce a full day of fragmented, shallow effort.' },
+    { q: 'How long is a focus span?', a: 'Research suggests sustained attention begins to degrade after roughly 45–90 minutes without a break. Shorter bursts — 25 to 50 minutes — followed by brief rests allow the prefrontal cortex to recover and maintain performance across a full day.' },
+    { q: 'Does caffeine really help?', a: 'Caffeine blocks adenosine receptors, which delays the sensation of fatigue rather than eliminating it. The debt accumulates and arrives later. Timed well — about 90 minutes after waking — it is genuinely useful. Timed poorly, it disrupts sleep and compounds fatigue the following day.' }
   ],
   cheer: [
-    {
-      q: 'I\'m feeling stuck.',
-      a: 'Stuck is not stopped. Write the next single physical action — not the project, not the plan. One action. Then do only that. Momentum follows motion, not the other way around.'
-    },
-    {
-      q: 'I keep getting distracted.',
-      a: 'The mind wanders because it is alive. Gently return it, without drama or self-reproach. Each return is a small act of discipline, and small acts compound into something formidable over time.'
-    },
-    {
-      q: 'Remind me why this matters.',
-      a: 'Because unfinished things take up residence in the mind and charge rent — attention, energy, low-level dread. Completion is not merely productive. It is restful. The finished task stops talking.'
-    },
-    {
-      q: 'I need a confidence boost.',
-      a: 'You have finished things before. The evidence is in the completed items of your lists, if you care to look. Today is not the first time you have faced a difficult task. It is merely the most recent.'
-    },
-    {
-      q: 'I\'m tired.',
-      a: 'Then rest is the work. A tired mind makes poor decisions and poorer progress. Five minutes of stillness is not surrender — it is maintenance. Return sharper.'
-    },
-    {
-      q: 'I feel like I\'m falling behind.',
-      a: 'Behind whom? The pace you set yesterday was made by a different version of you, with different information. Revise the plan. Do the next right thing. That is all that is ever required.'
-    },
-    {
-      q: 'Nothing feels rewarding.',
-      a: 'That is a signal, not a verdict. It often means the tasks on your list have grown too large to feel completable. Break one into three. Finish the smallest piece. The reward circuit responds to completion, not scale.'
-    },
-    {
-      q: 'I don\'t know where to start.',
-      a: 'Start with the task you are most tempted to avoid. It is usually the one casting the longest shadow. Once begun, it shrinks. The rest of the list will feel lighter by comparison.'
-    }
+    { q: 'I\'m feeling stuck.', a: 'Stuck is not stopped. Write the next single physical action — not the project, not the plan. One action. Then do only that. Momentum follows motion, not the other way around.' },
+    { q: 'I keep getting distracted.', a: 'The mind wanders because it is alive. Gently return it, without drama or self-reproach. Each return is a small act of discipline, and small acts compound into something formidable over time.' },
+    { q: 'Remind me why this matters.', a: 'Because unfinished things take up residence in the mind and charge rent — attention, energy, low-level dread. Completion is not merely productive. It is restful. The finished task stops talking.' },
+    { q: 'I need a confidence boost.', a: 'You have finished things before. The evidence is in the completed items of your lists, if you care to look. Today is not the first time you have faced a difficult task. It is merely the most recent.' },
+    { q: 'I\'m tired.', a: 'Then rest is the work. A tired mind makes poor decisions and poorer progress. Five minutes of stillness is not surrender — it is maintenance. Return sharper.' },
+    { q: 'I feel like I\'m falling behind.', a: 'Behind whom? The pace you set yesterday was made by a different version of you, with different information. Revise the plan. Do the next right thing. That is all that is ever required.' },
+    { q: 'Nothing feels rewarding.', a: 'That is a signal, not a verdict. It often means the tasks on your list have grown too large to feel completable. Break one into three. Finish the smallest piece. The reward circuit responds to completion, not scale.' },
+    { q: 'I don\'t know where to start.', a: 'Start with the task you are most tempted to avoid. It is usually the one casting the longest shadow. Once begun, it shrinks. The rest of the list will feel lighter by comparison.' }
   ]
 };
 
-let _archQATab = 'guide'; // active tab
+let _archQATab = 'guide';
 
 const arch = { enabled: true, xp: 0, mood: 70, focus: 50, energy: 80, mode: 'idle' };
 let _archFloatTimer = null;
 
-// ── SLEEPY TRIGGER CHECK ────────────────────────────────────────────────────
-// Three independent conditions — any one is sufficient.
-// 1. Low energy (< 20)
-// 2. Morning hours 4–8 AM on the user's local clock
-// 3. Companion is disabled (arch.enabled === false)
-//
-// Returns true if Archibald should be in sleepy state.
+// ── SLEEPY CHECK ───────────────────────────────────────────────────────────
 function archShouldBeSleepy() {
   if (!arch.enabled) return true;
   if (arch.energy < 20) return true;
@@ -194,7 +114,6 @@ function archShouldBeSleepy() {
   return false;
 }
 
-// Call after any state-relevant change to apply sleepy or restore idle.
 function archCheckSleepy() {
   if (archShouldBeSleepy()) {
     if (arch.mode !== 'sleepy') archSetMode('sleepy');
@@ -213,43 +132,69 @@ function archSetMode(mode) {
   if (lbl) lbl.textContent = mode[0].toUpperCase() + mode.slice(1);
 }
 
+// ── SPEAK ──────────────────────────────────────────────────────────────────
+// Updates both the in-panel speech block and the floating popup.
+// floatToo=false skips the popup (used for silent mode-change feedback).
 function archSpeak(text, floatToo = true) {
+  // In-panel speech block
   const box = document.getElementById('companionSpeech');
-  if (box) { box.style.opacity = .15; setTimeout(() => { box.textContent = text; box.style.opacity = 1; }, 150); }
-  // Suppress floating popup when disabled or sleepy
-  if (!floatToo || !arch.enabled) return;
-  const fp = document.getElementById('archFloat');
-  if (fp) {
-    clearTimeout(_archFloatTimer);
-    fp.textContent = text; fp.classList.add('visible');
-    _archFloatTimer = setTimeout(() => fp.classList.remove('visible'), 4000);
+  if (box) {
+    box.style.opacity = 0.15;
+    setTimeout(() => { box.textContent = text; box.style.opacity = 1; }, 150);
   }
+
+  // Floating popup — suppressed when companion is disabled
+  if (!floatToo || !arch.enabled) return;
+
+  const popup  = document.getElementById('archPopup');
+  const bubble = document.getElementById('archPopupBubble');
+  const popImg = document.getElementById('archPopupImg');
+
+  if (!popup || !bubble) return;
+
+  // Sync popup image to current mode
+  if (popImg) popImg.src = OWL[arch.mode] || OWL.idle;
+
+  clearTimeout(_archFloatTimer);
+  bubble.textContent = text;
+  popup.classList.add('visible');
+  _archFloatTimer = setTimeout(() => popup.classList.remove('visible'), 4500);
 }
 
 function archEvent(key) {
-  const lines = ARCH_QUOTES[key]; if (!lines) return;
+  const lines = ARCH_QUOTES[key];
+  if (!lines) return;
   archSpeak(rand(lines));
 }
 
-function archGreet() { archSpeak(rand(ARCH_QUOTES.greet)); archSetMode('idle'); }
+function archGreet() {
+  archSetMode('idle');
+  archSpeak(rand(ARCH_QUOTES.greet));
+}
 
-// Alias for callers that use the old name
 const archNotify = archEvent;
 
 // ── ENABLE / DISABLE ────────────────────────────────────────────────────────
-// Called by the "Enable companion" checkbox in the UI.
 function setArchEnabled(enabled) {
   arch.enabled = enabled;
   const left = document.querySelector('.companion-left');
+
   if (enabled) {
     if (left) left.classList.remove('companion-left--disabled');
-    archCheckSleepy(); // may stay idle if energy/time are fine
+    // Speak enable quote before checkSleepy so arch.enabled=true allows float
+    archSpeak(rand(ARCH_QUOTES.enable));
+    archCheckSleepy();
   } else {
     archSetMode('sleepy');
     if (left) left.classList.add('companion-left--disabled');
-    // Dismiss any visible float popup immediately
-    const fp = document.getElementById('archFloat');
-    if (fp) { clearTimeout(_archFloatTimer); fp.classList.remove('visible'); }
+    // Speak disable quote (floatToo=false: popup is blocked anyway when disabled,
+    // but we still want the speech block to update before pointer-events go away)
+    const box = document.getElementById('companionSpeech');
+    const text = rand(ARCH_QUOTES.disable);
+    if (box) { box.style.opacity = 0.15; setTimeout(() => { box.textContent = text; box.style.opacity = 1; }, 150); }
+    // Dismiss any visible popup
+    const popup = document.getElementById('archPopup');
+    if (popup) { clearTimeout(_archFloatTimer); popup.classList.remove('visible'); }
   }
 }
 
@@ -288,7 +233,6 @@ function archQAAnswer(tab, i) {
   const chips = document.querySelectorAll('#qaChipGrid .qa-chip');
   if (chips[i]) chips[i].classList.add('qa-chip--active');
 
-  // guide + trivia → excited; cheer → magic
   if (tab === 'cheer') {
     arch.mood = Math.min(100, arch.mood + 5);
     archSetMode('magic');
@@ -297,9 +241,7 @@ function archQAAnswer(tab, i) {
   }
 
   clearTimeout(window._archModeBack);
-  window._archModeBack = setTimeout(() => {
-    archCheckSleepy(); // respect sleepy conditions when returning to base
-  }, 3200);
+  window._archModeBack = setTimeout(() => archCheckSleepy(), 3200);
 
   requestAnimationFrame(() => {
     if (!box || !ans) return;
@@ -312,7 +254,6 @@ function archQAAnswer(tab, i) {
   });
 }
 
-// Random question from current tab (triggered by portrait click)
 function archRandomQA() {
   const items = ARCH_QA[_archQATab] || [];
   if (!items.length) return;
@@ -321,8 +262,6 @@ function archRandomQA() {
 }
 
 // ── PASSIVE BEHAVIOUR ────────────────────────────────────────────────────────
-// Runs every 15 s. Drains energy/mood, checks sleepy conditions, and
-// occasionally emits an idle quote if Archibald is awake.
 setInterval(() => {
   if (!arch.enabled) return;
   arch.energy = Math.max(0, arch.energy - 1);
@@ -335,7 +274,7 @@ setInterval(() => {
 }, 15000);
 
 function updateArchStats() {
-  const el  = id => document.getElementById(id);
+  const el   = id => document.getElementById(id);
   const fill = (bar, val) => { if (bar) bar.style.width = Math.max(0, Math.min(100, val)) + '%'; };
   fill(el('archMoodBar'),   arch.mood);
   fill(el('archFocusBar'),  arch.focus);
@@ -355,7 +294,6 @@ function archOnTaskAdd() {
   archEvent('task_add');
 }
 function archOnTimerDone() {
-  // Alarm fires restore energy (+25) — Archibald perks up at the bell
   arch.xp += 20;
   arch.energy = Math.min(100, arch.energy + 25);
   archSetMode('excited');
@@ -369,7 +307,6 @@ function archOnTimerAdd() {
   archEvent('timer_add');
 }
 function archOnPet() {
-  // Petting restores energy (+40) — the most direct way to wake him up
   arch.mood   = Math.min(100, arch.mood + 15);
   arch.energy = Math.min(100, arch.energy + 40);
   archSetMode('excited');

@@ -81,13 +81,9 @@
 }
 
 /*
-  Speech block — middle ground between jumping (auto height) and clipping (fixed height).
-  - min-height shows ~2 lines comfortably for short quotes.
-  - max-height allows long quotes to breathe up to ~5 lines.
-  - max-height transition gives a gentle expansion instead of a jarring jump.
-  - Fade mask applies only at the bottom so clipped text is signalled, not hidden.
-  - align-items: flex-start keeps text anchored to top so the fade always
-    applies to the actual overflow edge, not to vertically-centred mid-content.
+  Speech block — fixed height sized to the longest expected quote.
+  No fade mask, no max-height animation. Layout stays stable.
+  Overflow is hidden; scrolling is intentionally not exposed.
 */
 .companion-speech {
   background: var(--color-surface-2);
@@ -98,19 +94,11 @@
   color: var(--color-text);
   font-style: italic;
   line-height: 1.55;
-  min-height: 52px;
-  max-height: 120px;
+  height: 120px;
   overflow: hidden;
   display: flex;
   align-items: flex-start;
-  transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
-  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-}
-
-/* When JS sets this class after a new quote arrives the block expands smoothly */
-.companion-speech--expanded {
-  max-height: 200px;
+  transition: opacity 0.2s ease;
 }
 
 /* Right column */
