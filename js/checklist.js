@@ -11,6 +11,128 @@ const MAX_DEPTH = 2;
 let lists=[], lidx=1, tidxc=1, activeList=null, totalPts=0;
 let _dragSrcListId=null, _dragSrcTaskId=null;
 
+// ── SETTINGS ────────────────────────────────────────────────────
+let checklistSettings = {
+  fontSize: 'medium',      // 'small' | 'medium' | 'large'
+  density: 'normal',       // 'compact' | 'normal' | 'relaxed'
+  showPoints: true,
+  defaultTaskPts: 10,
+  defaultSubPts: 5,
+  showProgressBar: true,
+  confirmDelete: false
+};
+
+function _applyChecklistSettings() {
+  const root = document.getElementById('checklistMain');
+  if (!root) return;
+  // Font size
+  const fsMap = { small: 'var(--text-xs)', medium: 'var(--text-sm)', large: 'var(--text-base)' };
+  root.style.setProperty('--cl-font-size', fsMap[checklistSettings.fontSize] || fsMap.medium);
+  // Density
+  const pdMap = { compact: 'var(--space-1) var(--space-2)', normal: 'var(--space-3)', relaxed: 'var(--space-4) var(--space-5)' };
+  root.style.setProperty('--cl-task-padding', pdMap[checklistSettings.density] || pdMap.normal);
+  // Progress bar
+  const pb = root.querySelector('.checklist-progress-bar');
+  if (pb) pb.style.display = checklistSettings.showProgressBar ? '' : 'none';
+}
+
+function openChecklistSettings() {
+  const panel = document.getElementById('clSettingsPanel');
+  if (!panel) return;
+  panel.classList.toggle('visible');
+}
+
+function _renderSettingsPanel() {
+  let el = document.getElementById('clSettingsPanel');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'clSettingsPanel';
+    el.className = 'cl-settings-panel';
+    document.getElementById('checklistMain').prepend(el);
+  }
+  el.innerHTML = `
+    <div class="cl-settings-header">
+      <span class="cl-settings-title"><i data-lucide="settings-2" style="width:13px;height:13px;vertical-align:-2px;"></i> List Settings</span>
+      <button class="btn btn-icon btn-ghost btn-sm" onclick="openChecklistSettings()" title="Close settings"><i data-lucide="x" style="width:12px;height:12px;"></i></button>
+    </div>
+    <div class="cl-settings-grid">
+      <div class="cl-settings-row">
+        <label class="cl-settings-label">Font size</label>
+        <div class="cl-seg-group">
+          <button class="cl-seg-btn ${checklistSettings.fontSize==='small'?'active':''}" onclick="_clSetSetting('fontSize','small')">S</button>
+          <button class="cl-seg-btn ${checklistSettings.fontSize==='medium'?'active':''}" onclick="_clSetSetting('fontSize','medium')">M</button>
+          <button class="cl-seg-btn ${checklistSettings.fontSize==='large'?'active':''}" onclick="_clSetSetting('fontSize','large')">L</button>
+        </div>
+      </div>
+      <div class="cl-settings-row">
+        <label class="cl-settings-label">Density</label>
+        <div class="cl-seg-group">
+          <button class="cl-seg-btn ${checklistSettings.density==='compact'?'active':''}" onclick="_clSetSetting('density','compact')">Compact</button>
+          <button class="cl-seg-btn ${checklistSettings.density==='normal'?'active':''}" onclick="_clSetSetting('density','normal')">Normal</button>
+          <button class="cl-seg-btn ${checklistSettings.density==='relaxed'?'active':''}" onclick="_clSetSetting('density','relaxed')">Relaxed</button>
+        </div>
+      </div>
+      <div class="cl-settings-row">
+        <label class="cl-settings-label">Default task pts</label>
+        <div class="num-wrap" style="width:80px;">
+          <input type="number" id="clSetDefaultPts" value="${checklistSettings.defaultTaskPts}" min="1" max="999"
+            onchange="_clSetSetting('defaultTaskPts', Math.max(1,parseInt(this.value)||1))">
+          <div class="num-spin">
+            <button onclick="_clStepSetting('defaultTaskPts',1)">▲</button>
+            <button onclick="_clStepSetting('defaultTaskPts',-1)">▼</button>
+          </div>
+        </div>
+      </div>
+      <div class="cl-settings-row">
+        <label class="cl-settings-label">Default subtask pts</label>
+        <div class="num-wrap" style="width:80px;">
+          <input type="number" id="clSetDefaultSubPts" value="${checklistSettings.defaultSubPts}" min="1" max="999"
+            onchange="_clSetSetting('defaultSubPts', Math.max(1,parseInt(this.value)||1))">
+          <div class="num-spin">
+            <button onclick="_clStepSetting('defaultSubPts',1)">▲</button>
+            <button onclick="_clStepSetting('defaultSubPts',-1)">▼</button>
+          </div>
+        </div>
+      </div>
+      <div class="cl-settings-row">
+        <label class="cl-settings-label">Show points on tasks</label>
+        <label class="cl-toggle-wrap">
+          <input type="checkbox" ${checklistSettings.showPoints?'checked':''} onchange="_clSetSetting('showPoints',this.checked)">
+          <span class="cl-toggle"></span>
+        </label>
+      </div>
+      <div class="cl-settings-row">
+        <label class="cl-settings-label">Show progress bar</label>
+        <label class="cl-toggle-wrap">
+          <input type="checkbox" ${checklistSettings.showProgressBar?'checked':''} onchange="_clSetSetting('showProgressBar',this.checked)">
+          <span class="cl-toggle"></span>
+        </label>
+      </div>
+      <div class="cl-settings-row">
+        <label class="cl-settings-label">Confirm before deleting tasks</label>
+        <label class="cl-toggle-wrap">
+          <input type="checkbox" ${checklistSettings.confirmDelete?'checked':''} onchange="_clSetSetting('confirmDelete',this.checked)">
+          <span class="cl-toggle"></span>
+        </label>
+      </div>
+    </div>`;
+  lucide.createIcons();
+}
+
+function _clSetSetting(key, value) {
+  checklistSettings[key] = value;
+  _renderSettingsPanel();
+  _applyChecklistSettings();
+  // Sync pts inputs in add-task rows if they exist
+  const ntp = document.getElementById('newTaskPts');
+  if (ntp && key === 'defaultTaskPts') ntp.value = value;
+}
+function _clStepSetting(key, delta) {
+  checklistSettings[key] = Math.max(1, (checklistSettings[key] || 1) + delta);
+  _renderSettingsPanel();
+  _applyChecklistSettings();
+}
+
 // ── HELPERS ──────────────────────────────────────────────────
 function _getList(){ return lists.find(l=>l.id===activeList); }
 function _getTask(id){ const l=_getList(); return l&&l.tasks.find(t=>t.id===id); }
@@ -96,6 +218,7 @@ function renderChecklist(){
   const dpts=list.tasks.reduce((a,t)=>a+(t.done?t.pts:0),0);
   const tpts=list.tasks.reduce((a,t)=>a+t.pts,0);
   const dc=top.filter(t=>t.done).length, pct=top.length?Math.round(dc/top.length*100):0;
+  const pbDisplay=checklistSettings.showProgressBar?'':'display:none;';
   main.innerHTML=`
     <div class="checklist-header">
       <div class="flex-row" style="gap:var(--space-2);min-width:0;">
@@ -106,10 +229,13 @@ function renderChecklist(){
       </div>
       <div class="flex-row">
         <button class="btn btn-sm btn-ghost" onclick="clearDone()"><i data-lucide="check-check" style="width:12px;height:12px;"></i> Clear done</button>
+        <button class="btn btn-icon btn-ghost" style="width:28px;height:28px;" title="List settings" onclick="openChecklistSettings()">
+          <i data-lucide="settings-2" style="width:13px;height:13px;"></i>
+        </button>
         <button class="btn btn-sm btn-danger" onclick="deleteList(${list.id})"><i data-lucide="trash-2" style="width:12px;height:12px;"></i></button>
       </div>
     </div>
-    <div class="checklist-progress-bar"><div class="checklist-progress-fill" style="width:${pct}%"></div></div>
+    <div class="checklist-progress-bar" style="${pbDisplay}"><div class="checklist-progress-fill" style="width:${pct}%"></div></div>
     <div class="checklist-stats">
       <div class="stat-pill"><strong>${dc}</strong> / ${top.length} done</div>
       <div class="stat-pill"><strong>${pct}%</strong></div>
@@ -119,22 +245,48 @@ function renderChecklist(){
       ondragover="_onTaskDragOver(event,null)" ondrop="_onTaskDrop(event,null)">${_renderNodes(list.tasks,null)}</ul>
     <div class="add-task-row mt-3">
       <input type="text" id="newTaskInput" placeholder="Add a task… (Enter)" onkeydown="if(event.key==='Enter')addTask()">
-      <div class="num-wrap"><input type="number" class="points-input" id="newTaskPts" value="10" min="1" max="100" title="Points"><div class="num-spin"><button onclick="stepNum('newTaskPts',1)">▲</button><button onclick="stepNum('newTaskPts',-1)">▼</button></div></div>
+      <div class="num-wrap"><input type="number" class="points-input" id="newTaskPts" value="${checklistSettings.defaultTaskPts}" min="1" max="100" title="Points"><div class="num-spin"><button onclick="stepNum('newTaskPts',1)">▲</button><button onclick="stepNum('newTaskPts',-1)">▼</button></div></div>
       <button class="btn btn-primary" onclick="addTask()"><i data-lucide="plus" style="width:13px;height:13px;"></i></button>
     </div>`;
   lucide.createIcons();
   _initExpandBtns();
+  _applyChecklistSettings();
+  _renderSettingsPanel();
+  _attachTaskKeyboardNav();
+}
+
+// ── KEYBOARD NAVIGATION FOR TASKS ─────────────────────────────────────────────────
+function _attachTaskKeyboardNav() {
+  // Alt+↑/↓ reorder, Alt+→/← indent/dedent
+  // We listen on the task tree container for efficiency
+  const tree = document.getElementById('taskTree');
+  if (!tree || tree._klAttached) return;
+  tree._klAttached = true;
+  tree.addEventListener('keydown', (e) => {
+    if (!e.altKey) return;
+    const li = e.target.closest('.task-item');
+    if (!li) return;
+    const id = parseInt(li.id.replace('task-li-', ''));
+    if (isNaN(id)) return;
+    if (e.key === 'ArrowUp')   { e.preventDefault(); moveTaskUp(id); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveTaskDown(id); }
+    if (e.key === 'ArrowRight'){ e.preventDefault(); indentTask(id); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); dedentTask(id); }
+  });
 }
 
 // ── RECURSIVE NODE RENDERER ───────────────────────────────────────────────
 function _renderNodes(tasks, pid){
-  return tasks.filter(t=>t.pid===pid).map(t=>{
+  const siblings = tasks.filter(t=>t.pid===pid);
+  return siblings.map((t, idx) => {
     const children=tasks.filter(c=>c.pid===t.id);
     const hasChildren=children.length>0;
     const isCollapsed=!!t.collapsed;
     const hasNote=t.note&&t.note.trim();
     const canHaveChildren=t.depth<MAX_DEPTH;
     const depthClass=t.depth===0?'':t.depth===1?'depth-1':'depth-2';
+    const isFirst = idx === 0;
+    const isLast  = idx === siblings.length - 1;
 
     let collapseBtn='';
     if(canHaveChildren){
@@ -163,19 +315,28 @@ function _renderNodes(tasks, pid){
       checkWidget = `<div class="task-check" onclick="toggleTask(${t.id})" role="checkbox" aria-checked="${t.done}">${t.done?'<i data-lucide="check" style="width:11px;height:11px;"></i>':''}</div>`;
     }
 
+    const ptsDisplay = checklistSettings.showPoints ? '' : 'display:none;';
+
     return `<li class="task-item ${t.done?'done':''} ${depthClass}" id="task-li-${t.id}"
         draggable="true"
+        tabindex="0"
         ondragstart="_onTaskDragStart(event,${t.id})"
         ondragover="_onTaskDragOver(event,${t.id})"
         ondrop="_onTaskDrop(event,${t.id})"
         ondragend="_onTaskDragEnd()">
-      <span class="task-drag-handle" title="Drag to reorder">⠷</span>
+      <div class="task-drag-group">
+        <span class="task-drag-handle" title="Drag to reorder">⠷</span>
+        <div class="task-order-btns">
+          <button class="task-order-btn${isFirst?' disabled':''}" onclick="moveTaskUp(${t.id})" title="Move up (Alt+↑)" ${isFirst?'disabled':''}>▲</button>
+          <button class="task-order-btn${isLast?' disabled':''}" onclick="moveTaskDown(${t.id})" title="Move down (Alt+↓)" ${isLast?'disabled':''}>▼</button>
+        </div>
+      </div>
       ${collapseBtn}
       ${checkWidget}
       <div class="task-body">
         <div class="task-main-row">
           <span class="task-text" id="task-text-${t.id}">${t.text}</span>
-          <span class="task-points">✦${t.pts}</span>
+          <span class="task-points" id="task-pts-${t.id}" style="${ptsDisplay}cursor:pointer;" onclick="editTaskPts(${t.id})" title="Click to edit points">✦${t.pts}</span>
           <div class="task-actions">
             <button class="btn btn-icon btn-ghost btn-sm" title="Edit" onclick="editTask(${t.id})"><i data-lucide="pencil" style="width:11px;height:11px;"></i></button>
             <button class="btn btn-icon btn-ghost btn-sm" title="Note" onclick="toggleNote(${t.id})"><i data-lucide="sticky-note" style="width:11px;height:11px;"></i></button>
@@ -200,7 +361,7 @@ function _renderNodes(tasks, pid){
           <input type="text" id="sub-input-${t.id}" placeholder="Subtask… (Enter adds · Tab indents · Shift+Tab dedents)"
             style="flex:1;font-size:var(--text-xs);" onkeydown="_onSubKey(event,${t.id})">
           <div class="num-wrap">
-            <input type="number" id="sub-pts-${t.id}" value="5" min="1" max="100" style="width:48px;font-size:var(--text-xs);" title="Points">
+            <input type="number" id="sub-pts-${t.id}" value="${checklistSettings.defaultSubPts}" min="1" max="100" style="width:48px;font-size:var(--text-xs);" title="Points">
             <div class="num-spin"><button onclick="stepNum('sub-pts-${t.id}',1)">▲</button><button onclick="stepNum('sub-pts-${t.id}',-1)">▼</button></div>
           </div>
           <button class="btn btn-primary btn-sm" onclick="commitSub(${t.id})">Add</button>
@@ -211,6 +372,32 @@ function _renderNodes(tasks, pid){
   }).join('');
 }
 
+// ── MOVE TASK UP / DOWN ──────────────────────────────────────────────────────
+function moveTaskUp(id) {
+  const list = _getList(); if (!list) return;
+  const t = list.tasks.find(x => x.id === id); if (!t) return;
+  const siblings = list.tasks.filter(x => x.pid === t.pid);
+  const idx = siblings.findIndex(x => x.id === id);
+  if (idx <= 0) return;
+  const other = list.tasks.filter(x => x.pid !== t.pid);
+  siblings.splice(idx, 1); siblings.splice(idx - 1, 0, t);
+  list.tasks = [...other, ...siblings];
+  renderChecklist(); renderLists();
+  requestAnimationFrame(() => { const li = document.getElementById('task-li-' + id); if (li) li.focus(); });
+}
+function moveTaskDown(id) {
+  const list = _getList(); if (!list) return;
+  const t = list.tasks.find(x => x.id === id); if (!t) return;
+  const siblings = list.tasks.filter(x => x.pid === t.pid);
+  const idx = siblings.findIndex(x => x.id === id);
+  if (idx < 0 || idx >= siblings.length - 1) return;
+  const other = list.tasks.filter(x => x.pid !== t.pid);
+  siblings.splice(idx, 1); siblings.splice(idx + 1, 0, t);
+  list.tasks = [...other, ...siblings];
+  renderChecklist(); renderLists();
+  requestAnimationFrame(() => { const li = document.getElementById('task-li-' + id); if (li) li.focus(); });
+}
+
 // ── COLLAPSE ─────────────────────────────────────────────────────────────────
 function toggleCollapse(id){
   const t=_getTask(id); if(!t) return;
@@ -219,7 +406,6 @@ function toggleCollapse(id){
 }
 
 // ── REPEAT GOAL MODAL ────────────────────────────────────────────────────────
-// A lightweight in-page modal that avoids prompt() for cross-device compatibility.
 let _repeatGoalPendingId = null;
 
 function _ensureRepeatGoalModal(){
@@ -238,9 +424,7 @@ function _ensureRepeatGoalModal(){
       </div>
     </div>`;
   document.body.appendChild(el);
-  // Close on backdrop click
   el.addEventListener('click', e => { if(e.target === el) _cancelRepeatGoalModal(); });
-  // Confirm on Enter
   document.getElementById('rgmInput').addEventListener('keydown', e => {
     if(e.key === 'Enter') _confirmRepeatGoalModal();
     if(e.key === 'Escape') _cancelRepeatGoalModal();
@@ -298,7 +482,6 @@ function incrementRepeat(id){
 
   const goalMet = t.repeatGoal > 0 && (t.repeatCount||0) >= t.repeatGoal;
   if(goalMet){
-    // Reset for a new cycle
     t.repeatCount = 0;
     t.done = false;
     renderChecklist();
@@ -308,24 +491,17 @@ function incrementRepeat(id){
   const prevCount = t.repeatCount || 0;
   t.repeatCount = prevCount + 1;
 
-  // Bump animation
   requestAnimationFrame(()=>{
     const btn = document.querySelector(`#task-li-${id} .task-repeat-btn`);
     if(btn){ btn.classList.remove('bump'); void btn.offsetWidth; btn.classList.add('bump'); }
   });
 
   if(t.repeatGoal > 0){
-    // ── Limited repeats ──────────────────────────────────────────────────────
-    // Award points using floor-difference so that:
-    //   • every increment gives either floor(pts/goal) or ceil(pts/goal) pts
-    //   • the sum over a full cycle equals exactly pts
-    //   • on the final rep the remaining pts are awarded (making total = pts)
-    //   • result over one full cycle = pts, over two full cycles = 2×pts ✓
     const pts   = t.pts;
     const goal  = t.repeatGoal;
     const after  = Math.floor(pts * t.repeatCount / goal);
     const before = Math.floor(pts * prevCount      / goal);
-    const award  = after - before;  // always >= 0, sums to pts over full cycle
+    const award  = after - before;
 
     if(award > 0){
       totalPts += award;
@@ -341,8 +517,6 @@ function incrementRepeat(id){
       showToast(`↻ ${t.text}: ${t.repeatCount} / ${goal} reps${award>0?' (+'+award+' pts)':''}`);
     }
   } else {
-    // ── Unlimited repeats ────────────────────────────────────────────────────
-    // Award full pts on every rep (no auto-complete, purely additive)
     totalPts += t.pts;
     updateHeaderPts();
     if(typeof rewardsRender==='function') rewardsRender();
@@ -412,7 +586,7 @@ function dedentTask(id){
 function addTask(){
   const list=_getList(); if(!list) return;
   const inp=document.getElementById('newTaskInput'), text=inp.value.trim(); if(!text) return;
-  const pts=Math.max(1,parseInt(document.getElementById('newTaskPts').value)||10);
+  const pts=Math.max(1,parseInt(document.getElementById('newTaskPts').value)||checklistSettings.defaultTaskPts);
   list.tasks.push({id:tidxc++,text,pts,done:false,pid:null,depth:0,collapsed:false,note:'',repeat:false,repeatCount:0,repeatGoal:0});
   inp.value=''; renderChecklist(); renderLists();
   requestAnimationFrame(()=>{ const ni=document.getElementById('newTaskInput'); if(ni) ni.focus(); });
@@ -432,7 +606,7 @@ function _commitSubReturningId(pid){
   const inp=document.getElementById('sub-input-'+pid); if(!inp) return null;
   const text=inp.value.trim(); if(!text) return null;
   const ptsEl=document.getElementById('sub-pts-'+pid);
-  const pts=Math.max(1,parseInt(ptsEl?.value)||5);
+  const pts=Math.max(1,parseInt(ptsEl?.value)||checklistSettings.defaultSubPts);
   const list=_getList(); if(!list) return null;
   const parent=list.tasks.find(t=>t.id===pid);
   const newDepth=parent?parent.depth+1:0;
@@ -470,6 +644,28 @@ function saveEdit(id){
   if(val) t.text=val; renderChecklist();
 }
 
+// ── EDIT POINTS INLINE ────────────────────────────────────────────────────────
+function editTaskPts(id) {
+  const list = _getList(); if (!list) return;
+  const t = list.tasks.find(x => x.id === id); if (!t) return;
+  const span = document.getElementById('task-pts-' + id); if (!span) return;
+  const oldPts = t.pts;
+  span.outerHTML = `<input class="task-pts-edit-input" id="task-pts-edit-${id}"
+    type="number" value="${oldPts}" min="1" max="9999" style="width:56px;"
+    onblur="saveTaskPts(${id})"
+    onkeydown="if(event.key==='Enter')saveTaskPts(${id});if(event.key==='Escape'){document.getElementById('task-pts-edit-${id}').value=${oldPts};saveTaskPts(${id});}">`;
+  const inp = document.getElementById('task-pts-edit-' + id);
+  if (inp) { inp.focus(); inp.select(); }
+}
+function saveTaskPts(id) {
+  const inp = document.getElementById('task-pts-edit-' + id); if (!inp) return;
+  const val = Math.max(1, parseInt(inp.value) || 1);
+  const list = _getList(); if (!list) return;
+  const t = list.tasks.find(x => x.id === id); if (!t) return;
+  t.pts = val;
+  renderChecklist();
+}
+
 function toggleNote(id){
   const area=document.getElementById('task-note-input-'+id); if(!area) return;
   const vis=area.classList.toggle('visible');
@@ -495,6 +691,18 @@ function copyTask(id){
 }
 
 function delTask(id){
+  if (checklistSettings.confirmDelete) {
+    const list = _getList(); if (!list) return;
+    const t = list.tasks.find(x => x.id === id); if (!t) return;
+    askConfirm(`Delete task "${t.text}"?`, 'Delete Task', 'Delete', (yes) => {
+      if (!yes) return;
+      _doDelTask(id);
+    });
+  } else {
+    _doDelTask(id);
+  }
+}
+function _doDelTask(id) {
   const list=_getList(); if(!list) return;
   const toRemove=new Set([id,..._descendants(list.tasks,id).map(t=>t.id)]);
   list.tasks=list.tasks.filter(t=>!toRemove.has(t.id));
@@ -569,6 +777,7 @@ function _onTaskDragOver(e,id){
   e.preventDefault(); e.stopPropagation();
   if(_dragSrcTaskId===id) return;
   e.dataTransfer.dropEffect='move';
+  // Live visual preview: move drag-over indicator without waiting for drop
   document.querySelectorAll('.task-item').forEach(el=>el.classList.remove('drag-over'));
   if(id!==null){ const li=document.getElementById('task-li-'+id); if(li) li.classList.add('drag-over'); }
 }
