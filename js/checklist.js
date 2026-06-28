@@ -13,21 +13,27 @@ let _dragSrcListId=null, _dragSrcTaskId=null;
 
 // ── SETTINGS ────────────────────────────────────────────────────────────────
 let checklistSettings = {
-  fontSize: 'medium',      // 'small' | 'medium' | 'large'
+  fontSize: 'medium',      // 'xsmall' | 'small' | 'medium' | 'large' | 'xlarge'
   density: 'normal',       // 'supercompact' | 'compact' | 'normal' | 'relaxed'
   showPoints: true,
   defaultTaskPts: 10,
   defaultSubPts: 5,
   showProgressBar: true,
   confirmDelete: false,
-  liveReorder: true,       // use pointer-events live reorder while dragging
+  liveReorder: true,       // live highlight of drop target while dragging
   dragIndent: true         // allow horizontal drag to indent/dedent
 };
 
 function _applyChecklistSettings() {
   const root = document.getElementById('checklistMain');
   if (!root) return;
-  const fsMap = { small: 'var(--text-xs)', medium: 'var(--text-sm)', large: 'var(--text-base)' };
+  const fsMap = {
+    xsmall: 'var(--text-2xs, 0.65rem)',
+    small:  'var(--text-xs)',
+    medium: 'var(--text-sm)',
+    large:  'var(--text-base)',
+    xlarge: 'var(--text-lg)'
+  };
   root.style.setProperty('--cl-font-size', fsMap[checklistSettings.fontSize] || fsMap.medium);
   const pdMap = {
     supercompact: '1px var(--space-1)',
@@ -54,7 +60,8 @@ function _renderSettingsPanel() {
     el.className = 'cl-settings-panel';
     document.getElementById('checklistMain').prepend(el);
   }
-  const d = checklistSettings.density;
+  const d  = checklistSettings.density;
+  const fs = checklistSettings.fontSize;
   el.innerHTML = `
     <div class="cl-settings-header">
       <span class="cl-settings-title"><i data-lucide="settings-2" style="width:13px;height:13px;vertical-align:-2px;"></i> List Settings</span>
@@ -64,18 +71,20 @@ function _renderSettingsPanel() {
       <div class="cl-settings-row">
         <label class="cl-settings-label">Font size</label>
         <div class="cl-seg-group">
-          <button class="cl-seg-btn ${checklistSettings.fontSize==='small'?'active':''}" onclick="_clSetSetting('fontSize','small')">S</button>
-          <button class="cl-seg-btn ${checklistSettings.fontSize==='medium'?'active':''}" onclick="_clSetSetting('fontSize','medium')">M</button>
-          <button class="cl-seg-btn ${checklistSettings.fontSize==='large'?'active':''}" onclick="_clSetSetting('fontSize','large')">L</button>
+          <button class="cl-seg-btn ${fs==='xsmall'?'active':''}" onclick="_clSetSetting('fontSize','xsmall')">XS</button>
+          <button class="cl-seg-btn ${fs==='small'?'active':''}"  onclick="_clSetSetting('fontSize','small')">S</button>
+          <button class="cl-seg-btn ${fs==='medium'?'active':''}" onclick="_clSetSetting('fontSize','medium')">M</button>
+          <button class="cl-seg-btn ${fs==='large'?'active':''}"  onclick="_clSetSetting('fontSize','large')">L</button>
+          <button class="cl-seg-btn ${fs==='xlarge'?'active':''}" onclick="_clSetSetting('fontSize','xlarge')">XL</button>
         </div>
       </div>
       <div class="cl-settings-row">
         <label class="cl-settings-label">Density</label>
         <div class="cl-seg-group">
           <button class="cl-seg-btn ${d==='supercompact'?'active':''}" onclick="_clSetSetting('density','supercompact')">S.Compact</button>
-          <button class="cl-seg-btn ${d==='compact'?'active':''}" onclick="_clSetSetting('density','compact')">Compact</button>
-          <button class="cl-seg-btn ${d==='normal'?'active':''}" onclick="_clSetSetting('density','normal')">Normal</button>
-          <button class="cl-seg-btn ${d==='relaxed'?'active':''}" onclick="_clSetSetting('density','relaxed')">Relaxed</button>
+          <button class="cl-seg-btn ${d==='compact'?'active':''}"      onclick="_clSetSetting('density','compact')">Compact</button>
+          <button class="cl-seg-btn ${d==='normal'?'active':''}"       onclick="_clSetSetting('density','normal')">Normal</button>
+          <button class="cl-seg-btn ${d==='relaxed'?'active':''}"      onclick="_clSetSetting('density','relaxed')">Relaxed</button>
         </div>
       </div>
       <div class="cl-settings-row">
@@ -271,7 +280,9 @@ function renderChecklist(){
   _applyChecklistSettings();
   _renderSettingsPanel();
   _attachTaskKeyboardNav();
-  if (checklistSettings.liveReorder) _attachPointerDrag();
+  // Always attach pointer drag (ghost + indent/dedent always available).
+  // liveReorder toggle only controls the drop-target highlight inside _pdMove.
+  _attachPointerDrag();
 }
 
 // ── KEYBOARD NAVIGATION FOR TASKS ─────────────────────────────────────────────────
@@ -338,7 +349,7 @@ function _renderNodes(tasks, pid){
         tabindex="0"
         data-task-id="${t.id}">
       <div class="task-drag-group">
-        <span class="task-drag-handle" data-drag-handle title="Drag to reorder (horizontal = indent/dedent)">⠷</span>
+        <span class="task-drag-handle" data-drag-handle title="Drag to reorder · drag left/right to indent/dedent">⠷</span>
         <div class="task-order-btns">
           <button class="task-order-btn${isFirst?' disabled':''}" onclick="moveTaskUp(${t.id})" title="Move up (Alt+↑)" ${isFirst?'disabled':''}>▲</button>
           <button class="task-order-btn${isLast?' disabled':''}" onclick="moveTaskDown(${t.id})" title="Move down (Alt+↓)" ${isLast?'disabled':''}>▼</button>
@@ -387,6 +398,10 @@ function _renderNodes(tasks, pid){
 
 // ── POINTER-DRAG LIVE REORDER + HORIZONTAL INDENT/DEDENT ─────────────────────
 // Replaces native HTML5 drag for task items; lists still use native drag.
+// _pdMove/_pdEnd are attached to document once and never removed — they check
+// _pd.active so they are harmless when no drag is in progress.
+// _attachPointerDrag() only wires the pointerdown on #taskTree; it is called
+// after every renderChecklist() since innerHTML replaces the node.
 let _pd = {
   active: false,
   taskId: null,
@@ -401,15 +416,23 @@ let _pd = {
 
 const INDENT_THRESHOLD = 48; // px horizontal drag to trigger indent/dedent
 
-function _attachPointerDrag() {
-  const tree = document.getElementById('taskTree');
-  if (!tree || tree._pdAttached) return;
-  tree._pdAttached = true;
-
-  tree.addEventListener('pointerdown', _pdStart, { passive: false });
-  document.addEventListener('pointermove', _pdMove, { passive: false });
-  document.addEventListener('pointerup', _pdEnd);
+// Global document listeners — installed once on first call, never duplicated.
+let _pdDocListenersAttached = false;
+function _ensurePdDocListeners() {
+  if (_pdDocListenersAttached) return;
+  _pdDocListenersAttached = true;
+  document.addEventListener('pointermove',   _pdMove,   { passive: false });
+  document.addEventListener('pointerup',     _pdEnd);
   document.addEventListener('pointercancel', _pdCancel);
+}
+
+function _attachPointerDrag() {
+  _ensurePdDocListeners();
+  const tree = document.getElementById('taskTree');
+  if (!tree) return;
+  // No guard flag here — renderChecklist() rebuilds innerHTML so this is always
+  // a fresh node. Just add the listener directly.
+  tree.addEventListener('pointerdown', _pdStart, { passive: false });
 }
 
 function _pdStart(e) {
@@ -462,7 +485,7 @@ function _pdMove(e) {
 
   const dx = e.clientX - _pd.startX;
 
-  // Indent/dedent hint via horizontal drag
+  // Indent/dedent hint via horizontal drag (gated by dragIndent setting)
   let newHint = null;
   if (checklistSettings.dragIndent) {
     if (dx > INDENT_THRESHOLD)       newHint = 'indent';
@@ -473,9 +496,14 @@ function _pdMove(e) {
     _updateIndentIndicator(newHint);
   }
 
-  if (!checklistSettings.liveReorder) return;
+  // Live drop-target highlight (gated by liveReorder setting)
+  if (!checklistSettings.liveReorder) {
+    // Clear any stale highlight but don't compute a new one
+    document.querySelectorAll('.pd-drop-target').forEach(el => el.classList.remove('pd-drop-target'));
+    _pd.overTaskId = null;
+    return;
+  }
 
-  // Live reorder: find which task we're hovering
   const items = document.querySelectorAll('#taskTree .task-item:not(.pd-dragging)');
   let best = null, bestDist = Infinity;
   const cy = e.clientY;
@@ -494,7 +522,7 @@ function _pdMove(e) {
 }
 
 function _updateIndentIndicator(hint) {
-  const old = document.getElementById('pd-indent-hint');
+  const old = _pd.ghost && _pd.ghost.querySelector('#pd-indent-hint');
   if (old) old.remove();
   if (!hint || !_pd.ghost) return;
 
@@ -502,47 +530,46 @@ function _updateIndentIndicator(hint) {
   ind.id = 'pd-indent-hint';
   ind.className = 'pd-indent-hint';
   ind.textContent = hint === 'indent' ? '→ Indent' : '← Dedent';
-  _pd.ghost.style.position = 'fixed'; // ensure relative positioning for child
   _pd.ghost.appendChild(ind);
 }
 
 function _pdEnd(e) {
   if (!_pd.active) return;
+
+  const srcId    = _pd.taskId;
+  const hint     = _pd.indentHint;
+  const targetId = _pd.overTaskId;
+
   _pdCleanup();
+  _pdReset();
 
   const list = _getList(); if (!list) return;
-  const srcId = _pd.taskId;
-  const hint  = _pd.indentHint;
 
-  // Horizontal drag: indent or dedent
+  // Horizontal drag: indent or dedent (takes priority over vertical reorder)
   if (checklistSettings.dragIndent && hint) {
     if (hint === 'indent') indentTask(srcId);
     else                   dedentTask(srcId);
-    _pdReset();
     return;
   }
 
   // Vertical reorder
-  const targetId = _pd.overTaskId;
-  if (targetId === null || targetId === srcId) { _pdReset(); return; }
+  if (targetId === null || targetId === srcId) return;
 
   const src    = list.tasks.find(t => t.id === srcId);
   const target = list.tasks.find(t => t.id === targetId);
-  if (!src || !target) { _pdReset(); return; }
-
-  if (src.pid !== target.pid) { _pdReset(); return; }
+  if (!src || !target) return;
+  if (src.pid !== target.pid) return; // cross-level drops not supported here (use horizontal drag)
 
   const siblings  = list.tasks.filter(t => t.pid === src.pid);
   const fromIdx   = siblings.findIndex(t => t.id === srcId);
   const toIdx     = siblings.findIndex(t => t.id === targetId);
-  if (fromIdx < 0 || toIdx < 0) { _pdReset(); return; }
+  if (fromIdx < 0 || toIdx < 0) return;
 
   const otherTasks = list.tasks.filter(t => t.pid !== src.pid);
   siblings.splice(fromIdx, 1);
   siblings.splice(toIdx, 0, src);
   list.tasks = [...otherTasks, ...siblings];
 
-  _pdReset();
   renderChecklist(); renderLists();
 }
 
@@ -554,17 +581,15 @@ function _pdCancel() {
 
 function _pdCleanup() {
   if (_pd.ghost) { _pd.ghost.remove(); _pd.ghost = null; }
-  const old = document.getElementById('pd-indent-hint');
-  if (old) old.remove();
   document.querySelectorAll('.pd-dragging, .pd-drop-target').forEach(el => {
     el.classList.remove('pd-dragging', 'pd-drop-target');
   });
 }
 
 function _pdReset() {
-  _pd.active = false;
-  _pd.taskId = null;
-  _pd.ghost  = null;
+  _pd.active     = false;
+  _pd.taskId     = null;
+  _pd.ghost      = null;
   _pd.overTaskId = null;
   _pd.indentHint = null;
 }
