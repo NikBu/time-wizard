@@ -146,7 +146,7 @@
   cursor: grab;
   padding: 0 2px;
   line-height: 1;
-  touch-action: none; /* required for pointer capture */
+  touch-action: none;
 }
 .task-drag-handle:active { cursor: grabbing; }
 
@@ -181,7 +181,7 @@
   cursor: default;
 }
 
-/* ── Indent/dedent hint badge (shown on ghost during horizontal drag) ───────────────── */
+/* ── Indent/dedent hint badge ─────────────────────────────────────────────── */
 .pd-indent-hint {
   position: absolute;
   bottom: -26px;
@@ -216,7 +216,7 @@
 .task-check:hover { border-color: var(--color-primary); }
 .task-item.done .task-check { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 
-/* ── Repeat counter (replaces checkbox in repeat mode) ────────────────────────────────────── */
+/* ── Repeat counter ──────────────────────────────────────────────────────────── */
 .task-repeat-btn {
   flex-shrink: 0;
   align-self: flex-start;
@@ -327,13 +327,20 @@
 .task-expand-btn.visible { display: inline-block; }
 
 /* ── Notes ──────────────────────────────────────────────────────────────────────────────────── */
+/* font-size tracks --cl-font-size so it scales with the font size setting.          */
+/* A slightly smaller cap (0.9em) keeps notes visually subordinate to task text.     */
 .task-note {
-  font-size: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-1);
+  font-size: calc(var(--cl-font-size, var(--text-sm)) * 0.9);
+  color: var(--color-text-muted); margin-top: var(--space-1);
   line-height: 1.5; white-space: pre-wrap;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .task-note.expanded { display: block; overflow: visible; }
-.task-note-input { width: 100%; margin-top: var(--space-2); font-size: var(--text-xs); resize: vertical; min-height: 48px; display: none; }
+.task-note-input {
+  width: 100%; margin-top: var(--space-2);
+  font-size: calc(var(--cl-font-size, var(--text-sm)) * 0.9);
+  resize: vertical; min-height: 48px; display: none;
+}
 .task-note-input.visible { display: block; }
 
 /* ── Subtask add row ───────────────────────────────────────────────────────────────────── */

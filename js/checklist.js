@@ -280,7 +280,7 @@ function renderChecklist(){
   _applyChecklistSettings();
   _renderSettingsPanel();
   _attachTaskKeyboardNav();
-  // Always attach pointer drag (ghost + indent/dedent always available).
+  // Always attach pointer drag — ghost + indent/dedent always available.
   // liveReorder toggle only controls the drop-target highlight inside _pdMove.
   _attachPointerDrag();
 }
@@ -398,10 +398,15 @@ function _renderNodes(tasks, pid){
 
 // ── POINTER-DRAG LIVE REORDER + HORIZONTAL INDENT/DEDENT ─────────────────────
 // Replaces native HTML5 drag for task items; lists still use native drag.
-// _pdMove/_pdEnd are attached to document once and never removed — they check
-// _pd.active so they are harmless when no drag is in progress.
-// _attachPointerDrag() only wires the pointerdown on #taskTree; it is called
-// after every renderChecklist() since innerHTML replaces the node.
+//
+// KEY DESIGN DECISION: we do NOT call setPointerCapture().
+// setPointerCapture redirects ALL pointer events to the captured element,
+// which means the document-level pointermove/pointerup listeners never fire.
+// Since those document listeners cover the whole viewport already, capture
+// is unnecessary and actively harmful here.
+//
+// _pdMove/_pdEnd are attached to document ONCE via _ensurePdDocListeners().
+// _attachPointerDrag() adds pointerdown to the fresh #taskTree after each render.
 let _pd = {
   active: false,
   taskId: null,
@@ -416,7 +421,6 @@ let _pd = {
 
 const INDENT_THRESHOLD = 48; // px horizontal drag to trigger indent/dedent
 
-// Global document listeners — installed once on first call, never duplicated.
 let _pdDocListenersAttached = false;
 function _ensurePdDocListeners() {
   if (_pdDocListenersAttached) return;
@@ -430,8 +434,7 @@ function _attachPointerDrag() {
   _ensurePdDocListeners();
   const tree = document.getElementById('taskTree');
   if (!tree) return;
-  // No guard flag here — renderChecklist() rebuilds innerHTML so this is always
-  // a fresh node. Just add the listener directly.
+  // No guard — renderChecklist() always produces a fresh #taskTree node.
   tree.addEventListener('pointerdown', _pdStart, { passive: false });
 }
 
@@ -444,7 +447,7 @@ function _pdStart(e) {
   if (isNaN(taskId)) return;
 
   e.preventDefault();
-  handle.setPointerCapture(e.pointerId);
+  // NOTE: intentionally NO setPointerCapture — it would swallow document events.
 
   const rect = li.getBoundingClientRect();
   _pd.active  = true;
@@ -498,7 +501,6 @@ function _pdMove(e) {
 
   // Live drop-target highlight (gated by liveReorder setting)
   if (!checklistSettings.liveReorder) {
-    // Clear any stale highlight but don't compute a new one
     document.querySelectorAll('.pd-drop-target').forEach(el => el.classList.remove('pd-drop-target'));
     _pd.overTaskId = null;
     return;
@@ -525,7 +527,6 @@ function _updateIndentIndicator(hint) {
   const old = _pd.ghost && _pd.ghost.querySelector('#pd-indent-hint');
   if (old) old.remove();
   if (!hint || !_pd.ghost) return;
-
   const ind = document.createElement('div');
   ind.id = 'pd-indent-hint';
   ind.className = 'pd-indent-hint';
@@ -558,7 +559,7 @@ function _pdEnd(e) {
   const src    = list.tasks.find(t => t.id === srcId);
   const target = list.tasks.find(t => t.id === targetId);
   if (!src || !target) return;
-  if (src.pid !== target.pid) return; // cross-level drops not supported here (use horizontal drag)
+  if (src.pid !== target.pid) return;
 
   const siblings  = list.tasks.filter(t => t.pid === src.pid);
   const fromIdx   = siblings.findIndex(t => t.id === srcId);
@@ -724,13 +725,11 @@ function incrementRepeat(id){
     const after  = Math.floor(pts * t.repeatCount / goal);
     const before = Math.floor(pts * prevCount      / goal);
     const award  = after - before;
-
     if(award > 0){
       totalPts += award;
       updateHeaderPts();
       if(typeof rewardsRender==='function') rewardsRender();
     }
-
     if(t.repeatCount >= goal){
       t.done = true;
       archNotify('task_done');
