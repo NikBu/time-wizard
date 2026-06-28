@@ -1,13 +1,9 @@
 // ── CHECKLISTS ─────────────────────────────────────────────────
 // Task shape: { id, text, pts, done, pid, depth, collapsed, note, repeat, repeatCount, repeatGoal }
-// repeat: bool — if true, checkbox becomes a + counter instead of a done toggle
-// repeatCount: number of times the + has been pressed this session
-// repeatGoal: if > 0, marks done when count reaches goal; 0 = no auto-complete
-// depth: 0 = top-level, 1 = subtask, 2 = sub-subtask (max, no children)
+// depth: 0 = top-level, 1 = subtask, … up to checklistSettings.maxDepth
 // pid: parent task id, or null for top-level
 // collapsed: if true, children are hidden in the renderer
 
-const MAX_DEPTH = 2;
 let lists=[], lidx=1, tidxc=1, activeList=null, totalPts=0;
 let _dragSrcListId=null, _dragSrcTaskId=null;
 
@@ -20,9 +16,21 @@ let checklistSettings = {
   defaultSubPts: 5,
   showProgressBar: true,
   confirmDelete: false,
-  liveReorder: true,       // live highlight of drop target while dragging
-  dragIndent: true         // allow horizontal drag to indent/dedent
+  maxDepth: 2,             // max nesting depth (0-indexed); 2 = 3 levels
+  dragReorder: true,       // allow vertical drag to reorder tasks
+  dragIndent: true         // allow horizontal drag to reparent (indent/dedent)
 };
+
+// Returns the current max depth value (replaces old MAX_DEPTH constant)
+function _maxDepth() { return checklistSettings.maxDepth; }
+
+// Returns the deepest descendant depth offset relative to the given task's depth.
+// e.g. if task is depth 1 and has a child at depth 2, returns 1.
+function _maxDescendantOffset(tasks, id) {
+  const children = tasks.filter(t => t.pid === id);
+  if (!children.length) return 0;
+  return 1 + Math.max(...children.map(c => _maxDescendantOffset(tasks, c.id)));
+}
 
 function _applyChecklistSettings() {
   const root = document.getElementById('checklistMain');
@@ -62,6 +70,7 @@ function _renderSettingsPanel() {
   }
   const d  = checklistSettings.density;
   const fs = checklistSettings.fontSize;
+  const md = checklistSettings.maxDepth;
   el.innerHTML = `
     <div class="cl-settings-header">
       <span class="cl-settings-title"><i data-lucide="settings-2" style="width:13px;height:13px;vertical-align:-2px;"></i> List Settings</span>
@@ -85,6 +94,15 @@ function _renderSettingsPanel() {
           <button class="cl-seg-btn ${d==='compact'?'active':''}"      onclick="_clSetSetting('density','compact')">Compact</button>
           <button class="cl-seg-btn ${d==='normal'?'active':''}"       onclick="_clSetSetting('density','normal')">Normal</button>
           <button class="cl-seg-btn ${d==='relaxed'?'active':''}"      onclick="_clSetSetting('density','relaxed')">Relaxed</button>
+        </div>
+      </div>
+      <div class="cl-settings-row">
+        <label class="cl-settings-label">Max nesting depth</label>
+        <div class="cl-seg-group">
+          <button class="cl-seg-btn ${md===1?'active':''}" onclick="_clSetSetting('maxDepth',1)">2 lvl</button>
+          <button class="cl-seg-btn ${md===2?'active':''}" onclick="_clSetSetting('maxDepth',2)">3 lvl</button>
+          <button class="cl-seg-btn ${md===3?'active':''}" onclick="_clSetSetting('maxDepth',3)">4 lvl</button>
+          <button class="cl-seg-btn ${md===4?'active':''}" onclick="_clSetSetting('maxDepth',4)">5 lvl</button>
         </div>
       </div>
       <div class="cl-settings-row">
@@ -131,9 +149,9 @@ function _renderSettingsPanel() {
         </label>
       </div>
       <div class="cl-settings-row">
-        <label class="cl-settings-label">Live reorder while dragging</label>
+        <label class="cl-settings-label">Drag to reorder tasks</label>
         <label class="cl-toggle-wrap">
-          <input type="checkbox" ${checklistSettings.liveReorder?'checked':''} onchange="_clSetSetting('liveReorder',this.checked)">
+          <input type="checkbox" ${checklistSettings.dragReorder?'checked':''} onchange="_clSetSetting('dragReorder',this.checked)">
           <span class="cl-toggle"></span>
         </label>
       </div>
@@ -280,8 +298,6 @@ function renderChecklist(){
   _applyChecklistSettings();
   _renderSettingsPanel();
   _attachTaskKeyboardNav();
-  // Always attach pointer drag — ghost + indent/dedent always available.
-  // liveReorder toggle only controls the drop-target highlight inside _pdMove.
   _attachPointerDrag();
 }
 
@@ -311,8 +327,8 @@ function _renderNodes(tasks, pid){
     const hasChildren=children.length>0;
     const isCollapsed=!!t.collapsed;
     const hasNote=t.note&&t.note.trim();
-    const canHaveChildren=t.depth<MAX_DEPTH;
-    const depthClass=t.depth===0?'':t.depth===1?'depth-1':'depth-2';
+    const canHaveChildren=t.depth<_maxDepth();
+    const depthClass=t.depth===0?'':('depth-'+t.depth);
     const isFirst = idx === 0;
     const isLast  = idx === siblings.length - 1;
 
@@ -396,17 +412,11 @@ function _renderNodes(tasks, pid){
   }).join('');
 }
 
-// ── POINTER-DRAG LIVE REORDER + HORIZONTAL INDENT/DEDENT ─────────────────────
-// Replaces native HTML5 drag for task items; lists still use native drag.
-//
-// KEY DESIGN DECISION: we do NOT call setPointerCapture().
-// setPointerCapture redirects ALL pointer events to the captured element,
-// which means the document-level pointermove/pointerup listeners never fire.
-// Since those document listeners cover the whole viewport already, capture
-// is unnecessary and actively harmful here.
-//
-// _pdMove/_pdEnd are attached to document ONCE via _ensurePdDocListeners().
-// _attachPointerDrag() adds pointerdown to the fresh #taskTree after each render.
+// ── POINTER-DRAG: REORDER + FREE-FORM REPARENT ───────────────────────────────
+// dragReorder setting gates vertical swap.
+// dragIndent setting gates horizontal reparent (indent = become child of drop target;
+//   dedent = move up one level, keeping position near drop target).
+// No setPointerCapture — document listeners cover the full viewport.
 let _pd = {
   active: false,
   taskId: null,
@@ -419,7 +429,7 @@ let _pd = {
   indentHint: null   // 'indent' | 'dedent' | null
 };
 
-const INDENT_THRESHOLD = 48; // px horizontal drag to trigger indent/dedent
+const INDENT_THRESHOLD = 48;
 
 let _pdDocListenersAttached = false;
 function _ensurePdDocListeners() {
@@ -434,7 +444,6 @@ function _attachPointerDrag() {
   _ensurePdDocListeners();
   const tree = document.getElementById('taskTree');
   if (!tree) return;
-  // No guard — renderChecklist() always produces a fresh #taskTree node.
   tree.addEventListener('pointerdown', _pdStart, { passive: false });
 }
 
@@ -447,7 +456,7 @@ function _pdStart(e) {
   if (isNaN(taskId)) return;
 
   e.preventDefault();
-  // NOTE: intentionally NO setPointerCapture — it would swallow document events.
+  // No setPointerCapture — it would swallow document-level events.
 
   const rect = li.getBoundingClientRect();
   _pd.active  = true;
@@ -461,17 +470,7 @@ function _pdStart(e) {
 
   const ghost = li.cloneNode(true);
   ghost.id = 'pd-ghost';
-  ghost.style.cssText = `
-    position: fixed;
-    z-index: 9999;
-    pointer-events: none;
-    width: ${rect.width}px;
-    opacity: 0.85;
-    box-shadow: 0 8px 32px oklch(0 0 0 / 0.25);
-    left: ${rect.left}px;
-    top: ${rect.top}px;
-    transition: none;
-  `;
+  ghost.style.cssText = `position:fixed;z-index:9999;pointer-events:none;width:${rect.width}px;opacity:0.85;box-shadow:0 8px 32px oklch(0 0 0/0.25);left:${rect.left}px;top:${rect.top}px;transition:none;`;
   document.body.appendChild(ghost);
   _pd.ghost = ghost;
   li.classList.add('pd-dragging');
@@ -481,14 +480,12 @@ function _pdMove(e) {
   if (!_pd.active) return;
   e.preventDefault();
 
-  const x = e.clientX - _pd.offsetX;
-  const y = e.clientY - _pd.offsetY;
-  _pd.ghost.style.left = x + 'px';
-  _pd.ghost.style.top  = y + 'px';
+  _pd.ghost.style.left = (e.clientX - _pd.offsetX) + 'px';
+  _pd.ghost.style.top  = (e.clientY - _pd.offsetY) + 'px';
 
   const dx = e.clientX - _pd.startX;
 
-  // Indent/dedent hint via horizontal drag (gated by dragIndent setting)
+  // Horizontal indent/dedent hint
   let newHint = null;
   if (checklistSettings.dragIndent) {
     if (dx > INDENT_THRESHOLD)       newHint = 'indent';
@@ -499,27 +496,21 @@ function _pdMove(e) {
     _updateIndentIndicator(newHint);
   }
 
-  // Live drop-target highlight (gated by liveReorder setting)
-  if (!checklistSettings.liveReorder) {
-    document.querySelectorAll('.pd-drop-target').forEach(el => el.classList.remove('pd-drop-target'));
-    _pd.overTaskId = null;
-    return;
-  }
-
+  // Track nearest task for drop target (used by both reorder and reparent)
   const items = document.querySelectorAll('#taskTree .task-item:not(.pd-dragging)');
   let best = null, bestDist = Infinity;
-  const cy = e.clientY;
   items.forEach(item => {
     const r = item.getBoundingClientRect();
-    const mid = r.top + r.height / 2;
-    const dist = Math.abs(cy - mid);
+    const dist = Math.abs(e.clientY - (r.top + r.height / 2));
     if (dist < bestDist) { bestDist = dist; best = item; }
   });
   const overTaskId = best ? parseInt(best.dataset.taskId) : null;
   if (overTaskId !== _pd.overTaskId) {
     _pd.overTaskId = overTaskId;
     document.querySelectorAll('.task-item').forEach(el => el.classList.remove('pd-drop-target'));
-    if (best) best.classList.add('pd-drop-target');
+    if (best && (checklistSettings.dragIndent && newHint || checklistSettings.dragReorder)) {
+      best.classList.add('pd-drop-target');
+    }
   }
 }
 
@@ -530,8 +521,22 @@ function _updateIndentIndicator(hint) {
   const ind = document.createElement('div');
   ind.id = 'pd-indent-hint';
   ind.className = 'pd-indent-hint';
-  ind.textContent = hint === 'indent' ? '→ Indent' : '← Dedent';
+  ind.textContent = hint === 'indent' ? '→ Make child of target' : '← Move up one level';
   _pd.ghost.appendChild(ind);
+}
+
+function _pdGlow(srcId, targetId) {
+  // Brief glow on both old and new positions after a swap/reparent
+  requestAnimationFrame(() => {
+    [srcId, targetId].forEach(id => {
+      const li = document.getElementById('task-li-' + id);
+      if (!li) return;
+      li.classList.remove('pd-swap-glow');
+      void li.offsetWidth; // reflow to restart animation
+      li.classList.add('pd-swap-glow');
+      li.addEventListener('animationend', () => li.classList.remove('pd-swap-glow'), { once: true });
+    });
+  });
 }
 
 function _pdEnd(e) {
@@ -546,32 +551,89 @@ function _pdEnd(e) {
 
   const list = _getList(); if (!list) return;
 
-  // Horizontal drag: indent or dedent (takes priority over vertical reorder)
-  if (checklistSettings.dragIndent && hint) {
-    if (hint === 'indent') indentTask(srcId);
-    else                   dedentTask(srcId);
+  // ── Horizontal drag: free-form reparent ──
+  if (checklistSettings.dragIndent && hint && targetId !== null && targetId !== srcId) {
+    const src    = list.tasks.find(t => t.id === srcId);
+    const target = list.tasks.find(t => t.id === targetId);
+    if (!src || !target) return;
+
+    if (hint === 'indent') {
+      // Make src a child of target (appended at end of target's children)
+      const wouldBeDepth = target.depth + 1;
+      const offset = _maxDescendantOffset(list.tasks, srcId);
+      if (wouldBeDepth + offset > _maxDepth()) {
+        showToast(`Can't indent: would exceed max depth (${_maxDepth() + 1} levels).`, 'error');
+        return;
+      }
+      // Prevent making a task a child of its own descendant
+      const descIds = new Set(_descendants(list.tasks, srcId).map(t => t.id));
+      if (descIds.has(targetId)) {
+        showToast("Can't indent a task under its own subtask.", 'error');
+        return;
+      }
+      src.pid = target.id;
+      _reDepth(list.tasks, srcId, wouldBeDepth);
+      target.collapsed = false;
+    } else {
+      // dedent: move src up one level (become sibling of its current parent)
+      if (src.depth === 0) { showToast('Already at top level.'); return; }
+      const parent = list.tasks.find(t => t.id === src.pid);
+      src.pid = parent ? parent.pid : null;
+      _reDepth(list.tasks, srcId, src.depth - 1);
+    }
+    renderChecklist(); renderLists();
+    _pdGlow(srcId, targetId);
     return;
   }
 
-  // Vertical reorder
+  // ── Vertical drag: reorder (same or cross parent) ──
+  if (!checklistSettings.dragReorder) return;
   if (targetId === null || targetId === srcId) return;
 
   const src    = list.tasks.find(t => t.id === srcId);
   const target = list.tasks.find(t => t.id === targetId);
   if (!src || !target) return;
-  if (src.pid !== target.pid) return;
 
-  const siblings  = list.tasks.filter(t => t.pid === src.pid);
-  const fromIdx   = siblings.findIndex(t => t.id === srcId);
-  const toIdx     = siblings.findIndex(t => t.id === targetId);
-  if (fromIdx < 0 || toIdx < 0) return;
-
-  const otherTasks = list.tasks.filter(t => t.pid !== src.pid);
-  siblings.splice(fromIdx, 1);
-  siblings.splice(toIdx, 0, src);
-  list.tasks = [...otherTasks, ...siblings];
+  if (src.pid === target.pid) {
+    // Same-level reorder
+    const siblings  = list.tasks.filter(t => t.pid === src.pid);
+    const fromIdx   = siblings.findIndex(t => t.id === srcId);
+    const toIdx     = siblings.findIndex(t => t.id === targetId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const otherTasks = list.tasks.filter(t => t.pid !== src.pid);
+    siblings.splice(fromIdx, 1);
+    siblings.splice(toIdx, 0, src);
+    list.tasks = [...otherTasks, ...siblings];
+  } else {
+    // Cross-parent: move src to be a sibling of target (under target's parent)
+    const wouldBeDepth = target.depth;
+    const offset = _maxDescendantOffset(list.tasks, srcId);
+    if (wouldBeDepth + offset > _maxDepth()) {
+      showToast(`Can't move here: would exceed max depth (${_maxDepth() + 1} levels).`, 'error');
+      return;
+    }
+    const descIds = new Set(_descendants(list.tasks, srcId).map(t => t.id));
+    if (descIds.has(targetId)) {
+      showToast("Can't move a task under its own subtask.", 'error');
+      return;
+    }
+    // Remove src from its current sibling group
+    const oldSiblings = list.tasks.filter(t => t.pid === src.pid && t.id !== srcId);
+    const newSiblings = list.tasks.filter(t => t.pid === target.pid);
+    const toIdx = newSiblings.findIndex(t => t.id === targetId);
+    newSiblings.splice(toIdx, 0, src);
+    src.pid = target.pid;
+    _reDepth(list.tasks, srcId, wouldBeDepth);
+    // Rebuild tasks array preserving all other tasks
+    const others = list.tasks.filter(t => t.pid !== src.pid && t.pid !== (src.pid) && t.id !== srcId && !oldSiblings.includes(t) && !newSiblings.includes(t));
+    list.tasks = list.tasks.filter(t => t.id !== srcId && t.pid !== (target.pid === null ? undefined : target.pid) || false);
+    // Simpler: just fix the moved task in place
+    src.pid = target.pid;
+    _reDepth(list.tasks, srcId, target.depth);
+  }
 
   renderChecklist(); renderLists();
+  _pdGlow(srcId, targetId);
 }
 
 function _pdCancel() {
@@ -779,14 +841,19 @@ function _onSubKey(e, pid){
   }
 }
 
-// ── INDENT / DEDENT ───────────────────────────────────────────────────────────
+// ── INDENT / DEDENT (keyboard / button) ──────────────────────────────────────
+// These operate on the "sibling above" convention (standard for keyboard UX).
+// Drag-based reparenting (free-form, any target) is handled in _pdEnd.
 function indentTask(id){
   const list=_getList(); if(!list) return;
   const t=list.tasks.find(x=>x.id===id); if(!t) return;
-  if(t.depth>=MAX_DEPTH){ showToast('Max depth reached (3 levels).','error'); return; }
+  const offset = _maxDescendantOffset(list.tasks, id);
+  if(t.depth + 1 + offset > _maxDepth()){
+    showToast(`Can't indent: max depth is ${_maxDepth()+1} levels.`,'error'); return;
+  }
   const siblings=list.tasks.filter(x=>x.pid===t.pid);
   const idx=siblings.findIndex(x=>x.id===id);
-  if(idx<1){ showToast('No task above to indent under.'); return; }
+  if(idx<1){ showToast('No task above at this level to indent under.'); return; }
   const newParent=siblings[idx-1];
   t.pid=newParent.id;
   _reDepth(list.tasks, id, newParent.depth+1);

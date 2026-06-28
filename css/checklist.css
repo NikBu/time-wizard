@@ -64,8 +64,13 @@
 }
 .task-item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
 .task-item.done .task-text { text-decoration: line-through; color: var(--color-text-faint); opacity: 0.7; }
+
+/* Depth tiers — up to 4 levels (depth-1 … depth-4) */
 .task-item.depth-1 { background: var(--color-surface-offset); border-color: var(--color-divider); }
 .task-item.depth-2 { background: var(--color-surface-dynamic); border-color: var(--color-divider); border-style: dashed; }
+.task-item.depth-3 { background: color-mix(in oklch, var(--color-surface-dynamic) 70%, var(--color-primary-highlight) 30%); border-color: var(--color-divider); border-style: dashed; }
+.task-item.depth-4 { background: var(--color-primary-highlight); border-color: var(--color-primary); border-style: dashed; opacity: 0.9; }
+
 .task-item.drag-over  { outline: 2px dashed var(--color-primary); outline-offset: -2px; }
 .task-item.dragging   { opacity: 0.4; }
 
@@ -75,6 +80,16 @@
   outline: 2px solid var(--color-primary);
   outline-offset: -2px;
   background: var(--color-primary-highlight);
+}
+
+/* Swap glow — flashes on both src and target after a successful drop */
+@keyframes pd-swap-glow {
+  0%   { box-shadow: 0 0 0 0 oklch(from var(--color-primary) l c h / 0); }
+  30%  { box-shadow: 0 0 0 4px oklch(from var(--color-primary) l c h / 0.45); }
+  100% { box-shadow: 0 0 0 0 oklch(from var(--color-primary) l c h / 0); }
+}
+.task-item.pd-swap-glow {
+  animation: pd-swap-glow 0.6s ease-out forwards;
 }
 
 /* ── Collapse button ──────────────────────────────────────────────────────── */
@@ -327,8 +342,6 @@
 .task-expand-btn.visible { display: inline-block; }
 
 /* ── Notes ──────────────────────────────────────────────────────────────────────────────────── */
-/* font-size tracks --cl-font-size so it scales with the font size setting.          */
-/* A slightly smaller cap (0.9em) keeps notes visually subordinate to task text.     */
 .task-note {
   font-size: calc(var(--cl-font-size, var(--text-sm)) * 0.9);
   color: var(--color-text-muted); margin-top: var(--space-1);
@@ -373,7 +386,7 @@
   padding-top: 0; padding-bottom: 0;
 }
 .cl-settings-panel.visible {
-  max-height: 800px;
+  max-height: 900px;
   opacity: 1;
   padding: var(--space-4);
 }
