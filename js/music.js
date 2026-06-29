@@ -166,17 +166,24 @@ function renderCustomMusicList(){
   list.innerHTML=_customTracks.map((t,idx)=>{
     const active = idx===_activeTrackIdx;
     const dur = t.duration!=null ? fmtClock(t.duration) : '—';
+    // div-based row: outer div handles track selection, inner buttons stop propagation
     return `
-    <button class="custom-snd-row${active?' selected':''}" onclick="selectCustomTrack(${idx})">
+    <div class="custom-snd-row${active?' selected':''}" onclick="selectCustomTrack(${idx})" role="button" tabindex="0"
+         onkeydown="if(event.key==='Enter'||event.key===' ')selectCustomTrack(${idx})">
       <span class="snd-icon">🎵</span>
-      <span class="snd-name">${t.name}</span>
+      <span class="snd-name" title="${t.name}">${t.name}</span>
       <span class="snd-duration">${dur}</span>
       <span class="snd-actions" onclick="event.stopPropagation()">
-        <button class="btn btn-ghost btn-sm" onclick="previewCustomMusic(${idx})" title="Preview">▶</button>
-        <button class="btn btn-ghost btn-sm" onclick="removeCustomMusic(${idx})" title="Remove">✕</button>
+        <button class="btn btn-ghost btn-sm" onclick="previewCustomMusic(${idx})" title="Preview">
+          <i data-lucide="play" style="width:12px;height:12px;"></i>
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="removeCustomMusic(${idx})" title="Remove">
+          <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+        </button>
       </span>
-    </button>`;
+    </div>`;
   }).join('');
+  lucide.createIcons();
 }
 
 function selectCustomTrack(idx){
@@ -232,7 +239,7 @@ function playNextTrack(shuffle=false){
   if(!_customTracks.length) return;
   if(shuffle){
     const indices=_customTracks.map((_,i)=>i).filter(i=>i!==_activeTrackIdx);
-    const next = indices.length?indices[Math.floor(Math.random()*indices.length)]:_activeTrackIdx;
+    const next = indices.length ? indices[Math.floor(Math.random()*indices.length)] : _activeTrackIdx;
     _activeTrackIdx = next;
   } else {
     if(_activeTrackIdx===null) _activeTrackIdx=0;
@@ -252,11 +259,21 @@ function playPrevTrack(){
 
 function togglePlaylistRepeatMode(){
   _playlistRepeatMode = _playlistRepeatMode==='off' ? 'all' : _playlistRepeatMode==='all' ? 'one' : 'off';
+  _updateRepeatBtn();
+  if(_playingAudio) _playingAudio.loop = (_playlistRepeatMode==='one');
+}
+
+function _updateRepeatBtn(){
   const btn = document.getElementById('musicRepeatBtn');
-  if(btn){
-    const label = _playlistRepeatMode==='off' ? 'Repeat: Off' : _playlistRepeatMode==='all' ? 'Repeat: All' : 'Repeat: One';
-    btn.textContent = label;
-  }
+  if(!btn) return;
+  const configs = {
+    off:  { icon:'repeat',   label:'Off',  style:'opacity:.4;' },
+    all:  { icon:'repeat',   label:'All',  style:'' },
+    one:  { icon:'repeat-1', label:'One',  style:'' },
+  };
+  const c = configs[_playlistRepeatMode];
+  btn.innerHTML = `<i data-lucide="${c.icon}" style="width:13px;height:13px;${c.style}"></i> ${c.label}`;
+  lucide.createIcons();
 }
 
 function shufflePlaylist(){ playNextTrack(true); }
@@ -264,7 +281,6 @@ function shufflePlaylist(){ playNextTrack(true); }
 function _handleTrackEnded(){
   if(_playlistRepeatMode==='one'){ if(musicOn && _activeTrackIdx!==null) _playTrack(_activeTrackIdx); return; }
   if(_playlistRepeatMode==='all'){ playNextTrack(false); return; }
-  // off: stop after current track
   stopMusic();
 }
 

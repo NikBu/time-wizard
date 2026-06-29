@@ -23,3 +23,12 @@
 
 /* MUSIC DROP ZONE */
 #musicDropZone.drag-over{border-color:var(--color-primary);background:var(--color-primary-highlight);}
+
+/* CUSTOM TRACK ROW — div-based to allow inner buttons */
+.custom-snd-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-surface-offset);cursor:pointer;transition:background var(--trans),border-color var(--trans);user-select:none;}
+.custom-snd-row:hover{background:var(--color-surface-dynamic);border-color:var(--color-primary);}
+.custom-snd-row.selected{background:var(--color-primary-highlight);border-color:var(--color-primary);}
+.custom-snd-row .snd-icon{font-size:16px;flex-shrink:0;}
+.custom-snd-row .snd-name{flex:1;min-width:0;font-size:var(--text-sm);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.custom-snd-row .snd-duration{font-size:var(--text-xs);color:var(--color-text-muted);flex-shrink:0;}
+.custom-snd-row .snd-actions{display:flex;gap:var(--space-1);flex-shrink:0;}
