@@ -60,3 +60,11 @@
 .htb-dot-active{background:var(--color-success);box-shadow:0 0 4px oklch(from var(--color-success) l c h / 0.55);}
 .htb-dot-idle{background:var(--color-border);}
 .htb-dot-empty{background:transparent;}
+
+/* MUSIC TWO-COLUMN LAYOUT */
+.music-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:var(--space-4);align-items:flex-start;}
+.music-left,.music-right{min-width:0;}
+@media(max-width:840px){
+  .music-layout{grid-template-columns:1fr;}
+  .music-right{order:-1;}
+}

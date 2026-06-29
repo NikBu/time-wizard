@@ -294,7 +294,8 @@
 
 <!-- MUSIC PANEL -->
 <section class="tab-panel" id="panel-music">
-  <div style="max-width:640px;">
+  <div class="music-layout">
+    <div class="music-left">
     <h2 class="card-title" style="margin-bottom:var(--space-2);">Focus Music</h2>
     <p class="text-muted text-sm" style="margin-bottom:var(--space-5);">Plays looped ambient sound or custom tracks. Fades out when an alarm fires, then resumes.</p>
     <div class="card" style="margin-bottom:var(--space-4);">
@@ -338,6 +339,33 @@
       <div class="card-title" style="font-size:var(--text-base);margin-bottom:var(--space-3);">Built-in Ambients</div>
       <div id="ambientGrid" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
     </div>
+      <div class="card" style="background:var(--color-surface-offset);border-style:dashed;">
+        <div style="font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint);margin-bottom:var(--space-3);">🔍 Find sounds online</div>
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+          <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
+            <span style="font-size:15px;">🌐</span>
+            <div><a href="https://freesound.org" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">freesound.org</a>
+            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Huge Creative Commons library — search "rain loop", "brown noise", "forest ambience"</div></div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
+            <span style="font-size:15px;">🎵</span>
+            <div><a href="https://pixabay.com/music/" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">pixabay.com/music</a>
+            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Royalty-free, no attribution needed — good lofi & ambient section</div></div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
+            <span style="font-size:15px;">🎹</span>
+            <div><a href="https://musicforprogramming.net" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">musicforprogramming.net</a>
+            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Curated focus music — downloadable MP3s, free to use personally</div></div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
+            <span style="font-size:15px;">🤖</span>
+            <div><a href="https://suno.com" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">suno.com</a>
+            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">AI-generated music — free tier for personal use, Pro tier grants broader rights</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="music-right">
     <div class="card" style="margin-bottom:var(--space-4);">
       <div class="card-title" style="font-size:var(--text-base);margin-bottom:var(--space-1);">Custom Track</div>
       <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);">Upload an MP3, WAV, or OGG. It will loop automatically (or follow playlist repeat settings).</p>
@@ -397,6 +425,7 @@
         </div>
       </div>
     </div>
+  
   </div>
 </section>
 
