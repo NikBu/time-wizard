@@ -296,7 +296,7 @@
 <section class="tab-panel" id="panel-music">
   <div style="max-width:640px;">
     <h2 class="card-title" style="margin-bottom:var(--space-2);">Focus Music</h2>
-    <p class="text-muted text-sm" style="margin-bottom:var(--space-5);">Plays looped ambient sound while any timer is running. Fades out when an alarm fires, then resumes.</p>
+    <p class="text-muted text-sm" style="margin-bottom:var(--space-5);">Plays looped ambient sound or custom tracks. Fades out when an alarm fires, then resumes.</p>
     <div class="card" style="margin-bottom:var(--space-4);">
       <div style="display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap;">
         <div id="musicVisualizer" style="display:flex;align-items:flex-end;gap:3px;height:32px;flex-shrink:0;">
@@ -340,7 +340,7 @@
     </div>
     <div class="card" style="margin-bottom:var(--space-4);">
       <div class="card-title" style="font-size:var(--text-base);margin-bottom:var(--space-1);">Custom Track</div>
-      <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);">Upload an MP3, WAV, or OGG. It will loop automatically.</p>
+      <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);">Upload an MP3, WAV, or OGG. It will loop automatically (or follow playlist repeat settings).</p>
       <div id="musicDropZone" style="border:2px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);text-align:center;transition:border-color var(--trans),background var(--trans);cursor:pointer;" onclick="document.getElementById('musicUpload').click()" ondragover="musicDragOver(event)" ondragleave="musicDragLeave(event)" ondrop="musicDrop(event)">
         <i data-lucide="music" style="width:24px;height:24px;margin:0 auto var(--space-2);color:var(--color-text-faint);display:block;"></i>
         <div style="font-size:var(--text-sm);color:var(--color-text-muted);">Drop audio file here or <span style="color:var(--color-primary);font-weight:600;">click to browse</span></div>
@@ -356,6 +356,20 @@
         <div style="height:3px;background:var(--color-surface-dynamic);border-radius:var(--radius-full);overflow:hidden;">
           <div id="ctpBar" style="height:100%;width:0%;background:var(--color-primary);border-radius:var(--radius-full);transition:width .5s linear;"></div>
         </div>
+      </div>
+      <div class="music-player-controls" style="margin-top:var(--space-3);display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);">
+        <div style="display:flex;gap:var(--space-2);">
+          <button class="btn btn-secondary btn-sm" onclick="playPrevTrack()" title="Previous track">
+            <i data-lucide="skip-back" style="width:13px;height:13px;"></i>
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="playNextTrack(false)" title="Next track">
+            <i data-lucide="skip-forward" style="width:13px;height:13px;"></i>
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="shufflePlaylist()" title="Shuffle playlist">
+            <i data-lucide="shuffle" style="width:13px;height:13px;"></i>
+          </button>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="musicRepeatBtn" onclick="togglePlaylistRepeatMode()" title="Repeat mode">Repeat: All</button>
       </div>
     </div>
     <div class="card" style="background:var(--color-surface-offset);border-style:dashed;">
