@@ -22,7 +22,7 @@ let _activeTrackIdx = null;
 let _playingAudio = null;
 let _musicAnalyser = null;
 let _playlistRepeatMode = 'all'; // 'off' | 'one' | 'all'
-let _previewAudio = null;
+let _previewAudioTrack = null;
 let _previewTrackIdx = null;
 
 function _getPlayingAudio(){ return _playingAudio; }
@@ -168,7 +168,7 @@ function renderCustomMusicList(){
   list.innerHTML=_customTracks.map((t,idx)=>{
     const active = idx===_activeTrackIdx;
     const dur = t.duration!=null ? fmtClock(t.duration) : '—';
-    const isPreviewing = _previewAudio && _previewTrackIdx===idx;
+    const isPreviewing = _previewAudioTrack && _previewTrackIdx===idx;
     const previewIcon = isPreviewing ? 'square' : 'play';
     const previewTitle = isPreviewing ? 'Stop preview' : 'Preview';
     return `
@@ -198,9 +198,9 @@ function selectCustomTrack(idx){
 }
 
 function _stopPreview(){
-  if(_previewAudio){
-    try{ _previewAudio.pause(); }catch(e){}
-    _previewAudio = null;
+  if(_previewAudioTrack){
+    try{ _previewAudioTrack.pause(); }catch(e){}
+    _previewAudioTrack = null;
   }
   _previewTrackIdx = null;
   renderCustomMusicList();
@@ -208,31 +208,31 @@ function _stopPreview(){
 
 function previewCustomMusic(idx){
   // Toggle off if this track is already previewing
-  if(_previewAudio && _previewTrackIdx===idx){
+  if(_previewAudioTrack && _previewTrackIdx===idx){
     _stopPreview();
     return;
   }
   // Stop any previous preview
-  if(_previewAudio){
-    try{ _previewAudio.pause(); }catch(e){}
-    _previewAudio = null;
+  if(_previewAudioTrack){
+    try{ _previewAudioTrack.pause(); }catch(e){}
+    _previewAudioTrack = null;
     _previewTrackIdx = null;
   }
   const t=_customTracks[idx]; if(!t) return;
   const a=new Audio(t.url);
-  _previewAudio = a;
+  _previewAudioTrack = a;
   _previewTrackIdx = idx;
   a.volume=_musicVol;
   a.play().catch(()=>{});
-  a.onended = ()=>{ _previewAudio=null; _previewTrackIdx=null; renderCustomMusicList(); };
+  a.onended = ()=>{ _previewAudioTrack=null; _previewTrackIdx=null; renderCustomMusicList(); };
   renderCustomMusicList();
 }
 
 function removeCustomMusic(idx){
   const t=_customTracks[idx]; if(!t) return;
-  if(_previewAudio && _previewTrackIdx===idx){
-    try{ _previewAudio.pause(); }catch(e){}
-    _previewAudio=null;
+  if(_previewAudioTrack && _previewTrackIdx===idx){
+    try{ _previewAudioTrack.pause(); }catch(e){}
+    _previewAudioTrack=null;
     _previewTrackIdx=null;
   }
   if(t.audio){ try{ t.audio.pause(); }catch(e){} }
