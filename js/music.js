@@ -22,6 +22,8 @@ let _activeTrackIdx = null;
 let _playingAudio = null;
 let _musicAnalyser = null;
 let _playlistRepeatMode = 'all'; // 'off' | 'one' | 'all'
+let _previewAudio = null;
+let _previewTrackIdx = null;
 
 function _getPlayingAudio(){ return _playingAudio; }
 
@@ -166,7 +168,9 @@ function renderCustomMusicList(){
   list.innerHTML=_customTracks.map((t,idx)=>{
     const active = idx===_activeTrackIdx;
     const dur = t.duration!=null ? fmtClock(t.duration) : '—';
-    // div-based row: outer div handles track selection, inner buttons stop propagation
+    const isPreviewing = _previewAudio && _previewTrackIdx===idx;
+    const previewIcon = isPreviewing ? 'square' : 'play';
+    const previewTitle = isPreviewing ? 'Stop preview' : 'Preview';
     return `
     <div class="custom-snd-row${active?' selected':''}" onclick="selectCustomTrack(${idx})" role="button" tabindex="0"
          onkeydown="if(event.key==='Enter'||event.key===' ')selectCustomTrack(${idx})">
@@ -174,8 +178,8 @@ function renderCustomMusicList(){
       <span class="snd-name" title="${t.name}">${t.name}</span>
       <span class="snd-duration">${dur}</span>
       <span class="snd-actions" onclick="event.stopPropagation()">
-        <button class="btn btn-ghost btn-sm" onclick="previewCustomMusic(${idx})" title="Preview">
-          <i data-lucide="play" style="width:12px;height:12px;"></i>
+        <button class="btn btn-ghost btn-sm" onclick="previewCustomMusic(${idx})" title="${previewTitle}">
+          <i data-lucide="${previewIcon}" style="width:12px;height:12px;"></i>
         </button>
         <button class="btn btn-ghost btn-sm" onclick="removeCustomMusic(${idx})" title="Remove">
           <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
@@ -193,16 +197,44 @@ function selectCustomTrack(idx){
   if(musicOn){ stopMusic(); startMusic(); }
 }
 
+function _stopPreview(){
+  if(_previewAudio){
+    try{ _previewAudio.pause(); }catch(e){}
+    _previewAudio = null;
+  }
+  _previewTrackIdx = null;
+  renderCustomMusicList();
+}
+
 function previewCustomMusic(idx){
+  // Toggle off if this track is already previewing
+  if(_previewAudio && _previewTrackIdx===idx){
+    _stopPreview();
+    return;
+  }
+  // Stop any previous preview
+  if(_previewAudio){
+    try{ _previewAudio.pause(); }catch(e){}
+    _previewAudio = null;
+    _previewTrackIdx = null;
+  }
   const t=_customTracks[idx]; if(!t) return;
   const a=new Audio(t.url);
+  _previewAudio = a;
+  _previewTrackIdx = idx;
   a.volume=_musicVol;
   a.play().catch(()=>{});
-  setTimeout(()=>{ try{ a.pause(); }catch(e){} }, 10000);
+  a.onended = ()=>{ _previewAudio=null; _previewTrackIdx=null; renderCustomMusicList(); };
+  renderCustomMusicList();
 }
 
 function removeCustomMusic(idx){
   const t=_customTracks[idx]; if(!t) return;
+  if(_previewAudio && _previewTrackIdx===idx){
+    try{ _previewAudio.pause(); }catch(e){}
+    _previewAudio=null;
+    _previewTrackIdx=null;
+  }
   if(t.audio){ try{ t.audio.pause(); }catch(e){} }
   if(t.url) URL.revokeObjectURL(t.url);
   _customTracks.splice(idx,1);
@@ -282,6 +314,16 @@ function _handleTrackEnded(){
   if(_playlistRepeatMode==='one'){ if(musicOn && _activeTrackIdx!==null) _playTrack(_activeTrackIdx); return; }
   if(_playlistRepeatMode==='all'){ playNextTrack(false); return; }
   stopMusic();
+}
+
+function seekCustomTrack(event){
+  const a = _playingAudio;
+  if(!a || !isFinite(a.duration)) return;
+  const bar = event.currentTarget;
+  const rect = bar.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const pct = Math.min(Math.max(x / rect.width, 0), 1);
+  a.currentTime = pct * a.duration;
 }
 
 function monitorCustomTrack(){
