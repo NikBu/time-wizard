@@ -18,9 +18,29 @@ function setAlarmVol(v){
 function setMusicVol(v){
   _musicVol=v/100;
   const lbl=document.getElementById('musicVolLabel'); if(lbl) lbl.textContent=v+'%';
-  const mwSlider=document.getElementById('mwVolSlider'); if(mwSlider) mwSlider.value=v;
-  const mainSlider=document.getElementById('musicVolSlider'); if(mainSlider) mainSlider.value=v;
+  const mwSlider=document.getElementById('mwVolSlider'); if(mwSlider && mwSlider.value!==String(v)) mwSlider.value=v;
+  const mainSlider=document.getElementById('musicVolSlider'); if(mainSlider && mainSlider.value!==String(v)) mainSlider.value=v;
   if(_musicGain) _musicGain.gain.setTargetAtTime(_musicVol, actx().currentTime, 0.05);
+  if(window._applyMusicVolToPlayingAudio) window._applyMusicVolToPlayingAudio();
+}
+
+// Helper used by music.js to keep any HTMLAudioElement in sync with _musicVol
+let _htmlMusicSource = null;
+function attachHtmlMusicSource(audio){
+  actx();
+  if(_htmlMusicSource) try{ _htmlMusicSource.disconnect(); }catch(e){}
+  try{
+    _htmlMusicSource = _actx.createMediaElementSource(audio);
+    _htmlMusicSource.connect(musicDest());
+  }catch(e){ _htmlMusicSource = null; }
+  audio.volume = _musicVol;
+}
+
+function _applyMusicVolToPlayingAudio(){
+  if(typeof window._getPlayingAudio === 'function'){
+    const a = window._getPlayingAudio();
+    if(a) a.volume = _musicVol;
+  }
 }
 
 function oscEnv(f,t,sg,eg,st,dur){
