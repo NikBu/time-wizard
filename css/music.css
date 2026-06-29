@@ -19,7 +19,7 @@
 #musicWidget .mw-bar.active{animation:vizBounce calc(0.4s + var(--i)*0.07s) ease-in-out infinite alternate;}
 #musicWidget .mw-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-muted);}
 #musicWidget .mw-vol{display:flex;align-items:center;gap:var(--space-1);}
-#musicWidget input[type=range]{width:64px;height:4px;accent-color:var(--color-primary);}
+#musicWidget input[type=range]{width:64px;height:4px;accent-color:var(--color-primary);padding:0;}
 
 /* MUSIC DROP ZONE */
 #musicDropZone.drag-over{border-color:var(--color-primary);background:var(--color-primary-highlight);}

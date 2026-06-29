@@ -21,6 +21,7 @@ let _customTracks = []; // [{id,name,url,audio,duration}]
 let _activeTrackIdx = null;
 let _playingAudio = null;
 let _musicAnalyser = null;
+let _playlistRepeatMode = 'all'; // 'off' | 'one' | 'all'
 
 function _getPlayingAudio(){ return _playingAudio; }
 
@@ -89,7 +90,7 @@ function updateMusicStatus(){
   const track = (_activeTrackIdx!==null)?_customTracks[_activeTrackIdx]:null;
   const ambientName = AMBIENTS.find(a=>a.id===currentAmbient)?.name || 'Not playing';
   if(np) np.textContent = track ? track.name : ambientName;
-  if(st) st.textContent = musicOn ? 'Playing in loop' : (track||currentAmbient ? 'Paused' : 'Select a track and press Play');
+  if(st) st.textContent = musicOn ? 'Playing' : (track||currentAmbient ? 'Paused' : 'Select a track and press Play');
   if(btn) btn.innerHTML = musicOn ? '<i data-lucide="pause" style="width:13px;height:13px;"></i> Pause' : '<i data-lucide="play" style="width:13px;height:13px;"></i> Play';
   lucide.createIcons();
 }
@@ -141,9 +142,9 @@ function handleMusicUpload(input){
     const baseName=file.name.replace(/\.[^.]+$/,'');
     const track={ id: Date.now()+Math.random(), name: baseName, url, audio:null, duration:null };
     _customTracks.push(track);
-    _activeTrackIdx = _customTracks.length-1;
     _probeTrackDuration(track);
   });
+  _activeTrackIdx = _customTracks.length-1;
   currentAmbient=null;
   const nameEl=document.getElementById('musicUploadName');
   if(nameEl){ nameEl.style.display='block'; nameEl.textContent=input.files[0].name; }
@@ -222,8 +223,49 @@ function _playTrack(idx){
   if(!t.audio){ t.audio=new Audio(t.url); attachHtmlMusicSource(t.audio); }
   _playingAudio=t.audio;
   _playingAudio.volume=_musicVol;
-  _playingAudio.loop = true;
+  _playingAudio.loop = (_playlistRepeatMode==='one');
+  _playingAudio.onended = _handleTrackEnded;
   _playingAudio.play().catch(()=>{});
+}
+
+function playNextTrack(shuffle=false){
+  if(!_customTracks.length) return;
+  if(shuffle){
+    const indices=_customTracks.map((_,i)=>i).filter(i=>i!==_activeTrackIdx);
+    const next = indices.length?indices[Math.floor(Math.random()*indices.length)]:_activeTrackIdx;
+    _activeTrackIdx = next;
+  } else {
+    if(_activeTrackIdx===null) _activeTrackIdx=0;
+    else _activeTrackIdx = (_activeTrackIdx+1) % _customTracks.length;
+  }
+  renderCustomMusicList(); updateMusicStatus(); updateMusicWidget();
+  if(musicOn) _playTrack(_activeTrackIdx);
+}
+
+function playPrevTrack(){
+  if(!_customTracks.length) return;
+  if(_activeTrackIdx===null) _activeTrackIdx=0;
+  else _activeTrackIdx = (_activeTrackIdx-1+_customTracks.length) % _customTracks.length;
+  renderCustomMusicList(); updateMusicStatus(); updateMusicWidget();
+  if(musicOn) _playTrack(_activeTrackIdx);
+}
+
+function togglePlaylistRepeatMode(){
+  _playlistRepeatMode = _playlistRepeatMode==='off' ? 'all' : _playlistRepeatMode==='all' ? 'one' : 'off';
+  const btn = document.getElementById('musicRepeatBtn');
+  if(btn){
+    const label = _playlistRepeatMode==='off' ? 'Repeat: Off' : _playlistRepeatMode==='all' ? 'Repeat: All' : 'Repeat: One';
+    btn.textContent = label;
+  }
+}
+
+function shufflePlaylist(){ playNextTrack(true); }
+
+function _handleTrackEnded(){
+  if(_playlistRepeatMode==='one'){ if(musicOn && _activeTrackIdx!==null) _playTrack(_activeTrackIdx); return; }
+  if(_playlistRepeatMode==='all'){ playNextTrack(false); return; }
+  // off: stop after current track
+  stopMusic();
 }
 
 function monitorCustomTrack(){
