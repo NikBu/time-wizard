@@ -29,9 +29,13 @@ function _getPlayingAudio(){ return _playingAudio; }
 
 // ── INIT ───────────────────────────────────────────
 function _initPlaylists(){
-  // seed ambient playlist if not present
   if(!_playlists.find(p=>p.id==='__ambients__')){
     _playlists.unshift({ id:'__ambients__', name:'Ambients', locked:true, trackIds: AMBIENTS.map(a=>a.id) });
+  }
+  if(!_playlists.find(p=>p.id==='__custom__')){
+    // Default library playlist — all uploaded tracks live here automatically
+    const idx = _playlists.findIndex(p=>p.id==='__ambients__');
+    _playlists.splice(idx+1, 0, { id:'__custom__', name:'Custom Music', locked:false, trackIds:[] });
   }
   if(!_activePLId) _activePLId = _playlists[0].id;
 }
@@ -98,6 +102,35 @@ function removeTrackFromPlaylist(trackId, plId){
   updatePlayerUI();
 }
 
+// ── TRACK LIBRARY MODAL ────────────────────────────
+// Opens a picker to assign any uploaded track to a specific (non-locked) playlist
+function openAddToPlaylistModal(trackId){
+  const existing = document.getElementById('atpModal');
+  if(existing) existing.remove();
+  const track = _trackLib.find(t=>t.id===trackId);
+  if(!track) return;
+  const plOptions = _playlists.filter(p=>!p.locked);
+  const rows = plOptions.length ? plOptions.map(pl=>{
+    const already = pl.trackIds.includes(trackId);
+    return `<button class="btn ${already?'btn-secondary':'btn-ghost'} btn-sm"
+      style="width:100%;justify-content:space-between;margin-bottom:var(--space-2);"
+      onclick="addTrackToPlaylist('${trackId}','${pl.id}');renderPlaylists();document.getElementById('atpModal').remove();">
+      <span>${pl.name}</span>
+      ${already?'<i data-lucide="check" style="width:12px;height:12px;"></i>':'<i data-lucide="plus" style="width:12px;height:12px;"></i>'}
+    </button>`;
+  }).join('') : '<p style="font-size:var(--text-sm);color:var(--color-text-muted);">No custom playlists yet. Create one first.</p>';
+  const html = `<div class="modal-backdrop" id="atpModal" onclick="if(event.target===this)this.remove()">
+  <div class="modal" style="max-width:340px;">
+    <div class="modal-title">Add to playlist</div>
+    <div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);">Track: <strong>${track.name}</strong></div>
+    ${rows}
+    <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:var(--space-2);" onclick="document.getElementById('atpModal').remove()">Cancel</button>
+  </div>
+</div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  lucide.createIcons();
+}
+
 // ── RENDER PLAYLISTS SIDEBAR ───────────────────────
 function renderPlaylists(){
   const sidebar = document.getElementById('playlistSidebar'); if(!sidebar) return;
@@ -118,10 +151,20 @@ function renderPlaylists(){
 function renderTrackList(){
   const list = document.getElementById('playlistTrackList'); if(!list) return;
   const pl = _playlists.find(p=>p.id===_activePLId);
+  const addSection = document.getElementById('addTracksSection');
+
+  // show/hide upload section based on locked state
+  if(addSection){
+    const isLocked = pl ? pl.locked : true;
+    addSection.style.display = isLocked ? 'none' : '';
+  }
+
   if(!pl){ list.innerHTML=''; return; }
   const isAmbientPL = pl.id==='__ambients__';
   if(!pl.trackIds.length){
-    list.innerHTML='<div style="font-size:var(--text-xs);color:var(--color-text-faint);text-align:center;padding:var(--space-4);">No tracks yet. Upload below.</div>';
+    list.innerHTML=`<div style="font-size:var(--text-xs);color:var(--color-text-faint);text-align:center;padding:var(--space-4);">
+      ${isAmbientPL ? 'Built-in ambient tracks' : 'No tracks yet. Use "Add tracks" above.'}
+    </div>`;
     return;
   }
   list.innerHTML = pl.trackIds.map(tid=>{
@@ -142,6 +185,9 @@ function renderTrackList(){
       <span class="snd-name" title="${name}">${name}</span>
       <span class="snd-duration">${dur}</span>
       ${!isAmbientPL ? `<span class="snd-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm" onclick="openAddToPlaylistModal('${tid}')" title="Add to playlist">
+          <i data-lucide="list-plus" style="width:12px;height:12px;"></i>
+        </button>
         <button class="btn btn-ghost btn-sm" onclick="removeTrackFromPlaylist('${tid}')" title="Remove from playlist">
           <i data-lucide="x" style="width:12px;height:12px;"></i>
         </button>
@@ -149,6 +195,16 @@ function renderTrackList(){
     </div>`;
   }).join('');
   lucide.createIcons();
+}
+
+// ── TOGGLE ADD TRACKS PANEL ────────────────────────
+function toggleAddTracks(){
+  const body = document.getElementById('addTracksBody');
+  const chevron = document.getElementById('addTracksChevron');
+  if(!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if(chevron) chevron.style.transform = open ? '' : 'rotate(180deg)';
 }
 
 // ── TRACK SELECTION ────────────────────────────────
@@ -166,7 +222,6 @@ function toggleMusic(){ musicOn ? pauseMusic() : startMusic(); }
 
 function startMusic(){
   if(!_activeTrackId){
-    // auto-select first track of active playlist
     const pl = _playlists.find(p=>p.id===_activePLId);
     if(pl && pl.trackIds.length){ selectTrack(pl.trackIds[0]); return; }
     showToast('Select a track first','error'); return;
@@ -207,13 +262,11 @@ function stopMusic(){
 function _playTrackById(id){
   const isAmbient = AMBIENTS.some(a=>a.id===id);
   _isAmbientActive = isAmbient;
-  // stop whatever is playing
   if(_playingAudio){ try{ _playingAudio.onended=null; _playingAudio.pause(); _playingAudio.currentTime=0; }catch(e){} _playingAudio=null; }
   if(_ambientNode?.stop){ try{ _ambientNode.stop(); }catch(e){} _ambientNode=null; }
   if(isAmbient){
     actx();
     _ambientNode = createAmbient(id);
-    // toggle dim on seek row
     document.getElementById('playerSeekRow')?.classList.add('seek-row--disabled');
   } else {
     const t = _trackLib.find(x=>x.id===id); if(!t) return;
@@ -296,16 +349,30 @@ function _updateShuffleBtn(){
 // ── UPLOAD ─────────────────────────────────────────
 function handleMusicUpload(input){
   const files = input.files || []; if(!files.length) return;
-  const pl = _playlists.find(p=>p.id===_activePLId);
+  // Always find or create a non-locked target playlist
+  // If active playlist is locked (Ambients) → silently redirect to __custom__
+  let pl = _playlists.find(p=>p.id===_activePLId);
+  if(!pl || pl.locked){
+    pl = _playlists.find(p=>p.id==='__custom__');
+    if(pl){ _activePLId = pl.id; renderPlaylists(); }
+  }
   const targetPL = (pl && !pl.locked) ? pl : null;
+
   Array.from(files).forEach(file=>{
     const url = URL.createObjectURL(file);
     const id = 'tr_' + Date.now() + '_' + Math.random().toString(36).slice(2);
     const track = { id, name: file.name.replace(/\.[^.]+$/,''), url, audio:null, duration:null };
     _trackLib.push(track);
     _probeTrackDuration(track);
-    if(targetPL) targetPL.trackIds.push(id);
+    // Always add to __custom__ (master library)
+    const customPL = _playlists.find(p=>p.id==='__custom__');
+    if(customPL && !customPL.trackIds.includes(id)) customPL.trackIds.push(id);
+    // Also add to target if it differs from __custom__
+    if(targetPL && targetPL.id !== '__custom__' && !targetPL.trackIds.includes(id)){
+      targetPL.trackIds.push(id);
+    }
   });
+
   if(!_activeTrackId && targetPL && targetPL.trackIds.length){
     _activeTrackId = targetPL.trackIds[targetPL.trackIds.length-1];
     _isAmbientActive = false;
@@ -333,7 +400,6 @@ function musicDrop(e){
 
 // ── PLAYER UI ──────────────────────────────────────
 function updatePlayerUI(){
-  // now-playing info
   const np = document.getElementById('musicNowPlaying');
   const st = document.getElementById('musicStatus');
   const btn = document.getElementById('musicPlayBtn');
@@ -352,14 +418,12 @@ function updatePlayerUI(){
     ? '<i data-lucide="pause" style="width:14px;height:14px;"></i>'
     : '<i data-lucide="play" style="width:14px;height:14px;"></i>';
 
-  // dim seek row for ambient
   const seekRow = document.getElementById('playerSeekRow');
   if(seekRow) seekRow.classList.toggle('seek-row--disabled', _isAmbientActive);
 
   lucide.createIcons();
 }
 
-// keep old name for compat
 function updateMusicStatus(){ updatePlayerUI(); }
 
 function setViz(on){

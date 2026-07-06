@@ -59,3 +59,13 @@
 
 /* ── PLAYLIST TRACK CARD ─────────────────────────── */
 .pl-tracks-card{flex:1;}
+
+/* ── MOBILE ORDER: player first, playlists second ── */
+@media (max-width: 767px) {
+  .music-layout { display: flex; flex-direction: column; }
+  .music-left  { order: 1; }
+  .music-right { order: 2; }
+}
+
+/* ── ADD-TO-PLAYLIST MODAL ───────────────────────── */
+#atpModal .modal { max-width: 340px; }
