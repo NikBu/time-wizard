@@ -186,8 +186,6 @@
 
 <!-- COMPANION PANEL -->
 <section class="tab-panel" id="panel-companion">
-
-  <!-- Enable toggle row -->
   <div class="companion-topbar">
     <div>
       <h2 class="card-title" style="margin-bottom:0;">Archibald</h2>
@@ -198,14 +196,8 @@
       Enable companion
     </label>
   </div>
-
-  <!-- Two-column layout: 2fr left (Arch+QA) | 3fr right (Cabinet) -->
   <div class="companion-layout" id="archBody">
-
-    <!-- LEFT: portrait + QA -->
     <div class="companion-left">
-
-      <!-- Portrait card -->
       <div class="card companion-portrait-card">
         <div class="companion-portrait" onclick="archOnPet()" title="Pet Archibald" style="cursor:pointer;">
           <img src="" alt="Archibald" id="companionImg" class="companion-img" width="160" height="160">
@@ -215,46 +207,28 @@
           "Ah, a new visitor. I am Archibald. Let us begin our work together, shall we?"
         </div>
       </div>
-
-      <!-- QA card -->
       <div class="card">
-        <!-- Header row -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
           <div class="card-title" style="font-size:var(--text-base);margin-bottom:0;">📢 Ask Archibald</div>
           <span style="font-size:var(--text-xs);color:var(--color-text-faint);">Click any question</span>
         </div>
-
-        <!-- Segmented control -->
         <div class="qa-seg" role="tablist" aria-label="Question categories">
-          <button class="qa-seg-btn qa-seg-btn--active" role="tab" data-tab="guide"
-            onclick="renderQA('guide')" aria-selected="true">🧭 Guide</button>
-          <button class="qa-seg-btn" role="tab" data-tab="trivia"
-            onclick="renderQA('trivia')" aria-selected="false">💡 Trivia</button>
-          <button class="qa-seg-btn" role="tab" data-tab="cheer"
-            onclick="renderQA('cheer')" aria-selected="false">✨ Cheer Up</button>
+          <button class="qa-seg-btn qa-seg-btn--active" role="tab" data-tab="guide" onclick="renderQA('guide')" aria-selected="true">🧭 Guide</button>
+          <button class="qa-seg-btn" role="tab" data-tab="trivia" onclick="renderQA('trivia')" aria-selected="false">💡 Trivia</button>
+          <button class="qa-seg-btn" role="tab" data-tab="cheer" onclick="renderQA('cheer')" aria-selected="false">✨ Cheer Up</button>
         </div>
-
-        <!-- Chip grid -->
         <div class="qa-chip-grid" id="qaChipGrid"></div>
-
-        <!-- Answer panel -->
         <div id="qaAnswer" style="display:none;margin-top:var(--space-3);padding:var(--space-3);background:var(--color-surface-offset);border-radius:var(--radius-lg);border-left:3px solid var(--color-primary);">
           <div id="qaAnswerText" style="font-size:var(--text-sm);color:var(--color-text);font-style:italic;"></div>
         </div>
       </div>
-
-    </div><!-- /companion-left -->
-
-    <!-- RIGHT: Reward Cabinet -->
+    </div>
     <div class="companion-right">
       <div class="reward-cabinet">
-
-        <!-- Cabinet nameplate header -->
         <div class="cabinet-nameplate">
           <span class="cabinet-title">Reward Cabinet</span>
           <div class="cabinet-history-anchor">
-            <button class="cabinet-history-btn" id="cabinetHistoryBtn"
-              onclick="cabinetHistoryToggle()" title="Redemption history" aria-expanded="false">
+            <button class="cabinet-history-btn" id="cabinetHistoryBtn" onclick="cabinetHistoryToggle()" title="Redemption history" aria-expanded="false">
               <i data-lucide="scroll" style="width:15px;height:15px;"></i>
             </button>
             <div class="cabinet-history-popup" id="cabinetHistoryPopup" style="display:none;">
@@ -265,24 +239,16 @@
             </div>
           </div>
         </div>
-
-        <!-- Add reward button row -->
         <div class="reward-add-row">
           <button class="btn btn-sm btn-ghost reward-add-btn" onclick="rewardOpenModal()">
             <i data-lucide="plus" style="width:12px;height:12px;"></i> Add reward
           </button>
         </div>
-
-        <!-- Next-reward hint -->
         <div class="reward-next-hint" id="rewardNextHint" style="display:none;"></div>
-
-        <!-- Cabinet shelves -->
         <div class="cabinet-shelves" id="rewardCardList"></div>
-
-      </div><!-- /reward-cabinet -->
-    </div><!-- /companion-right -->
-
-  </div><!-- /companion-layout -->
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- THEMES PANEL -->
@@ -295,51 +261,65 @@
 <!-- MUSIC PANEL -->
 <section class="tab-panel" id="panel-music">
   <div class="music-layout">
+
+    <!-- LEFT: Player -->
     <div class="music-left">
-    <h2 class="card-title" style="margin-bottom:var(--space-2);">Focus Music</h2>
-    <p class="text-muted text-sm" style="margin-bottom:var(--space-5);">Plays looped ambient sound or custom tracks. Fades out when an alarm fires, then resumes.</p>
-    <div class="card" style="margin-bottom:var(--space-4);">
-      <div style="display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap;">
-        <div id="musicVisualizer" style="display:flex;align-items:flex-end;gap:3px;height:32px;flex-shrink:0;">
-          <div class="viz-bar" style="--i:0"></div><div class="viz-bar" style="--i:1"></div>
-          <div class="viz-bar" style="--i:2"></div><div class="viz-bar" style="--i:3"></div>
-          <div class="viz-bar" style="--i:4"></div>
+      <div class="card music-player-card">
+
+        <!-- Visualizer + Now Playing -->
+        <div class="player-now-playing-row">
+          <div id="musicVisualizer" class="player-visualizer">
+            <div class="viz-bar" style="--i:0"></div><div class="viz-bar" style="--i:1"></div>
+            <div class="viz-bar" style="--i:2"></div><div class="viz-bar" style="--i:3"></div>
+            <div class="viz-bar" style="--i:4"></div>
+          </div>
+          <div class="player-track-info">
+            <div id="musicNowPlaying" class="player-track-name">Not playing</div>
+            <div id="musicStatus" class="player-track-status">Select a track and press Play</div>
+          </div>
         </div>
-        <div style="flex:1;min-width:0;">
-          <div id="musicNowPlaying" style="font-size:var(--text-sm);font-weight:600;color:var(--color-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Not playing</div>
-          <div id="musicStatus" style="font-size:var(--text-xs);color:var(--color-text-muted);">Select a track and press Play</div>
+
+        <!-- Seek bar -->
+        <div class="player-seek-row" id="playerSeekRow">
+          <span id="ctpElapsed" class="player-time">0:00</span>
+          <div id="customTrackProgress" class="player-seek-bar-wrap" onclick="seekCustomTrack(event)">
+            <div id="ctpBar" class="player-seek-bar-fill"></div>
+          </div>
+          <span id="ctpTotal" class="player-time">—</span>
         </div>
-        <div style="display:flex;gap:var(--space-2);align-items:center;">
-          <button class="btn btn-primary" id="musicPlayBtn" onclick="toggleMusic()">
-            <i data-lucide="play" style="width:13px;height:13px;"></i> Play
+
+        <!-- Transport -->
+        <div class="player-transport-row">
+          <button class="btn btn-ghost btn-icon" onclick="playPrevTrack()" title="Previous">
+            <i data-lucide="skip-back" style="width:16px;height:16px;"></i>
           </button>
-          <button class="btn btn-secondary btn-sm" onclick="stopMusic()" title="Stop">
-            <i data-lucide="square" style="width:13px;height:13px;"></i>
+          <button class="btn btn-primary player-play-btn" id="musicPlayBtn" onclick="toggleMusic()">
+            <i data-lucide="play" style="width:16px;height:16px;"></i>
+          </button>
+          <button class="btn btn-ghost btn-icon" onclick="stopMusic()" title="Stop">
+            <i data-lucide="square" style="width:15px;height:15px;"></i>
+          </button>
+          <button class="btn btn-ghost btn-icon" onclick="playNextTrack()" title="Next">
+            <i data-lucide="skip-forward" style="width:16px;height:16px;"></i>
+          </button>
+          <button class="btn btn-ghost btn-icon" id="musicShuffleBtn" onclick="toggleShuffle()" title="Shuffle" style="opacity:.4;">
+            <i data-lucide="shuffle" style="width:15px;height:15px;"></i>
+          </button>
+          <button class="btn btn-ghost btn-icon" id="musicRepeatBtn" onclick="togglePlaylistRepeatMode()" title="Repeat">
+            <i data-lucide="repeat" style="width:15px;height:15px;"></i>
           </button>
         </div>
-      </div>
-      <div style="margin-top:var(--space-4);display:flex;flex-direction:column;gap:var(--space-1);">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span class="section-label" style="margin-bottom:0;">Music volume</span>
-          <span id="musicVolLabel" style="font-size:var(--text-xs);color:var(--color-text-muted);">60%</span>
+
+        <!-- Volume -->
+        <div class="player-volume-row">
+          <i data-lucide="volume-1" style="width:13px;height:13px;color:var(--color-text-faint);"></i>
+          <input type="range" class="time-slider" id="musicVolSlider" min="0" max="100" value="60" oninput="setMusicVol(this.value)">
+          <span id="musicVolLabel" style="font-size:var(--text-xs);color:var(--color-text-muted);min-width:30px;">60%</span>
         </div>
-        <input type="range" class="time-slider" id="musicVolSlider" min="0" max="100" value="60" oninput="setMusicVol(this.value)">
       </div>
-    </div>
-    <div class="card" style="margin-bottom:var(--space-4);">
-      <div style="display:flex;flex-direction:column;gap:var(--space-1);">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span class="section-label" style="margin-bottom:0;">Alarm volume</span>
-          <span id="alarmVolLabel" style="font-size:var(--text-xs);color:var(--color-text-muted);">80%</span>
-        </div>
-        <input type="range" class="time-slider" id="alarmVolSlider" min="0" max="100" value="80" oninput="setAlarmVol(this.value)">
-      </div>
-    </div>
-    <div class="card" style="margin-bottom:var(--space-4);">
-      <div class="card-title" style="font-size:var(--text-base);margin-bottom:var(--space-3);">Built-in Ambients</div>
-      <div id="ambientGrid" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
-    </div>
-      <div class="card" style="background:var(--color-surface-offset);border-style:dashed;">
+
+      <!-- Find Sounds card -->
+      <div class="card" style="background:var(--color-surface-offset);border-style:dashed;margin-top:var(--space-4);">
         <div style="font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint);margin-bottom:var(--space-3);">🔍 Find sounds online</div>
         <div style="display:flex;flex-direction:column;gap:var(--space-2);">
           <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
@@ -350,7 +330,7 @@
           <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
             <span style="font-size:15px;">🎵</span>
             <div><a href="https://pixabay.com/music/" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">pixabay.com/music</a>
-            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Royalty-free, no attribution needed — good lofi & ambient section</div></div>
+            <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Royalty-free, no attribution needed — good lofi &amp; ambient section</div></div>
           </div>
           <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
             <span style="font-size:15px;">🎹</span>
@@ -364,68 +344,47 @@
           </div>
         </div>
       </div>
-    </div>
+    </div><!-- /music-left -->
+
+    <!-- RIGHT: Playlists -->
     <div class="music-right">
-    <div class="card" style="margin-bottom:var(--space-4);">
-      <div class="card-title" style="font-size:var(--text-base);margin-bottom:var(--space-1);">Custom Track</div>
-      <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);">Upload an MP3, WAV, or OGG. It will loop automatically (or follow playlist repeat settings).</p>
-      <div id="musicDropZone" style="border:2px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);text-align:center;transition:border-color var(--trans),background var(--trans);cursor:pointer;" onclick="document.getElementById('musicUpload').click()" ondragover="musicDragOver(event)" ondragleave="musicDragLeave(event)" ondrop="musicDrop(event)">
-        <i data-lucide="music" style="width:24px;height:24px;margin:0 auto var(--space-2);color:var(--color-text-faint);display:block;"></i>
-        <div style="font-size:var(--text-sm);color:var(--color-text-muted);">Drop audio file here or <span style="color:var(--color-primary);font-weight:600;">click to browse</span></div>
-        <div style="font-size:var(--text-xs);color:var(--color-text-faint);margin-top:var(--space-1);">MP3 · WAV · OGG</div>
-        <div id="musicUploadName" style="font-size:var(--text-xs);color:var(--color-primary);margin-top:var(--space-2);display:none;"></div>
-      </div>
-      <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,audio/*" style="display:none;" onchange="handleMusicUpload(this)">
-      <div id="customMusicList" style="margin-top:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2);"></div>
-      <div id="customTrackProgress" style="display:none;margin-top:var(--space-3);">
-        <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-1);">
-          <span id="ctpElapsed">0:00</span><span id="ctpTotal">—</span>
-        </div>
-        <div style="height:3px;background:var(--color-surface-dynamic);border-radius:var(--radius-full);overflow:hidden;" onclick="seekCustomTrack(event)">
-          <div id="ctpBar" style="height:100%;width:0%;background:var(--color-primary);border-radius:var(--radius-full);transition:width .5s linear;"></div>
-        </div>
-      </div>
-      <div class="music-player-controls" style="margin-top:var(--space-3);display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);">
-        <div style="display:flex;gap:var(--space-2);">
-          <button class="btn btn-secondary btn-sm" onclick="playPrevTrack()" title="Previous track">
-            <i data-lucide="skip-back" style="width:13px;height:13px;"></i>
-          </button>
-          <button class="btn btn-secondary btn-sm" onclick="playNextTrack(false)" title="Next track">
-            <i data-lucide="skip-forward" style="width:13px;height:13px;"></i>
-          </button>
-          <button class="btn btn-secondary btn-sm" onclick="shufflePlaylist()" title="Shuffle playlist">
-            <i data-lucide="shuffle" style="width:13px;height:13px;"></i>
+
+      <!-- Playlist sidebar -->
+      <div class="card pl-sidebar-card">
+        <div class="pl-sidebar-header">
+          <span class="section-label" style="margin-bottom:0;">Playlists</span>
+          <button class="btn btn-ghost btn-sm" onclick="createPlaylist()" title="New playlist">
+            <i data-lucide="plus" style="width:12px;height:12px;"></i> New
           </button>
         </div>
-        <button class="btn btn-ghost btn-sm" id="musicRepeatBtn" onclick="togglePlaylistRepeatMode()" title="Repeat mode">Repeat: All</button>
+        <div id="playlistSidebar" class="pl-sidebar-list"></div>
       </div>
-    </div>
-    <div class="card" style="background:var(--color-surface-offset);border-style:dashed;">
-      <div style="font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint);margin-bottom:var(--space-3);">🔍 Find sounds online</div>
-      <div style="display:flex;flex-direction:column;gap:var(--space-2);">
-        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
-          <span style="font-size:15px;">🌐</span>
-          <div><a href="https://freesound.org" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">freesound.org</a>
-          <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Huge Creative Commons library — search "rain loop", "brown noise", "forest ambience"</div></div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
-          <span style="font-size:15px;">🎵</span>
-          <div><a href="https://pixabay.com/music/" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">pixabay.com/music</a>
-          <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Royalty-free, no attribution needed — good lofi & ambient section</div></div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
-          <span style="font-size:15px;">🎹</span>
-          <div><a href="https://musicforprogramming.net" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">musicforprogramming.net</a>
-          <div style="font-size:var(--text-xs);color:var(--color-text-muted);">Curated focus music — downloadable MP3s, free to use personally</div></div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:var(--space-3);">
-          <span style="font-size:15px;">🤖</span>
-          <div><a href="https://suno.com" target="_blank" rel="noopener noreferrer" style="font-size:var(--text-xs);font-weight:600;color:var(--color-primary);">suno.com</a>
-          <div style="font-size:var(--text-xs);color:var(--color-text-muted);">AI-generated music — free tier for personal use, Pro tier grants broader rights</div></div>
+
+      <!-- Track list for active playlist -->
+      <div class="card pl-tracks-card">
+        <div id="playlistTrackList" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
+
+        <!-- Collapsible Add tracks (hidden for locked playlists via JS) -->
+        <div id="addTracksSection" style="margin-top:var(--space-3);border-top:1px solid var(--color-divider);padding-top:var(--space-3);">
+          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:space-between;" onclick="toggleAddTracks()">
+            <span><i data-lucide="upload" style="width:12px;height:12px;"></i> Add tracks</span>
+            <i data-lucide="chevron-down" id="addTracksChevron" style="width:12px;height:12px;"></i>
+          </button>
+          <div id="addTracksBody" style="display:none;margin-top:var(--space-3);">
+            <div id="musicDropZone"
+              style="border:2px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);text-align:center;transition:border-color var(--trans),background var(--trans);cursor:pointer;"
+              onclick="document.getElementById('musicUpload').click()"
+              ondragover="musicDragOver(event)" ondragleave="musicDragLeave(event)" ondrop="musicDrop(event)">
+              <i data-lucide="music" style="width:22px;height:22px;margin:0 auto var(--space-2);color:var(--color-text-faint);display:block;"></i>
+              <div style="font-size:var(--text-sm);color:var(--color-text-muted);">Drop audio here or <span style="color:var(--color-primary);font-weight:600;">click to browse</span></div>
+              <div style="font-size:var(--text-xs);color:var(--color-text-faint);margin-top:var(--space-1);">MP3 · WAV · OGG · multiple files OK</div>
+            </div>
+            <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,audio/*" multiple style="display:none;" onchange="handleMusicUpload(this)">
+          </div>
         </div>
       </div>
-    </div>
-  
+
+    </div><!-- /music-right -->
   </div>
 </section>
 
@@ -466,8 +425,6 @@
 <!-- Modal: Reward Create / Edit -->
 <div class="modal-backdrop hidden" id="rewardModal">
   <div class="modal reward-modal" style="max-width:420px;">
-
-    <!-- Tinted header banner -->
     <div class="reward-modal-header">
       <span class="reward-modal-preview" id="rewardModalPreview">🎁</span>
       <div>
@@ -475,15 +432,11 @@
         <div class="reward-modal-subtitle">Define what you'll treat yourself to</div>
       </div>
     </div>
-
-    <!-- Name -->
     <div class="form-group">
       <label for="rewardModalName">Name</label>
       <input type="text" id="rewardModalName" placeholder="e.g. Coffee break…" style="width:100%;" maxlength="60"
         onkeydown="if(event.key==='Enter') rewardSaveModal()">
     </div>
-
-    <!-- Emoji picker -->
     <div class="form-group">
       <label>Emoji</label>
       <div class="reward-emoji-panel">
@@ -496,8 +449,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Cost -->
     <div class="form-group">
       <label for="rewardModalCost">Cost</label>
       <div class="reward-input-with-suffix">
@@ -505,12 +456,8 @@
         <span class="reward-input-suffix">pts</span>
       </div>
     </div>
-
-    <!-- Repeatable toggle row -->
     <div class="reward-option-row">
-      <div class="reward-option-icon">
-        <i data-lucide="repeat" style="width:15px;height:15px;"></i>
-      </div>
+      <div class="reward-option-icon"><i data-lucide="repeat" style="width:15px;height:15px;"></i></div>
       <div class="reward-option-body">
         <div class="reward-option-label">Repeatable</div>
         <div class="reward-option-desc">Can be redeemed multiple times</div>
@@ -520,7 +467,6 @@
         <span class="reward-toggle-track"><span class="reward-toggle-thumb"></span></span>
       </label>
     </div>
-
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="rewardCloseModal()">Cancel</button>
       <button class="btn btn-primary" onclick="rewardSaveModal()">

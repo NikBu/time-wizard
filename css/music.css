@@ -1,17 +1,9 @@
-/* MUSIC VISUALIZER */
+/* ── VISUALIZER ───────────────────────────────────── */
 .viz-bar{width:4px;border-radius:var(--radius-full);background:var(--color-accent);transform-origin:bottom;animation:none;transition:height .1s ease;}
 .viz-bar.active{animation:vizBounce calc(0.4s + var(--i) * 0.07s) ease-in-out infinite alternate;}
 @keyframes vizBounce{from{height:4px;}to{height:28px;}}
-/* AMBIENT TRACK ROW */
-.ambient-row{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-surface-offset);cursor:pointer;transition:background var(--trans),border-color var(--trans);}
-.ambient-row:hover{background:var(--color-surface-dynamic);border-color:var(--color-primary);}
-.ambient-row.selected{background:var(--color-primary-highlight);border-color:var(--color-primary);}
-.ambient-row .amb-icon{font-size:20px;flex-shrink:0;}
-.ambient-row .amb-info{flex:1;min-width:0;}
-.ambient-row .amb-name{font-size:var(--text-sm);font-weight:600;}
-.ambient-row .amb-desc{font-size:var(--text-xs);color:var(--color-text-muted);}
 
-/* FLOATING MUSIC WIDGET */
+/* ── FLOATING WIDGET ─────────────────────────────── */
 #musicWidget{position:fixed;bottom:var(--space-5);right:var(--space-5);z-index:200;display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);font-size:var(--text-xs);transition:opacity .2s,transform .2s;}
 #musicWidget.hidden-widget{opacity:0;pointer-events:none;transform:translateY(8px);}
 #musicWidget .mw-bars{display:flex;align-items:flex-end;gap:2px;height:16px;}
@@ -21,10 +13,10 @@
 #musicWidget .mw-vol{display:flex;align-items:center;gap:var(--space-1);}
 #musicWidget input[type=range]{width:64px;height:4px;accent-color:var(--color-primary);padding:0;}
 
-/* MUSIC DROP ZONE */
+/* ── DROP ZONE ───────────────────────────────────── */
 #musicDropZone.drag-over{border-color:var(--color-primary);background:var(--color-primary-highlight);}
 
-/* CUSTOM TRACK ROW — div-based to allow inner buttons */
+/* ── TRACK ROW ───────────────────────────────────── */
 .custom-snd-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-surface-offset);cursor:pointer;transition:background var(--trans),border-color var(--trans);user-select:none;}
 .custom-snd-row:hover{background:var(--color-surface-dynamic);border-color:var(--color-primary);}
 .custom-snd-row.selected{background:var(--color-primary-highlight);border-color:var(--color-primary);}
@@ -32,3 +24,38 @@
 .custom-snd-row .snd-name{flex:1;min-width:0;font-size:var(--text-sm);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .custom-snd-row .snd-duration{font-size:var(--text-xs);color:var(--color-text-muted);flex-shrink:0;}
 .custom-snd-row .snd-actions{display:flex;gap:var(--space-1);flex-shrink:0;}
+
+/* ── PLAYER CARD ─────────────────────────────────── */
+.music-player-card{display:flex;flex-direction:column;gap:var(--space-4);}
+
+.player-now-playing-row{display:flex;align-items:center;gap:var(--space-3);}
+.player-visualizer{display:flex;align-items:flex-end;gap:3px;height:32px;flex-shrink:0;}
+.player-track-info{flex:1;min-width:0;}
+.player-track-name{font-size:var(--text-sm);font-weight:600;color:var(--color-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.player-track-status{font-size:var(--text-xs);color:var(--color-text-muted);}
+
+.player-seek-row{display:flex;align-items:center;gap:var(--space-2);}
+.player-seek-row.seek-row--disabled{opacity:.35;pointer-events:none;}
+.player-time{font-size:var(--text-xs);color:var(--color-text-muted);flex-shrink:0;min-width:28px;}
+.player-seek-bar-wrap{flex:1;height:5px;background:var(--color-surface-dynamic);border-radius:var(--radius-full);overflow:hidden;cursor:pointer;}
+.player-seek-bar-fill{height:100%;width:0%;background:var(--color-primary);border-radius:var(--radius-full);transition:width .5s linear;}
+
+.player-transport-row{display:flex;align-items:center;justify-content:center;gap:var(--space-3);}
+.player-play-btn{width:40px;height:40px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;padding:0;}
+
+.player-volume-row{display:flex;align-items:center;gap:var(--space-2);}
+.player-volume-row input[type=range]{flex:1;}
+
+/* ── PLAYLIST SIDEBAR ────────────────────────────── */
+.pl-sidebar-card{margin-bottom:var(--space-3);}
+.pl-sidebar-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2);}
+.pl-sidebar-list{display:flex;flex-direction:column;gap:var(--space-1);max-height:200px;overflow-y:auto;}
+.pl-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-2);border-radius:var(--radius-md);cursor:pointer;font-size:var(--text-sm);transition:background var(--trans);border:1px solid transparent;user-select:none;}
+.pl-row:hover{background:var(--color-surface-dynamic);}
+.pl-row--active{background:var(--color-primary-highlight);border-color:var(--color-primary);font-weight:600;}
+.pl-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pl-count{font-size:var(--text-xs);color:var(--color-text-muted);flex-shrink:0;}
+.pl-lock-icon{color:var(--color-text-faint);flex-shrink:0;}
+
+/* ── PLAYLIST TRACK CARD ─────────────────────────── */
+.pl-tracks-card{flex:1;}
