@@ -225,12 +225,18 @@ function startMusic(){
     if(pl && pl.trackIds.length){ selectTrack(pl.trackIds[0]); return; }
     showToast('Select a track first','error'); return;
   }
-  _playTrackById(_activeTrackId);
+
+  if(!_isAmbientActive && _playingAudio && _activeTrackId === _playingAudio._trackId){
+    _playingAudio.play().catch(()=>{});
+  } else {
+    _playTrackById(_activeTrackId);
+  }
+
   musicOn = true;
   setViz(true);
   updatePlayerUI();
   updateMusicWidget();
-  if(_isAmbientActive) stopMonitorCustomTrack(); else monitorCustomTrack();
+  if(_isAmbientActive) stopMonitorCustomTrack(true); else monitorCustomTrack();
   if(typeof archOnMusicOn === 'function') archOnMusicOn();
 }
 
@@ -242,7 +248,7 @@ function pauseMusic(){
   setViz(false);
   updatePlayerUI();
   updateMusicWidget();
-  stopMonitorCustomTrack();
+  stopMonitorCustomTrack(true);
   if(typeof archOnMusicOff === 'function') archOnMusicOff();
 }
 
@@ -261,7 +267,7 @@ function stopMusic(){
   setViz(false);
   updatePlayerUI();
   updateMusicWidget();
-  stopMonitorCustomTrack();
+  stopMonitorCustomTrack(false);
   if(typeof archOnMusicOff === 'function') archOnMusicOff();
 }
 
@@ -282,6 +288,7 @@ function _playTrackById(id){
   } else {
     const t = _trackLib.find(x=>x.id===id); if(!t) return;
     const audio = new Audio(t.url);
+    audio._trackId = id;
     attachHtmlMusicSource(audio);
     _playingAudio = audio;
     _playingAudio.volume = _musicVol;
@@ -461,7 +468,7 @@ function updateMusicWidget(){
 
 // ── MONITOR (seek bar update) ──────────────────────
 function monitorCustomTrack(){
-  stopMonitorCustomTrack();
+  stopMonitorCustomTrack(true);
   const wrap = document.getElementById('customTrackProgress');
   if(!_playingAudio || !wrap){ if(wrap) wrap.style.display='none'; return; }
   wrap.style.display='block';
@@ -478,11 +485,13 @@ function monitorCustomTrack(){
     document.querySelectorAll('.mw-bar').forEach((b,i)=>{ const v=data[i%data.length]||0; b.style.height=(4+v/255*16)+'px'; });
   },500);
 }
-function stopMonitorCustomTrack(){
+function stopMonitorCustomTrack(preserveProgress=false){
   clearInterval(_musicUpdateTimer); _musicUpdateTimer=null;
   const wrap = document.getElementById('customTrackProgress'); if(wrap) wrap.style.display='none';
-  const bar = document.getElementById('ctpBar'); if(bar) bar.style.width='0%';
-  const el = document.getElementById('ctpElapsed'); if(el) el.textContent='0:00';
+  if(!preserveProgress){
+    const bar = document.getElementById('ctpBar'); if(bar) bar.style.width='0%';
+    const el = document.getElementById('ctpElapsed'); if(el) el.textContent='0:00';
+  }
 }
 
 function _ensureMusicAnalyser(){
