@@ -285,7 +285,7 @@
           <div id="customTrackProgress" class="player-seek-bar-wrap" onclick="seekCustomTrack(event)">
             <div id="ctpBar" class="player-seek-bar-fill"></div>
           </div>
-          <span id="ctpTotal" class="player-time">—</span>
+          <span id="ctpTotal" class="player-time">&mdash;</span>
         </div>
 
         <!-- Transport -->
@@ -362,13 +362,12 @@
 
       <!-- Track list for active playlist -->
       <div class="card pl-tracks-card">
-        <div id="playlistTrackList" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
 
-        <!-- Collapsible Add tracks (hidden for locked playlists via JS) -->
-        <div id="addTracksSection" style="margin-top:var(--space-3);border-top:1px solid var(--color-divider);padding-top:var(--space-3);">
+        <!-- Collapsible Add tracks — at TOP, hidden for locked playlists via JS -->
+        <div id="addTracksSection" style="margin-bottom:var(--space-3);border-bottom:1px solid var(--color-divider);padding-bottom:var(--space-3);">
           <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:space-between;" onclick="toggleAddTracks()">
             <span><i data-lucide="upload" style="width:12px;height:12px;"></i> Add tracks</span>
-            <i data-lucide="chevron-down" id="addTracksChevron" style="width:12px;height:12px;"></i>
+            <i data-lucide="chevron-down" id="addTracksChevron" style="width:12px;height:12px;transition:transform .2s;"></i>
           </button>
           <div id="addTracksBody" style="display:none;margin-top:var(--space-3);">
             <div id="musicDropZone"
@@ -377,11 +376,13 @@
               ondragover="musicDragOver(event)" ondragleave="musicDragLeave(event)" ondrop="musicDrop(event)">
               <i data-lucide="music" style="width:22px;height:22px;margin:0 auto var(--space-2);color:var(--color-text-faint);display:block;"></i>
               <div style="font-size:var(--text-sm);color:var(--color-text-muted);">Drop audio here or <span style="color:var(--color-primary);font-weight:600;">click to browse</span></div>
-              <div style="font-size:var(--text-xs);color:var(--color-text-faint);margin-top:var(--space-1);">MP3 · WAV · OGG · multiple files OK</div>
+              <div style="font-size:var(--text-xs);color:var(--color-text-faint);margin-top:var(--space-1);">MP3 &middot; WAV &middot; OGG &middot; multiple files OK</div>
             </div>
             <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,audio/*" multiple style="display:none;" onchange="handleMusicUpload(this)">
           </div>
         </div>
+
+        <div id="playlistTrackList" style="display:flex;flex-direction:column;gap:var(--space-2);"></div>
       </div>
 
     </div><!-- /music-right -->
