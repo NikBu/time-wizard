@@ -52,7 +52,7 @@
   height:100%;
   width:0%;
   background:var(--color-primary);
-  transition:width .5s linear;
+  transition:width .1s linear;
   border-radius:0;
 }
 
@@ -105,7 +105,20 @@
 .player-seek-row.seek-row--disabled{opacity:.35;pointer-events:none;}
 .player-time{font-size:var(--text-xs);color:var(--color-text-muted);flex-shrink:0;min-width:28px;}
 
-/* Seek bar: native range styled with thumb circle */
+/*
+  Seek bar layout:
+  - .player-seek-bar-wrap is the flex container (height=20px, position:relative)
+  - .player-seek-bar-track is the grey background line (absolute, centred vertically, pointer-events:none)
+  - .player-seek-bar-fill is the coloured progress fill inside the track
+  - .player-seek-range is the native <input type=range> on top
+
+  The native thumb does NOT travel from 0% to 100% of the input's total width —
+  it travels from (thumbRadius) to (inputWidth - thumbRadius).
+  We use a CSS custom property --pct (set by JS) and calc() to position the fill
+  so its right edge always matches the thumb centre:
+    fill width = calc(var(--pct, 0) * (100% - 14px) + 7px)
+  where 14px = thumb diameter and 7px = thumb radius (half of 14px).
+*/
 .player-seek-bar-wrap{
   flex:1;
   position:relative;
@@ -120,17 +133,21 @@
   border-radius:var(--radius-full);
   pointer-events:none;
   overflow:hidden;
-  z-index:0; /* stay below the range input and its thumb */
 }
 .player-seek-bar-fill{
   height:100%;
-  width:0%;
+  /* --pct is a 0-1 fraction set by JS.
+     At 0: fill = 7px (thumb centre at left edge).
+     At 1: fill = 100% - 7px (thumb centre at right edge).
+     This matches where the native thumb actually sits. */
+  width: calc(var(--pct, 0) * (100% - 14px) + 7px);
   background:var(--color-primary);
   border-radius:var(--radius-full);
-  transition:width .5s linear;
+  transition: width .1s linear;
 }
 .player-seek-range{
-  position:relative;
+  position:absolute;
+  left:0;right:0;
   width:100%;
   height:20px;
   -webkit-appearance:none;
@@ -156,8 +173,6 @@
   border:2px solid var(--color-surface);
   box-shadow:0 0 0 1px var(--color-primary);
   cursor:grab;
-  position:relative;
-  z-index:2; /* Firefox: lift thumb above the track div */
 }
 .player-seek-range:hover::-webkit-slider-thumb{
   transform:scale(1.2);

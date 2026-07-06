@@ -398,14 +398,21 @@ function seekCustomTrack(event){
   a.currentTime = pct * a.duration;
 }
 
-// Seek from the range input (0-100)
+// Helper: set the fill bar using --pct (0-1 fraction) so it tracks the thumb
+function _setFillPct(fillEl, pct01){
+  fillEl.style.setProperty('--pct', pct01);
+}
+
+// Seek from the range input (value is 0-100)
 function _seekFromRange(val){
   if(_isAmbientActive) return;
   const a = _playingAudio; if(!a || !isFinite(a.duration)) return;
-  // Disable fill transition during drag so it follows the thumb instantly
   const fillEl = document.getElementById('ctpBar');
-  if(fillEl) fillEl.style.transition = 'none';
-  fillEl && (fillEl.style.width = val + '%');
+  if(fillEl){
+    // Disable CSS transition while dragging so fill is perfectly in sync
+    fillEl.style.transition = 'none';
+    _setFillPct(fillEl, val / 100);
+  }
   a.currentTime = (val / 100) * a.duration;
 }
 
@@ -514,7 +521,6 @@ function updatePlayerUI(){
   const seekRow = document.getElementById('playerSeekRow');
   if(seekRow) seekRow.classList.toggle('seek-row--disabled', _isAmbientActive);
 
-  // Show progress wrap if a non-ambient track is loaded
   const progressWrap = document.getElementById('customTrackProgress');
   if(progressWrap){
     progressWrap.style.display = (!_isAmbientActive && _activeTrackId) ? 'block' : 'none';
@@ -555,14 +561,13 @@ function updateMusicWidget(){
     if(vol) volLabel.textContent = vol.value + '%';
   }
 
-  // Widget progress bar: hide for ambients
   const mwpw = document.getElementById('mwProgressWrap');
   if(mwpw) mwpw.style.pointerEvents = _isAmbientActive ? 'none' : '';
 
   lucide.createIcons();
 }
 
-// ── MONITOR (seek bar + widget progress update) ─────────
+// ── MONITOR (seek bar + widget progress update) ─────
 function monitorCustomTrack(){
   stopMonitorCustomTrack(true);
   const wrap = document.getElementById('customTrackProgress');
@@ -573,36 +578,37 @@ function monitorCustomTrack(){
   const data = new Uint8Array(analyser.frequencyBinCount);
   _musicUpdateTimer = setInterval(()=>{
     const a = _playingAudio; if(!a) return;
-    const pct = a.duration ? (a.currentTime/a.duration)*100 : 0;
-    // Main player seek fill + range thumb
+    const pct01 = a.duration ? (a.currentTime / a.duration) : 0;
+    const pct100 = pct01 * 100;
+    // Main player: update fill bar and range thumb
     const bar = document.getElementById('ctpBar');
     if(bar && !_seeking){
-      // Restore smooth transition for auto-playback updates
-      bar.style.transition = 'width .5s linear';
-      bar.style.width = pct+'%';
+      // Re-enable smooth CSS transition for auto-playback ticks
+      bar.style.transition = 'width .1s linear';
+      _setFillPct(bar, pct01);
     }
-    const rng = document.getElementById('ctpRange'); if(rng && !_seeking) rng.value=pct;
-    const el = document.getElementById('ctpElapsed'); if(el) el.textContent=fmtClock(a.currentTime||0);
-    const tt = document.getElementById('ctpTotal'); if(tt) tt.textContent=isFinite(a.duration)?fmtClock(a.duration):'—';
+    const rng = document.getElementById('ctpRange');
+    if(rng && !_seeking) rng.value = pct100;
+    const el = document.getElementById('ctpElapsed'); if(el) el.textContent = fmtClock(a.currentTime || 0);
+    const tt = document.getElementById('ctpTotal');   if(tt) tt.textContent = isFinite(a.duration) ? fmtClock(a.duration) : '—';
     // Widget progress bar
-    const mwFill = document.getElementById('mwProgressFill'); if(mwFill) mwFill.style.width=pct+'%';
+    const mwFill = document.getElementById('mwProgressFill'); if(mwFill) mwFill.style.width = pct100 + '%';
     analyser.getByteFrequencyData(data);
     document.querySelectorAll('.mw-bar').forEach((b,i)=>{ const v=data[i%data.length]||0; b.style.height=(4+v/255*16)+'px'; });
-  },500);
+  }, 100);
 }
 
 let _seeking = false;
-// Prevent the interval from fighting with the user dragging the range
 document.addEventListener('mousedown', e=>{ if(e.target && e.target.id==='ctpRange') _seeking=true; });
 document.addEventListener('mouseup',   ()=>{ _seeking=false; });
-// Touch support for seek drag
 document.addEventListener('touchstart', e=>{ if(e.target && e.target.id==='ctpRange') _seeking=true; }, {passive:true});
 document.addEventListener('touchend',   ()=>{ _seeking=false; });
 
 function stopMonitorCustomTrack(preserveProgress=false){
   clearInterval(_musicUpdateTimer); _musicUpdateTimer=null;
   if(!preserveProgress){
-    const bar = document.getElementById('ctpBar'); if(bar) bar.style.width='0%';
+    const bar = document.getElementById('ctpBar');
+    if(bar){ _setFillPct(bar, 0); bar.style.transition='none'; }
     const rng = document.getElementById('ctpRange'); if(rng) rng.value=0;
     const el = document.getElementById('ctpElapsed'); if(el) el.textContent='0:00';
     const mwFill = document.getElementById('mwProgressFill'); if(mwFill) mwFill.style.width='0%';
