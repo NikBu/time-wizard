@@ -402,6 +402,10 @@ function seekCustomTrack(event){
 function _seekFromRange(val){
   if(_isAmbientActive) return;
   const a = _playingAudio; if(!a || !isFinite(a.duration)) return;
+  // Disable fill transition during drag so it follows the thumb instantly
+  const fillEl = document.getElementById('ctpBar');
+  if(fillEl) fillEl.style.transition = 'none';
+  fillEl && (fillEl.style.width = val + '%');
   a.currentTime = (val / 100) * a.duration;
 }
 
@@ -571,7 +575,12 @@ function monitorCustomTrack(){
     const a = _playingAudio; if(!a) return;
     const pct = a.duration ? (a.currentTime/a.duration)*100 : 0;
     // Main player seek fill + range thumb
-    const bar = document.getElementById('ctpBar'); if(bar) bar.style.width=pct+'%';
+    const bar = document.getElementById('ctpBar');
+    if(bar && !_seeking){
+      // Restore smooth transition for auto-playback updates
+      bar.style.transition = 'width .5s linear';
+      bar.style.width = pct+'%';
+    }
     const rng = document.getElementById('ctpRange'); if(rng && !_seeking) rng.value=pct;
     const el = document.getElementById('ctpElapsed'); if(el) el.textContent=fmtClock(a.currentTime||0);
     const tt = document.getElementById('ctpTotal'); if(tt) tt.textContent=isFinite(a.duration)?fmtClock(a.duration):'—';
@@ -586,6 +595,9 @@ let _seeking = false;
 // Prevent the interval from fighting with the user dragging the range
 document.addEventListener('mousedown', e=>{ if(e.target && e.target.id==='ctpRange') _seeking=true; });
 document.addEventListener('mouseup',   ()=>{ _seeking=false; });
+// Touch support for seek drag
+document.addEventListener('touchstart', e=>{ if(e.target && e.target.id==='ctpRange') _seeking=true; }, {passive:true});
+document.addEventListener('touchend',   ()=>{ _seeking=false; });
 
 function stopMonitorCustomTrack(preserveProgress=false){
   clearInterval(_musicUpdateTimer); _musicUpdateTimer=null;
