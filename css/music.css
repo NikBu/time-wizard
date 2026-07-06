@@ -155,6 +155,7 @@
   background:transparent;
   cursor:pointer;
   z-index:1;
+  padding: 0 0 8px 0;
 }
 .player-seek-range::-webkit-slider-thumb{
   -webkit-appearance:none;
@@ -164,7 +165,7 @@
   border:2px solid var(--color-surface);
   box-shadow:0 0 0 1px var(--color-primary);
   cursor:grab;
-  transition:transform .15s,box-shadow .15s;
+  transition:transform .15s,box-shadow .15s;  
 }
 .player-seek-range::-moz-range-thumb{
   width:14px;height:14px;
