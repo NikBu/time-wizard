@@ -8,10 +8,6 @@ const AMBIENTS = [
 ];
 
 // ── TRACK LIBRARY & PLAYLISTS ──────────────────────
-// _trackLib: global pool  { id, name, url, duration }
-//   NOTE: no .audio field — a fresh Audio is created on every play
-//   to avoid HTMLAudioElement \"ended\" state lockup.
-// _playlists: [ { id, name, locked, trackIds:[] } ]
 let _trackLib = [];
 let _playlists = [];
 let _activePLId = null;
@@ -22,9 +18,9 @@ let musicOn = false;
 let _ambientNode = null;
 let _ambientTimerId = null;
 let _musicUpdateTimer = null;
-let _playingAudio = null;   // always a freshly-created Audio per play
+let _playingAudio = null;
 let _musicAnalyser = null;
-let _playlistRepeatMode = 'all'; // 'off' | 'one' | 'all'
+let _playlistRepeatMode = 'all';
 let _shuffleMode = false;
 
 function _getPlayingAudio(){ return _playingAudio; }
@@ -74,7 +70,7 @@ function renamePlaylist(id){
 function deletePlaylist(id){
   const pl = _playlists.find(p=>p.id===id);
   if(!pl || pl.locked) return;
-  if(!confirm('Delete playlist \"' + pl.name + '\"?')) return;
+  if(!confirm('Delete playlist "' + pl.name + '"?')) return;
   _playlists = _playlists.filter(p=>p.id!==id);
   if(_activePLId===id) _activePLId = _playlists[0]?.id || null;
   renderPlaylists();
@@ -112,19 +108,19 @@ function openAddToPlaylistModal(trackId){
   const plOptions = _playlists.filter(p=>!p.locked);
   const rows = plOptions.length ? plOptions.map(pl=>{
     const already = pl.trackIds.includes(trackId);
-    return `<button class=\"btn ${already?'btn-secondary':'btn-ghost'} btn-sm\"
-      style=\"width:100%;justify-content:space-between;margin-bottom:var(--space-2);\"
-      onclick=\"addTrackToPlaylist('${trackId}','${pl.id}');renderPlaylists();document.getElementById('atpModal').remove();\">
+    return `<button class="btn ${already?'btn-secondary':'btn-ghost'} btn-sm"
+      style="width:100%;justify-content:space-between;margin-bottom:var(--space-2);"
+      onclick="addTrackToPlaylist('${trackId}','${pl.id}');renderPlaylists();document.getElementById('atpModal').remove();">
       <span>${pl.name}</span>
-      ${already?'<i data-lucide=\"check\" style=\"width:12px;height:12px;\"></i>':'<i data-lucide=\"plus\" style=\"width:12px;height:12px;\"></i>'}
+      ${already?'<i data-lucide="check" style="width:12px;height:12px;"></i>':'<i data-lucide="plus" style="width:12px;height:12px;"></i>'}
     </button>`;
-  }).join('') : '<p style=\"font-size:var(--text-sm);color:var(--color-text-muted);\">No custom playlists yet. Create one first.</p>';
-  const html = `<div class=\"modal-backdrop\" id=\"atpModal\" onclick=\"if(event.target===this)this.remove()\">
-  <div class=\"modal\" style=\"max-width:340px;\">
-    <div class=\"modal-title\">Add to playlist</div>
-    <div style=\"font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);\">Track: <strong>${track.name}</strong></div>
+  }).join('') : '<p style="font-size:var(--text-sm);color:var(--color-text-muted);">No custom playlists yet. Create one first.</p>';
+  const html = `<div class="modal-backdrop" id="atpModal" onclick="if(event.target===this)this.remove()">
+  <div class="modal" style="max-width:340px;">
+    <div class="modal-title">Add to playlist</div>
+    <div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);">Track: <strong>${track.name}</strong></div>
     ${rows}
-    <button class=\"btn btn-ghost btn-sm\" style=\"width:100%;margin-top:var(--space-2);\" onclick=\"document.getElementById('atpModal').remove()\">Cancel</button>
+    <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:var(--space-2);" onclick="document.getElementById('atpModal').remove()">Cancel</button>
   </div>
 </div>`;
   document.body.insertAdjacentHTML('beforeend', html);
@@ -136,12 +132,12 @@ function renderPlaylists(){
   const sidebar = document.getElementById('playlistSidebar'); if(!sidebar) return;
   sidebar.innerHTML = _playlists.map(pl=>{
     const active = pl.id===_activePLId;
-    return `<div class=\"pl-row${active?' pl-row--active':''}\" onclick=\"selectPlaylist('${pl.id}')\">
-      ${pl.locked ? '<i data-lucide=\"lock\" class=\"pl-lock-icon\" style=\"width:11px;height:11px;\"></i>' : ''}
-      <span class=\"pl-name\">${pl.name}</span>
-      <span class=\"pl-count\">${pl.trackIds.length}</span>
-      ${!pl.locked ? `<button class=\"btn btn-ghost btn-icon\" style=\"padding:1px 3px;\" onclick=\"event.stopPropagation();renamePlaylist('${pl.id}')\" title=\"Rename\"><i data-lucide=\"pencil\" style=\"width:11px;height:11px;\"></i></button>` : ''}
-      ${!pl.locked ? `<button class=\"btn btn-ghost btn-icon\" style=\"padding:1px 3px;color:var(--color-danger);\" onclick=\"event.stopPropagation();deletePlaylist('${pl.id}')\" title=\"Delete\"><i data-lucide=\"trash-2\" style=\"width:11px;height:11px;\"></i></button>` : ''}
+    return `<div class="pl-row${active?' pl-row--active':''}" onclick="selectPlaylist('${pl.id}')">
+      ${pl.locked ? '<i data-lucide="lock" class="pl-lock-icon" style="width:11px;height:11px;"></i>' : ''}
+      <span class="pl-name">${pl.name}</span>
+      <span class="pl-count">${pl.trackIds.length}</span>
+      ${!pl.locked ? `<button class="btn btn-ghost btn-icon" style="padding:1px 3px;" onclick="event.stopPropagation();renamePlaylist('${pl.id}')" title="Rename"><i data-lucide="pencil" style="width:11px;height:11px;"></i></button>` : ''}
+      ${!pl.locked ? `<button class="btn btn-ghost btn-icon" style="padding:1px 3px;color:var(--color-danger);" onclick="event.stopPropagation();deletePlaylist('${pl.id}')" title="Delete"><i data-lucide="trash-2" style="width:11px;height:11px;"></i></button>` : ''}
     </div>`;
   }).join('');
   lucide.createIcons();
@@ -160,12 +156,15 @@ function renderTrackList(){
 
   if(!pl){ list.innerHTML=''; return; }
   const isAmbientPL = pl.id==='__ambients__';
+  const isDraggable = !isAmbientPL && !pl.locked;
+
   if(!pl.trackIds.length){
-    list.innerHTML=`<div style=\"font-size:var(--text-xs);color:var(--color-text-faint);text-align:center;padding:var(--space-4);\">
-      ${isAmbientPL ? 'Built-in ambient tracks' : 'No tracks yet. Use \"Add tracks\" above.'}
+    list.innerHTML=`<div style="font-size:var(--text-xs);color:var(--color-text-faint);text-align:center;padding:var(--space-4);">
+      ${isAmbientPL ? 'Built-in ambient tracks' : 'No tracks yet. Use "Add tracks" above.'}
     </div>`;
     return;
   }
+
   list.innerHTML = pl.trackIds.map(tid=>{
     let name, dur, icon;
     if(isAmbientPL){
@@ -178,22 +177,79 @@ function renderTrackList(){
       icon = '🎵';
     }
     const active = tid===_activeTrackId;
-    return `<div class=\"custom-snd-row${active?' selected':''}\" onclick=\"selectTrack('${tid}')\" role=\"button\" tabindex=\"0\"
-         onkeydown=\"if(event.key==='Enter'||event.key===' ')selectTrack('${tid}')\">
-      <span class=\"snd-icon\">${icon}</span>
-      <span class=\"snd-name\" title=\"${name}\">${name}</span>
-      <span class=\"snd-duration\">${dur}</span>
-      ${!isAmbientPL ? `<span class=\"snd-actions\" onclick=\"event.stopPropagation()\">
-        <button class=\"btn btn-ghost btn-sm\" onclick=\"openAddToPlaylistModal('${tid}')\" title=\"Add to playlist\">
-          <i data-lucide=\"list-plus\" style=\"width:12px;height:12px;\"></i>
+    const dragAttrs = isDraggable ? `draggable="true"` : '';
+    const handle = isDraggable
+      ? `<span class="snd-drag-handle" title="Drag to reorder"><i data-lucide="grip-vertical" style="width:13px;height:13px;"></i></span>`
+      : '';
+    return `<div class="custom-snd-row${active?' selected':''}" data-track-id="${tid}" ${dragAttrs}
+         onclick="selectTrack('${tid}')" role="button" tabindex="0"
+         onkeydown="if(event.key==='Enter'||event.key===' ')selectTrack('${tid}')">
+      ${handle}
+      <span class="snd-icon">${icon}</span>
+      <span class="snd-name" title="${name}">${name}</span>
+      <span class="snd-duration">${dur}</span>
+      ${!isAmbientPL ? `<span class="snd-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm" onclick="openAddToPlaylistModal('${tid}')" title="Add to playlist">
+          <i data-lucide="list-plus" style="width:12px;height:12px;"></i>
         </button>
-        <button class=\"btn btn-ghost btn-sm\" onclick=\"removeTrackFromPlaylist('${tid}')\" title=\"Remove from playlist\">
-          <i data-lucide=\"x\" style=\"width:12px;height:12px;\"></i>
+        <button class="btn btn-ghost btn-sm" onclick="removeTrackFromPlaylist('${tid}')" title="Remove from playlist">
+          <i data-lucide="x" style="width:12px;height:12px;"></i>
         </button>
       </span>` : ''}
     </div>`;
   }).join('');
+
   lucide.createIcons();
+
+  if(isDraggable) _attachDragReorder(list, pl);
+}
+
+// ── DRAG REORDER ───────────────────────────────────
+function _attachDragReorder(list, pl){
+  let dragSrc = null;
+
+  list.querySelectorAll('.custom-snd-row[draggable]').forEach(row=>{
+    row.addEventListener('dragstart', e=>{
+      dragSrc = row;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', row.dataset.trackId);
+    });
+    row.addEventListener('dragend', ()=>{
+      row.classList.remove('dragging');
+      list.querySelectorAll('.custom-snd-row').forEach(r=>{
+        r.classList.remove('drag-over-top','drag-over-bottom');
+      });
+      dragSrc = null;
+    });
+    row.addEventListener('dragover', e=>{
+      e.preventDefault();
+      if(!dragSrc || dragSrc===row) return;
+      e.dataTransfer.dropEffect = 'move';
+      const rect = row.getBoundingClientRect();
+      const mid = rect.top + rect.height/2;
+      list.querySelectorAll('.custom-snd-row').forEach(r=>r.classList.remove('drag-over-top','drag-over-bottom'));
+      row.classList.add(e.clientY < mid ? 'drag-over-top' : 'drag-over-bottom');
+    });
+    row.addEventListener('dragleave', ()=>{
+      row.classList.remove('drag-over-top','drag-over-bottom');
+    });
+    row.addEventListener('drop', e=>{
+      e.preventDefault();
+      if(!dragSrc || dragSrc===row) return;
+      const srcId = dragSrc.dataset.trackId;
+      const tgtId = row.dataset.trackId;
+      const rect = row.getBoundingClientRect();
+      const insertBefore = e.clientY < rect.top + rect.height/2;
+      const arr = pl.trackIds;
+      const fromIdx = arr.indexOf(srcId);
+      const toIdx   = arr.indexOf(tgtId);
+      arr.splice(fromIdx, 1);
+      const newIdx = arr.indexOf(tgtId);
+      arr.splice(insertBefore ? newIdx : newIdx+1, 0, srcId);
+      renderTrackList();
+    });
+  });
 }
 
 // ── TOGGLE ADD TRACKS PANEL ────────────────────────
@@ -226,7 +282,7 @@ function startMusic(){
     showToast('Select a track first','error'); return;
   }
 
-  if(!_isAmbientActive && _playingAudio && _activeTrackId === _playingAudio._trackId){
+  if(!_isAmbientActive && _playingAudio && _playingAudio._trackId === _activeTrackId){
     _playingAudio.play().catch(()=>{});
   } else {
     _playTrackById(_activeTrackId);
@@ -342,6 +398,23 @@ function seekCustomTrack(event){
   a.currentTime = pct * a.duration;
 }
 
+// Seek from the range input (0-100)
+function _seekFromRange(val){
+  if(_isAmbientActive) return;
+  const a = _playingAudio; if(!a || !isFinite(a.duration)) return;
+  a.currentTime = (val / 100) * a.duration;
+}
+
+// Widget seek bar click
+function _mwSeek(event){
+  if(_isAmbientActive) return;
+  const a = _playingAudio; if(!a || !isFinite(a.duration)) return;
+  const wrap = event.currentTarget;
+  const rect = wrap.getBoundingClientRect();
+  const pct = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
+  a.currentTime = pct * a.duration;
+}
+
 // ── REPEAT / SHUFFLE ───────────────────────────────
 function togglePlaylistRepeatMode(){
   _playlistRepeatMode = _playlistRepeatMode==='off' ? 'all' : _playlistRepeatMode==='all' ? 'one' : 'off';
@@ -352,7 +425,7 @@ function _updateRepeatBtn(){
   const btn = document.getElementById('musicRepeatBtn'); if(!btn) return;
   const cfgs = { off:{icon:'repeat',label:'Off',style:'opacity:.4;'}, all:{icon:'repeat',label:'All',style:''}, one:{icon:'repeat-1',label:'One',style:''} };
   const c = cfgs[_playlistRepeatMode];
-  btn.innerHTML = `<i data-lucide=\"${c.icon}\" style=\"width:13px;height:13px;${c.style}\"></i>`;
+  btn.innerHTML = `<i data-lucide="${c.icon}" style="width:13px;height:13px;${c.style}"></i>`;
   btn.title = 'Repeat: '+c.label;
   lucide.createIcons();
 }
@@ -431,11 +504,17 @@ function updatePlayerUI(){
   if(np) np.textContent = trackName;
   if(st) st.textContent = musicOn ? 'Playing' : (_activeTrackId ? 'Paused' : 'Select a track and press Play');
   if(btn) btn.innerHTML = musicOn
-    ? '<i data-lucide=\"pause\" style=\"width:14px;height:14px;\"></i>'
-    : '<i data-lucide=\"play\" style=\"width:14px;height:14px;\"></i>';
+    ? '<i data-lucide="pause" style="width:14px;height:14px;"></i>'
+    : '<i data-lucide="play" style="width:14px;height:14px;"></i>';
 
   const seekRow = document.getElementById('playerSeekRow');
   if(seekRow) seekRow.classList.toggle('seek-row--disabled', _isAmbientActive);
+
+  // Show progress wrap if a non-ambient track is loaded
+  const progressWrap = document.getElementById('customTrackProgress');
+  if(progressWrap){
+    progressWrap.style.display = (!_isAmbientActive && _activeTrackId) ? 'block' : 'none';
+  }
 
   lucide.createIcons();
 }
@@ -449,48 +528,72 @@ function setViz(on){
 
 function updateMusicWidget(){
   const w = document.getElementById('musicWidget'); if(!w) return;
-  const name = document.getElementById('mwName');
+  const nameEl = document.getElementById('mwName');
+  const statusEl = document.getElementById('mwStatus');
   const btn = document.getElementById('mwPlayBtn');
+  const volLabel = document.getElementById('mwVolLabel');
   const hasTrack = !!_activeTrackId;
   w.classList.toggle('hidden-widget', !hasTrack);
+
   let trackName = '—';
   if(_activeTrackId){
     trackName = _isAmbientActive
       ? (AMBIENTS.find(a=>a.id===_activeTrackId)?.name || '—')
       : (_trackLib.find(t=>t.id===_activeTrackId)?.name || '—');
   }
-  if(name) name.textContent = trackName;
+  if(nameEl) nameEl.textContent = trackName;
+  if(statusEl) statusEl.textContent = musicOn ? 'Playing' : (_activeTrackId ? 'Paused' : 'Stopped');
   if(btn) btn.innerHTML = musicOn
-    ? '<i data-lucide=\"pause\" style=\"width:14px;height:14px;\"></i>'
-    : '<i data-lucide=\"play\" style=\"width:14px;height:14px;\"></i>';
+    ? '<i data-lucide="pause" style="width:14px;height:14px;"></i>'
+    : '<i data-lucide="play" style="width:14px;height:14px;"></i>';
+  if(volLabel){
+    const vol = document.getElementById('mwVolSlider');
+    if(vol) volLabel.textContent = vol.value + '%';
+  }
+
+  // Widget progress bar: hide for ambients
+  const mwpw = document.getElementById('mwProgressWrap');
+  if(mwpw) mwpw.style.pointerEvents = _isAmbientActive ? 'none' : '';
+
   lucide.createIcons();
 }
 
-// ── MONITOR (seek bar update) ──────────────────────
+// ── MONITOR (seek bar + widget progress update) ─────────
 function monitorCustomTrack(){
   stopMonitorCustomTrack(true);
   const wrap = document.getElementById('customTrackProgress');
-  if(!_playingAudio || !wrap){ if(wrap) wrap.style.display='none'; return; }
-  wrap.style.display='block';
+  if(!_playingAudio){ if(wrap) wrap.style.display='none'; return; }
+  if(wrap) wrap.style.display='block';
   _ensureMusicAnalyser();
   const analyser = _musicAnalyser;
   const data = new Uint8Array(analyser.frequencyBinCount);
   _musicUpdateTimer = setInterval(()=>{
     const a = _playingAudio; if(!a) return;
     const pct = a.duration ? (a.currentTime/a.duration)*100 : 0;
+    // Main player seek fill + range thumb
     const bar = document.getElementById('ctpBar'); if(bar) bar.style.width=pct+'%';
+    const rng = document.getElementById('ctpRange'); if(rng && !_seeking) rng.value=pct;
     const el = document.getElementById('ctpElapsed'); if(el) el.textContent=fmtClock(a.currentTime||0);
     const tt = document.getElementById('ctpTotal'); if(tt) tt.textContent=isFinite(a.duration)?fmtClock(a.duration):'—';
+    // Widget progress bar
+    const mwFill = document.getElementById('mwProgressFill'); if(mwFill) mwFill.style.width=pct+'%';
     analyser.getByteFrequencyData(data);
     document.querySelectorAll('.mw-bar').forEach((b,i)=>{ const v=data[i%data.length]||0; b.style.height=(4+v/255*16)+'px'; });
   },500);
 }
+
+let _seeking = false;
+// Prevent the interval from fighting with the user dragging the range
+document.addEventListener('mousedown', e=>{ if(e.target && e.target.id==='ctpRange') _seeking=true; });
+document.addEventListener('mouseup',   ()=>{ _seeking=false; });
+
 function stopMonitorCustomTrack(preserveProgress=false){
   clearInterval(_musicUpdateTimer); _musicUpdateTimer=null;
-  const wrap = document.getElementById('customTrackProgress'); if(wrap) wrap.style.display='none';
   if(!preserveProgress){
     const bar = document.getElementById('ctpBar'); if(bar) bar.style.width='0%';
+    const rng = document.getElementById('ctpRange'); if(rng) rng.value=0;
     const el = document.getElementById('ctpElapsed'); if(el) el.textContent='0:00';
+    const mwFill = document.getElementById('mwProgressFill'); if(mwFill) mwFill.style.width='0%';
   }
 }
 

@@ -49,7 +49,7 @@
         <div class="htd-list" id="headerTimerList"></div>
       </div>
     </div>
-    <div id="headerPoints" class="badge gold">✼ 0 pts</div>
+    <div id="headerPoints" class="badge gold">✜ 0 pts</div>
     <button class="icon-btn" onclick="exportData()" aria-label="Export data" title="Export data">
       <i data-lucide="download-cloud" style="width:16px;height:16px;"></i>
     </button>
@@ -279,11 +279,20 @@
           </div>
         </div>
 
-        <!-- Seek bar -->
+        <!-- Seek bar (range input with visible fill track underneath) -->
         <div class="player-seek-row" id="playerSeekRow">
           <span id="ctpElapsed" class="player-time">0:00</span>
-          <div id="customTrackProgress" class="player-seek-bar-wrap" onclick="seekCustomTrack(event)">
-            <div id="ctpBar" class="player-seek-bar-fill"></div>
+          <div class="player-seek-bar-wrap">
+            <div class="player-seek-bar-track">
+              <div id="ctpBar" class="player-seek-bar-fill"></div>
+            </div>
+            <input
+              type="range" min="0" max="100" value="0" step="0.1"
+              id="ctpRange"
+              class="player-seek-range"
+              oninput="_seekFromRange(this.value)"
+              title="Seek"
+            >
           </div>
           <span id="ctpTotal" class="player-time">&mdash;</span>
         </div>
@@ -363,7 +372,7 @@
       <!-- Track list for active playlist -->
       <div class="card pl-tracks-card">
 
-        <!-- Collapsible Add tracks — at TOP, hidden for locked playlists via JS -->
+        <!-- Collapsible Add tracks -->
         <div id="addTracksSection" style="margin-bottom:var(--space-3);border-bottom:1px solid var(--color-divider);padding-bottom:var(--space-3);">
           <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:space-between;" onclick="toggleAddTracks()">
             <span><i data-lucide="upload" style="width:12px;height:12px;"></i> Add tracks</span>
@@ -487,22 +496,42 @@
 
 <!-- Floating music mini-player -->
 <div id="musicWidget" class="hidden-widget">
-  <div class="mw-bars">
-    <div class="mw-bar" style="--i:0"></div><div class="mw-bar" style="--i:1"></div>
-    <div class="mw-bar" style="--i:2"></div><div class="mw-bar" style="--i:3"></div>
+  <!-- Progress bar at very top edge -->
+  <div id="mwProgressWrap" onclick="_mwSeek(event)" title="Seek">
+    <div id="mwProgressFill"></div>
   </div>
-  <span class="mw-name" id="mwName">—</span>
-  <button class="btn btn-icon btn-ghost" style="padding:2px;" onclick="toggleMusic()" id="mwPlayBtn" title="Play/Pause">
-    <i data-lucide="play" style="width:14px;height:14px;"></i>
-  </button>
-  <div class="mw-vol" title="Music volume">
+  <!-- Main body row -->
+  <div class="mw-body">
+    <div class="mw-bars">
+      <div class="mw-bar" style="--i:0"></div><div class="mw-bar" style="--i:1"></div>
+      <div class="mw-bar" style="--i:2"></div><div class="mw-bar" style="--i:3"></div>
+    </div>
+    <div class="mw-track-info">
+      <span class="mw-name" id="mwName">—</span>
+      <span class="mw-status" id="mwStatus">Stopped</span>
+    </div>
+    <div class="mw-controls">
+      <button class="btn btn-icon btn-ghost" style="padding:2px;" onclick="playPrevTrack()" title="Previous">
+        <i data-lucide="skip-back" style="width:13px;height:13px;"></i>
+      </button>
+      <button class="btn btn-icon btn-ghost" style="padding:2px;" onclick="toggleMusic()" id="mwPlayBtn" title="Play/Pause">
+        <i data-lucide="play" style="width:14px;height:14px;"></i>
+      </button>
+      <button class="btn btn-icon btn-ghost" style="padding:2px;" onclick="playNextTrack()" title="Next">
+        <i data-lucide="skip-forward" style="width:13px;height:13px;"></i>
+      </button>
+      <button class="btn btn-icon btn-ghost" style="padding:2px;" onclick="stopMusic()" title="Stop">
+        <i data-lucide="square" style="width:12px;height:12px;"></i>
+      </button>
+    </div>
+  </div>
+  <!-- Volume row -->
+  <div class="mw-vol">
     <i data-lucide="volume-1" style="width:12px;height:12px;color:var(--color-text-faint);"></i>
     <input type="range" min="0" max="100" value="60" id="mwVolSlider"
       oninput="setMusicVol(this.value);document.getElementById('musicVolSlider').value=this.value;">
+    <span id="mwVolLabel" style="font-size:10px;color:var(--color-text-muted);min-width:24px;">60%</span>
   </div>
-  <button class="btn btn-icon btn-ghost" style="padding:2px;" onclick="stopMusic()" title="Stop">
-    <i data-lucide="square" style="width:12px;height:12px;"></i>
-  </button>
 </div>
 
 <script src="./js/audio.js"></script>
