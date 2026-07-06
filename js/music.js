@@ -409,7 +409,6 @@ function _seekFromRange(val){
   const a = _playingAudio; if(!a || !isFinite(a.duration)) return;
   const fillEl = document.getElementById('ctpBar');
   if(fillEl){
-    // Disable CSS transition while dragging so fill is perfectly in sync
     fillEl.style.transition = 'none';
     _setFillPct(fillEl, val / 100);
   }
@@ -576,14 +575,18 @@ function monitorCustomTrack(){
   _ensureMusicAnalyser();
   const analyser = _musicAnalyser;
   const data = new Uint8Array(analyser.frequencyBinCount);
-  _musicUpdateTimer = setInterval(()=>{
+
+  // Capture the audio element this monitor session is bound to.
+  // If the track changes before the first timeupdate fires, the
+  // stale listener will find a mismatched reference and bail out.
+  const boundAudio = _playingAudio;
+
+  function _tick(){
     const a = _playingAudio; if(!a) return;
     const pct01 = a.duration ? (a.currentTime / a.duration) : 0;
     const pct100 = pct01 * 100;
-    // Main player: update fill bar and range thumb
     const bar = document.getElementById('ctpBar');
     if(bar && !_seeking){
-      // Re-enable smooth CSS transition for auto-playback ticks
       bar.style.transition = 'width .1s linear';
       _setFillPct(bar, pct01);
     }
@@ -591,11 +594,20 @@ function monitorCustomTrack(){
     if(rng && !_seeking) rng.value = pct100;
     const el = document.getElementById('ctpElapsed'); if(el) el.textContent = fmtClock(a.currentTime || 0);
     const tt = document.getElementById('ctpTotal');   if(tt) tt.textContent = isFinite(a.duration) ? fmtClock(a.duration) : '—';
-    // Widget progress bar
     const mwFill = document.getElementById('mwProgressFill'); if(mwFill) mwFill.style.width = pct100 + '%';
     analyser.getByteFrequencyData(data);
     document.querySelectorAll('.mw-bar').forEach((b,i)=>{ const v=data[i%data.length]||0; b.style.height=(4+v/255*16)+'px'; });
-  }, 100);
+  }
+
+  // Wait for the first real timeupdate before starting the interval.
+  // This prevents the "0 → real position → jump back" glitch on track start.
+  function _onFirstTimeUpdate(){
+    if(_playingAudio !== boundAudio) return; // track changed before we fired
+    _tick(); // seed UI with the first real position immediately
+    _musicUpdateTimer = setInterval(_tick, 100);
+  }
+
+  boundAudio.addEventListener('timeupdate', _onFirstTimeUpdate, { once: true });
 }
 
 let _seeking = false;
