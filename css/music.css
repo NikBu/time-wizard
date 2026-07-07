@@ -119,6 +119,13 @@
     fill width = calc(var(--pct, 0) * (100% - 14px) + 7px)
   where 14px = thumb diameter and 7px = thumb radius (half of 14px).
 */
+#ctpElapsed,
+#ctpTotal {
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5ch;   /* enough for "59:59" */
+  text-align: right;  /* elapsed right-aligns into its fixed slot */
+}
+
 .player-seek-bar-wrap{
   flex:1;
   position:relative;
